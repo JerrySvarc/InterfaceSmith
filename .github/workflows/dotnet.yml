@@ -23,6 +23,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet tool restore
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build Build.fsproj --no-restore
     - name: Test
       run: dotnet run RunTests
