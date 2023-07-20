@@ -5,10 +5,10 @@
 const CONFIG = {
     // The tags to include the generated JS and CSS will be automatically injected in the HTML template
     // See https://github.com/jantimon/html-webpack-plugin
-    indexHtmlTemplate: './src/Client/index.html',
-    fsharpEntry: './src/Client/output/App.js',
+    indexHtmlTemplate: './src/index.html',
+    fsharpEntry: './src/output/App.js',
     outputDir: './deploy/public',
-    assetsDir: './src/Client/public',
+    assetsDir: './src/public',
     devServerPort: 8080,
     // When using webpack-dev-server, you may need to redirect some calls
     // to a external API server. See https://webpack.js.org/configuration/dev-server/#devserver-proxy
@@ -44,7 +44,7 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-module.exports = function(env, arg) {
+module.exports = function (env, arg) {
     // Mode is passed as a flag to npm run. see the docs for more details on flags https://webpack.js.org/api/cli/#flags
     const mode = arg.mode ?? 'development';
     // environment variables docs: https://webpack.js.org/api/cli/#environment-options
@@ -90,7 +90,7 @@ module.exports = function(env, arg) {
             // PRODUCTION AND DEVELOPMENT
             // HtmlWebpackPlugin allows us to use a template for the index.html page
             // and automatically injects <script> or <link> tags for generated bundles.
-            new HtmlWebpackPlugin({ filename: 'index.html', template: resolve(config.indexHtmlTemplate)})
+            new HtmlWebpackPlugin({ filename: 'index.html', template: resolve(config.indexHtmlTemplate) })
         ].filter(Boolean),
         // Configuration for webpack-dev-server
         devServer: {
