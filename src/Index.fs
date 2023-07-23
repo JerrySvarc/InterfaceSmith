@@ -27,10 +27,25 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 open Feliz
 open Feliz.Bulma
 
-let upploadButtonView = Html.button [ Html.text "Upload" ]
-
+let upploadButtonView =
+   Bulma.file[
+        file.isNormal
+        prop.children [
+            Bulma.fileLabel.label [
+                Bulma.fileInput [
+                    prop.type' "file"
+                    prop.name "resume"
+                ]
+                Bulma.fileCta [
+                    Bulma.fileLabel.span [
+                        prop.text "Choose a file…"
+                    ]
+                ]
+            ]
+        ]
+    ]
 let sideMenuView =
-    Bulma.box[
+   Bulma.box[
         Bulma.menu [
             Bulma.menuLabel [
                 Html.text "Menu"
@@ -39,9 +54,34 @@ let sideMenuView =
         ]
     ]
 
+let componentCard RenderingCode =
+    Bulma.card [
+       Bulma.cardContent [
+        Bulma.media [
+            Bulma.mediaContent [
+                Bulma.title.p [
+                    Bulma.title.is4
+                    prop.text "Component structure"
+                ]
+            ]
+        ]
+        Bulma.cardFooter [
+        Bulma.cardFooterItem.a [
+            prop.text "Save"
+        ]
+        Bulma.cardFooterItem.a [
+            prop.text "Edit"
+        ]
+        Bulma.cardFooterItem.a [
+            prop.text "Delete"
+        ]
+    ]
+    ]
+]
+
 let createdComponentView (model: Model) =
-    Bulma.box [  Html.text "Created Components"  ]
-let componentCard = Html.div [ Bulma.card [ Html.text "Component Card" ] ]
+    Bulma.box [ componentCard example; componentCard example ]
+
 let view (model: Model) (dispatch: Msg -> unit) =
 
         Bulma.columns [
@@ -55,6 +95,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.column[
                     column.is10
                     prop.children [
+                        createdComponentView model
                        //Created components will be shown here
                     ]
                 ]
