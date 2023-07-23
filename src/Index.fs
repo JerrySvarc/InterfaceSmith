@@ -17,11 +17,11 @@ let example =
                HtmlList(false, Field("tasks"), Hole) ]
 
 let init () : Model * Cmd<Msg> =
-    { CreatedComponents = [ example ] }, Cmd.none
+    { CreatedComponents = [ example; example ] }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
-    { model with CreatedComponents = [ example ] }, Cmd.none
+    { model with CreatedComponents = [ example; example] }, Cmd.none
 
 
 open Feliz
@@ -54,7 +54,7 @@ let sideMenuView =
         ]
     ]
 
-let componentCard RenderingCode =
+let componentCards RenderingCode =
     Bulma.card [
        Bulma.cardContent [
         Bulma.media [
@@ -80,24 +80,17 @@ let componentCard RenderingCode =
 ]
 
 let createdComponentView (model: Model) =
-    Bulma.box [ componentCard example; componentCard example ]
+    List.map componentCards model.CreatedComponents
 
 let view (model: Model) (dispatch: Msg -> unit) =
-
-        Bulma.columns [
-            prop.children [
-                Bulma.column[
-                    column.is2
-                    prop.children [
-                        sideMenuView
-                    ]
-                ]
-                Bulma.column[
-                    column.is10
-                    prop.children [
-                        createdComponentView model
-                       //Created components will be shown here
-                    ]
+    Bulma.columns [
+        prop.children [
+            Bulma.column[
+                column.is2
+                prop.children [
+                    sideMenuView
                 ]
             ]
+            Bulma.column [createdComponentView model |> Html.div]
         ]
+    ]
