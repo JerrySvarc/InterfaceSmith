@@ -17,11 +17,11 @@ let example =
                HtmlList(false, Field("tasks"), Hole) ]
 
 let init () : Model * Cmd<Msg> =
-    { CreatedComponents = [ example; example ] }, Cmd.none
+    { CreatedComponents = [ example; example; example ] }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
-    { model with CreatedComponents = [ example; example] }, Cmd.none
+    { model with CreatedComponents = [ example; example; example] }, Cmd.none
 
 
 open Feliz
@@ -79,18 +79,32 @@ let componentCards RenderingCode =
     ]
 ]
 
+
+let navBar =
+    Bulma.navbar[
+        Bulma.navbarBrand.a [
+            Bulma.navbarItem.a [
+                prop.text "Value driven UI editor"
+            ]
+        ]
+
+    ]
+
 let createdComponentView (model: Model) =
     List.map componentCards model.CreatedComponents
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    Bulma.columns [
-        prop.children [
-            Bulma.column[
-                column.is2
-                prop.children [
-                    sideMenuView
+    Html.div [
+        navBar
+        Bulma.columns [
+            prop.children [
+                Bulma.column[
+                    column.is2
+                    prop.children [
+                        sideMenuView
+                    ]
                 ]
+                Bulma.column [createdComponentView model |> Html.div]
             ]
-            Bulma.column [createdComponentView model |> Html.div]
         ]
     ]
