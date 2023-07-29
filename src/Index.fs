@@ -17,16 +17,16 @@ let example =
                HtmlList(false, Field("tasks"), Hole) ]
 
 let init () : Model * Cmd<Msg> =
-    { CreatedComponents = [ example; example; example ] }, Cmd.none
+    { CreatedComponents = [ example;  ] }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
-    { model with CreatedComponents = [ example; example; example] }, Cmd.none
+    { model with CreatedComponents = [ example; ] }, Cmd.none
 
 
 open Feliz
 open Feliz.Bulma
-
+//Definition of different UI elements used in the application
 let upploadButtonView =
    Bulma.file[
         file.isNormal
@@ -34,7 +34,7 @@ let upploadButtonView =
             Bulma.fileLabel.label [
                 Bulma.fileInput [
                     prop.type' "file"
-                    prop.name "resume"
+                    prop.name "component-data"
                 ]
                 Bulma.fileCta [
                     Bulma.fileLabel.span [
@@ -54,7 +54,7 @@ let sideMenuView =
         ]
     ]
 
-let componentCards RenderingCode =
+let componentCards renderingCode =
     Bulma.card [
        Bulma.cardContent [
         Bulma.media [
