@@ -61,7 +61,7 @@ let componentCards renderingCode =
             Bulma.mediaContent [
                 Bulma.title.p [
                     Bulma.title.is4
-                    prop.text "Component structure"
+                    prop.text "Component name"
                 ]
             ]
         ]
