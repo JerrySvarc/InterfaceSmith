@@ -15,3 +15,7 @@ type RenderingCode =
     | HtmlList of numbered: bool * innerData: Reference * itemCode: RenderingCode
     | Sequence of RenderingCode list
     | Hole
+
+type Component =
+    {   Name : string
+        Code : RenderingCode }
