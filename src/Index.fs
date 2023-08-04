@@ -14,13 +14,17 @@ type EditorModel =
 
 type Model =
     {   CurrentPage : Page
-        CreatedComponents: RenderingCode list
+        CreatedComponents: Component list
         Editor : EditorModel }
 
 
 type Msg =
     | ChangePage of Page
+    | DeleteComponent of string
+    | UploadData of string
 
+
+//placeholder for the data that will be uploaded
 let example =
     Sequence [ HtmlElement("h1", [], Constant("TODO list"))
                HtmlList(false, Field("tasks"), Hole) ]
@@ -29,56 +33,58 @@ let exampleEditor = { CurrentComponent = {Name = "example";Code =example } }
 
 
 let init () : Model * Cmd<Msg> =
-    {CurrentPage = Main;  CreatedComponents = [ example; ]; Editor = exampleEditor }, Cmd.none
+    {CurrentPage = Main;  CreatedComponents = [ exampleEditor.CurrentComponent; exampleEditor.CurrentComponent]; Editor = exampleEditor }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | ChangePage page -> { model with CurrentPage = page }, Cmd.none
+    | UploadData(_) -> failwith "Not Implemented"
+    | DeleteComponent(_) -> failwith "Not Implemented"
 
 
 open Feliz
 open Feliz.Bulma
 
-
 let view (model: Model) (dispatch: Msg -> unit) =
     //Definition of different UI elements used in the application
     let upploadButtonView =
         Bulma.file[
-                file.isNormal
-                prop.children [
-                    Bulma.fileLabel.label [
-                        Bulma.fileInput [
-                            prop.type' "file"
-                            prop.name "component-data"
-                        ]
-                        Bulma.fileCta [
-                            Bulma.fileLabel.span [
-                                prop.text "Choose a file…"
-                            ]
+            file.isNormal
+            prop.children [
+                Bulma.fileLabel.label [
+                    Bulma.fileInput [
+                        prop.type' "file"
+                        prop.name "component-data"
+                        prop.onChange (fun file -> dispatch (UploadData file))
+                    ]
+                    Bulma.fileCta [
+                        Bulma.fileLabel.span [
+                            prop.text "Choose a file…"
                         ]
                     ]
                 ]
             ]
+        ]
 
     let sideMenuView =
         Bulma.box[
-                Bulma.menu [
-                    Bulma.menuLabel [
-                        Html.text "Menu"
-                    ]
-                    Bulma.menuList [ upploadButtonView]
+            Bulma.menu [
+                Bulma.menuLabel [
+                    Html.text "Menu"
                 ]
+                Bulma.menuList [ upploadButtonView]
             ]
+        ]
 
-    let componentCards renderingCode =
+    let componentCards (component : Component)=
         Bulma.card [
         Bulma.cardContent [
             Bulma.media [
                 Bulma.mediaContent [
                     Bulma.title.p [
                         Bulma.title.is4
-                        prop.text "Component name"
+                        prop.text component.Name
                     ]
                 ]
             ]
@@ -92,6 +98,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.cardFooterItem.a [
                 prop.text "Delete"
+                prop.onClick (fun _ -> dispatch (DeleteComponent component.Name))
             ]
             ]
         ]
@@ -103,58 +110,42 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.navbarItem.a [
                     prop.text "Value driven UI editor"
                 ]
-            ]
-
         ]
+    ]
 
     let createdComponentView (model: Model) =
         List.map componentCards model.CreatedComponents
 
-    Html.div [
-        match model.CurrentPage with
-        | Main ->
+    let mainView =
+        Html.div [
             navBar
-            Bulma.columns [
-                prop.children [
-                    Bulma.column[
-                        column.is2
-                        prop.children [
-                            sideMenuView
-                        ]
-                    ]
-                    Bulma.column [createdComponentView model |> Html.div]
-                ]
-            ]
-        | Editor ->
-            navBar
-            Bulma.columns [
-                prop.children [
-                    Bulma.column[
-                        column.is2
-                        prop.children [
-                            sideMenuView
-                        ]
-                    ]
-                    Bulma.column [
-                        Bulma.box [
-                        ]
+            match model.CurrentPage with
+            | Main ->
+                sideMenuView
+                Bulma.column [createdComponentView model |> Html.div]
+
+            | Editor ->
+                Bulma.box [
+                    Feliz.Html.button [
+                        prop.text "Back"
+                        prop.onClick (fun _ -> dispatch (ChangePage Main))
                     ]
                 ]
-            ]
-        | Preview ->
-            navBar
-            Bulma.columns [
-                prop.children [
-                    Bulma.column[
-                        column.is2
-                        prop.children [
-                            sideMenuView
+            | Preview ->
+                Bulma.columns [
+                    prop.children [
+                        Bulma.column[
+                            column.is2
+                            prop.children [
+                                sideMenuView
+                            ]
                         ]
-                    ]
-                    Bulma.column [
-                        Bulma.box [
+                        Bulma.column [
+                            Bulma.box [
+                            ]
                         ]
                     ]
                 ]
-            ]
-    ]
+        ]
+
+    mainView
