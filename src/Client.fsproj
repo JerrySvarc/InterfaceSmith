@@ -5,6 +5,7 @@
     <DefineConstants>FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="FileUpload.fs" />
     <None Include="index.html" />
     <Compile Include="Types.fs" />
     <Compile Include="DataRecognition.fs" />

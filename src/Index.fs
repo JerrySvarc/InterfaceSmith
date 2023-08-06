@@ -15,7 +15,7 @@ type EditorModel =
 type Model =
     {   CurrentPage : Page
         CreatedComponents: Component list
-        Editor : EditorModel }
+        EditorModel : EditorModel }
 
 
 type Msg =
@@ -33,7 +33,7 @@ let exampleEditor = { CurrentComponent = {Name = "example";Code =example } }
 
 
 let init () : Model * Cmd<Msg> =
-    {CurrentPage = Main;  CreatedComponents = [ exampleEditor.CurrentComponent; exampleEditor.CurrentComponent]; Editor = exampleEditor }, Cmd.none
+    {CurrentPage = Main;  CreatedComponents = [ exampleEditor.CurrentComponent; exampleEditor.CurrentComponent]; EditorModel = exampleEditor }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -42,13 +42,15 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | UploadData(_) -> failwith "Not Implemented"
     | DeleteComponent(_) -> failwith "Not Implemented"
 
-
+open FileUpload
 open Feliz
 open Feliz.Bulma
 
 let view (model: Model) (dispatch: Msg -> unit) =
+
     //Definition of different UI elements used in the application
-    let upploadButtonView =
+
+    let upploadButtonView onLoad =
         Bulma.file[
             file.isNormal
             prop.children [
@@ -56,7 +58,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     Bulma.fileInput [
                         prop.type' "file"
                         prop.name "component-data"
-                        prop.onChange (fun file -> dispatch (UploadData file))
+                        prop.onChange ( handleFileEvent onLoad)
                     ]
                     Bulma.fileCta [
                         Bulma.fileLabel.span [
@@ -73,7 +75,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.menuLabel [
                     Html.text "Menu"
                 ]
-                Bulma.menuList [ upploadButtonView]
+                Bulma.menuList [ upploadButtonView (UploadData >> dispatch)]
             ]
         ]
 
@@ -116,6 +118,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let createdComponentView (model: Model) =
         List.map componentCards model.CreatedComponents
 
+    let editorView (component : Component) =
+        Html.div[
+            Bulma.columns[
+                Bulma.column[]
+                Bulma.column[]
+            ]
+        ]
+
     let mainView =
         Html.div [
             navBar
@@ -125,12 +135,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.column [createdComponentView model |> Html.div]
 
             | Editor ->
-                Bulma.box [
-                    Feliz.Html.button [
-                        prop.text "Back"
-                        prop.onClick (fun _ -> dispatch (ChangePage Main))
-                    ]
+                Feliz.Html.button [
+                    prop.text "Back"
+                    prop.onClick (fun _ -> dispatch (ChangePage Main))
                 ]
+                editorView model.EditorModel.CurrentComponent
             | Preview ->
                 Bulma.columns [
                     prop.children [
