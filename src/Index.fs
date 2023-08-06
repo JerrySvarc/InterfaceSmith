@@ -79,14 +79,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
 
-    let componentCards (component : Component)=
+    let componentCards (createdComponent : Component)=
         Bulma.card [
         Bulma.cardContent [
             Bulma.media [
                 Bulma.mediaContent [
                     Bulma.title.p [
                         Bulma.title.is4
-                        prop.text component.Name
+                        prop.text createdComponent.Name
                     ]
                 ]
             ]
@@ -100,7 +100,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
             Bulma.cardFooterItem.a [
                 prop.text "Delete"
-                prop.onClick (fun _ -> dispatch (DeleteComponent component.Name))
+                prop.onClick (fun _ -> dispatch (DeleteComponent createdComponent.Name))
             ]
             ]
         ]
@@ -118,7 +118,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let createdComponentView (model: Model) =
         List.map componentCards model.CreatedComponents
 
-    let editorView (component : Component) =
+    let editorView (createdComponent : Component) =
         Html.div[
             Bulma.columns[
                 Bulma.column[]
