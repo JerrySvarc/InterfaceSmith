@@ -13,4 +13,4 @@ let handleFileEvent onLoad (fileEvent:Browser.Types.Event) =
     if files.length > 0 then
         let reader = Browser.Dom.FileReader.Create()
         reader.onload <- (fun _ -> reader.result |> unbox |> onLoad)
-        reader.readAsArrayBuffer(files.[0])
+        reader.readAsText(files.[0])

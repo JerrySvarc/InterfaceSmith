@@ -19,4 +19,5 @@ type RenderingCode =
 
 type Component =
     {   Name : string
+        JsonData : string
         Code : RenderingCode}

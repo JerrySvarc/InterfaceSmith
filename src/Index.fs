@@ -29,7 +29,7 @@ let example =
     Sequence [ HtmlElement("h1", [], Constant("TODO list"))
                HtmlList(false, Field("tasks"), Hole) ]
 
-let exampleEditor = { CurrentComponent = {Name = "example";Code =example } }
+let exampleEditor = { CurrentComponent = {Name = "example";Code =example ; JsonData = ""} }
 
 
 let init () : Model * Cmd<Msg> =
@@ -39,7 +39,10 @@ let init () : Model * Cmd<Msg> =
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | ChangePage page -> { model with CurrentPage = page }, Cmd.none
-    | UploadData(_) -> failwith "Not Implemented"
+    | UploadData data ->
+        let newComponent = {Name = ""; JsonData = data; Code = Hole}
+        let newEditorModel = {model.EditorModel with CurrentComponent = newComponent}
+        {model with CurrentPage = Editor; EditorModel = newEditorModel}, Cmd.none
     | DeleteComponent(_) -> failwith "Not Implemented"
 
 open FileUpload
@@ -121,7 +124,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let editorView (createdComponent : Component) =
         Html.div[
             Bulma.columns[
-                Bulma.column[]
+                Bulma.column[ Html.text createdComponent.JsonData]
                 Bulma.column[]
             ]
         ]
