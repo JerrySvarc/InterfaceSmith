@@ -3,6 +3,8 @@ module Index
 open Elmish
 open Fable.Remoting.Client
 open Types
+open Fable.SimpleJson
+open DataLoading
 
 type Page =
     | Main
@@ -14,6 +16,7 @@ type EditorModel =
 
 type Model =
     {   CurrentPage : Page
+        FileUploadError : bool
         CreatedComponents: Component list
         EditorModel : EditorModel }
 
@@ -29,20 +32,25 @@ let example =
     Sequence [ HtmlElement("h1", [], Constant("TODO list"))
                HtmlList(false, Field("tasks"), Hole) ]
 
-let exampleEditor = { CurrentComponent = {Name = "example";Code =example ; JsonData = ""} }
+let exampleEditor = { CurrentComponent = {Name = "example";Code =example ; JsonData = Map.empty} }
 
 
 let init () : Model * Cmd<Msg> =
-    {CurrentPage = Main;  CreatedComponents = [ exampleEditor.CurrentComponent; exampleEditor.CurrentComponent]; EditorModel = exampleEditor }, Cmd.none
+    {CurrentPage = Main; FileUploadError = false; CreatedComponents = [ exampleEditor.CurrentComponent; exampleEditor.CurrentComponent]; EditorModel = exampleEditor }, Cmd.none
 
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | ChangePage page -> { model with CurrentPage = page }, Cmd.none
     | UploadData data ->
-        let newComponent = {Name = ""; JsonData = data; Code = Hole}
-        let newEditorModel = {model.EditorModel with CurrentComponent = newComponent}
-        {model with CurrentPage = Editor; EditorModel = newEditorModel}, Cmd.none
+        let loadedDataOption = loadJson data
+        match loadedDataOption with
+        | Some(data)  ->
+            let newComponent = {Name = ""; JsonData =data ; Code= Hole}
+            let newEditorModel = {model.EditorModel with CurrentComponent = newComponent}
+            {model with CurrentPage = Editor; EditorModel = newEditorModel; FileUploadError = false}, Cmd.none
+        | None ->
+            {model with FileUploadError = true}, Cmd.none
     | DeleteComponent(_) -> failwith "Not Implemented"
 
 open FileUpload
@@ -54,23 +62,31 @@ let view (model: Model) (dispatch: Msg -> unit) =
     //Definition of different UI elements used in the application
 
     let upploadButtonView onLoad =
-        Bulma.file[
-            file.isNormal
-            prop.children [
-                Bulma.fileLabel.label [
-                    Bulma.fileInput [
-                        prop.type' "file"
-                        prop.name "component-data"
-                        prop.onChange ( handleFileEvent onLoad)
-                    ]
-                    Bulma.fileCta [
-                        Bulma.fileLabel.span [
-                            prop.text "Choose a file…"
+        Html.div[
+            Bulma.file[
+                file.isNormal
+                prop.children [
+                    Bulma.fileLabel.label [
+                        Bulma.fileInput [
+                            prop.type' "file"
+                            prop.name "component-data"
+                            prop.onChange ( handleFileEvent onLoad)
+                        ]
+                        Bulma.fileCta [
+                            Bulma.fileLabel.span [
+                                prop.text "Choose a file…"
+                            ]
                         ]
                     ]
                 ]
             ]
+            if  model.FileUploadError then
+                Html.text "The selected file could not be used for creation."
+            else
+                Html.text ""
+
         ]
+
 
     let sideMenuView =
         Bulma.box[
@@ -124,8 +140,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let editorView (createdComponent : Component) =
         Html.div[
             Bulma.columns[
-                Bulma.column[ Html.text createdComponent.JsonData]
-                Bulma.column[]
+                Bulma.column[ Html.text (SimpleJson.stringify (createdComponent.JsonData))]
+                Bulma.column[
+
+                ]
             ]
         ]
 

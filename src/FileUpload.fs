@@ -7,10 +7,17 @@ open Fable.React
 open Fable.React.Props
 open Fable.Core
 open Fable.Core.JsInterop
+open Browser.Types
+
+let isJsonFile (file: Browser.Types.File) =
+    file.GetType().Name.EndsWith("File") && file.name.EndsWith(".json")
 
 let handleFileEvent onLoad (fileEvent:Browser.Types.Event) =
     let files:Browser.Types.FileList = !!fileEvent.target?files
     if files.length > 0 then
         let reader = Browser.Dom.FileReader.Create()
         reader.onload <- (fun _ -> reader.result |> unbox |> onLoad)
-        reader.readAsText(files.[0])
+        if isJsonFile files.[0] then
+            reader.readAsText(files.[0])
+        else
+           onLoad ""

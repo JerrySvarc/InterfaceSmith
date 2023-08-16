@@ -8,10 +8,14 @@
     <Compile Include="FileUpload.fs" />
     <None Include="index.html" />
     <Compile Include="Types.fs" />
+    <Compile Include="DataLoading.fs" />
     <Compile Include="DataRecognition.fs" />
     <None Include="paket.references" />
     <Compile Include="Index.fs" />
     <Compile Include="App.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.JsonProvider" Version="1.1.1" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
