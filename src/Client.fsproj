@@ -10,8 +10,10 @@
     <Compile Include="Types.fs" />
     <Compile Include="DataLoading.fs" />
     <Compile Include="DataRecognition.fs" />
+    <Compile Include="Editor.fs" />
     <None Include="paket.references" />
-    <Compile Include="Index.fs" />
+    <Compile Include="Overview.fs" />
+    <Compile Include="Main.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
