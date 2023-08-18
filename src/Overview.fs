@@ -100,6 +100,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
 
 
-    let createdComponentView (model: Model) =
+    let createdComponentView  =
         List.map componentCards model.CreatedComponents
-    createdComponentView
+
+    createdComponentView |> Html.div

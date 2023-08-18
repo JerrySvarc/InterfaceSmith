@@ -22,5 +22,5 @@ type RenderingCode =
 
 type Component =
     {   Name : string
-        JsonData : Map<string,Json>
+        JsonData : Json
         Code : RenderingCode}

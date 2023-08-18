@@ -69,7 +69,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
             navBar
             match model.CurrentPage with
             | Overview ->
-                Html.text "k"
+                Html.div [
+                   Overview.view model.OverviewModel  (OverviewMsg >> dispatch)
+                ]
             | Editor -> failwith "k"
                    // Editor.view model.EditorModel (EditorMsg >> dispatch)
             | Preview ->
