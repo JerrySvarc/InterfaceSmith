@@ -39,6 +39,6 @@ let loadJson json=
             |> List.choose id
             |> function
                 | [JObject data]  ->
-                    Some data
+                    Some ((JObject)data)
                 | _ -> None
         | _ -> None

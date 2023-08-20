@@ -55,11 +55,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.navbarItem.a [
                     prop.text "Value driven UI editor"
                 ]
-                Html.button [
+                Bulma.navbarItem.a [
                     prop.text "Home"
+                    prop.onClick (fun _ -> dispatch (ChangePage Overview))
                 ]
                 Bulma.navbarItem.a [
                     prop.text "Editor"
+                    prop.onClick (fun _ -> dispatch (ChangePage Editor))
                 ]
         ]
     ]
@@ -69,11 +71,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
             navBar
             match model.CurrentPage with
             | Overview ->
-                Html.div [
                    Overview.view model.OverviewModel  (OverviewMsg >> dispatch)
-                ]
-            | Editor -> failwith "k"
-                   // Editor.view model.EditorModel (EditorMsg >> dispatch)
+            | Editor ->
+                   Editor.view model.EditorModel (EditorMsg >> dispatch)
             | Preview ->
                 Bulma.columns [
 

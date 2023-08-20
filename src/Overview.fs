@@ -6,72 +6,32 @@ open Feliz.Bulma
 open Types
 open Fable.SimpleJson
 open DataLoading
-
+open System
 type Model =
     {
         FileUploadError : bool
-        CreatedComponents: Component list
+        CreatedComponents: Map<Guid, Component>
     }
 
 type Msg =
-    | DeleteComponent of string
-    | UploadData of string
+    | DeleteComponent of Guid
+
+let code = Sequence [
+    HtmlElement("h1", [], Constant("TODO list"))
+    HtmlList(false, Field("tasks"), Hole) ]
+let newComp = {Name = "example";Code =code ; JsonData = JNull}
 
 let init() =
-    {  CreatedComponents = []; FileUploadError  = false}
+    {  CreatedComponents = Map.empty; FileUploadError  = false}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg>=
     match msg  with
-    | UploadData data ->
-        let loadedDataOption = loadJson data
-        match loadedDataOption with
-        | Some(data)  -> failwith "k"
-            //let newComponent = {Name = ""; JsonData =data ; Code= Hole}
-            //let newEditorModel = {model.EditorModel with CurrentComponent = newComponent}
-            //{model with CurrentPage = Editor; EditorModel = newEditorModel; FileUploadError = false}, Cmd.none
-        | None ->
-            {model with FileUploadError = true}, Cmd.none
-    | DeleteComponent(_) -> failwith "Not Implemented"
+    | DeleteComponent guid ->
+        {model with CreatedComponents = model.CreatedComponents |> Map.remove guid}, Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    let upploadButtonView onLoad =
-        Html.div[
-            Bulma.file[
-                file.isNormal
-                prop.children [
-                    Bulma.fileLabel.label [
-                        Bulma.fileInput [
-                            prop.type' "file"
-                            prop.name "component-data"
-                           // prop.onChange ( handleFileEvent onLoad)
-                        ]
-                        Bulma.fileCta [
-                            Bulma.fileLabel.span [
-                                prop.text "Choose a file…"
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-            if  model.FileUploadError then
-                Html.text "The selected file could not be used for creation."
-            else
-                Html.text ""
 
-        ]
-
-
-    let sideMenuView =
-        Bulma.box[
-            Bulma.menu [
-                Bulma.menuLabel [
-                    Html.text "Menu"
-                ]
-                Bulma.menuList [ upploadButtonView (UploadData >> dispatch)]
-            ]
-        ]
-
-    let componentCards (createdComponent : Component)=
+    let componentCards id createdComponent =
         Bulma.card [
         Bulma.cardContent [
             Bulma.media [
@@ -83,24 +43,25 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
             Bulma.cardFooter [
-            Bulma.cardFooterItem.a [
-                prop.text "Save"
-            ]
-            Bulma.cardFooterItem.a [
-                prop.text "Edit"
-               // prop.onClick (fun _ -> dispatch (ChangePage Editor))
-            ]
-            Bulma.cardFooterItem.a [
-                prop.text "Delete"
-                prop.onClick (fun _ -> dispatch (DeleteComponent createdComponent.Name))
-            ]
+                Bulma.cardFooterItem.a [
+                    prop.text "Save"
+                ]
+                Bulma.cardFooterItem.a [
+                    prop.text "Edit"
+                // prop.onClick (fun _ -> dispatch (ChangePage Editor))
+                ]
+                Bulma.cardFooterItem.a [
+                    prop.text "Delete"
+                    prop.onClick (fun _ -> dispatch (DeleteComponent id))
+                ]
             ]
         ]
     ]
 
 
-
     let createdComponentView  =
-        List.map componentCards model.CreatedComponents
+        let cards = Map.map  (fun key value -> componentCards key value)  model.CreatedComponents
+        cards
 
-    createdComponentView |> Html.div
+
+    createdComponentView.Values |> Html.div
