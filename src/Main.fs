@@ -34,8 +34,16 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | ChangePage page -> { model with CurrentPage = page }, Cmd.none
     | OverviewMsg msg  ->
-        let updatedOverview, overviewCmd = Overview.update msg model.OverviewModel
-        {model with OverviewModel = updatedOverview}, Cmd.none
+        match msg with
+        | EditComponent guid ->
+            let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
+            if found then
+                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false}; CurrentPage = Editor}, Cmd.none
+            else
+                model,Cmd.none
+        | _  ->
+            let updatedOverview, overviewCmd = Overview.update msg model.OverviewModel
+            {model with OverviewModel = updatedOverview}, Cmd.none
     | EditorMsg msg ->
         let updatedEditor, editorCmd = Editor.update msg model.EditorModel
         {model with EditorModel = updatedEditor}, Cmd.none
@@ -53,7 +61,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         Bulma.navbarMenu[
             Bulma.navbarBrand.a [
                 Bulma.navbarItem.a [
-                    prop.text "Value driven UI editor"
+                    Bulma.title "Value driven UI editor"
                 ]
                 Bulma.navbarItem.a [
                     prop.text "Home"
