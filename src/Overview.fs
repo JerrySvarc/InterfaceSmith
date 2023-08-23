@@ -70,14 +70,15 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
 
     if model.CreatedComponents.Count = 0 then
-        Bulma.card[
+        Bulma.block[
+        Bulma.notification[
             color.isInfo
             prop.children[
-                Bulma.cardContent[
-                    Html.text "No components to display."
-                ]
+                Html.text "No components to display."
             ]
-        ]
+        ]]
 
     else
-        createdComponentView.Values |> Html.div
+        Bulma.box[
+            createdComponentView.Values |> Html.div
+        ]

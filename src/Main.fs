@@ -58,24 +58,35 @@ let view (model: Model) (dispatch: Msg -> unit) =
     //Definition of different UI elements used in the application
 
     let navBar =
-        Bulma.navbarMenu[
-            Bulma.navbarBrand.a [
-                Bulma.navbarItem.a [
-                    Bulma.title "Value driven UI editor"
+        Bulma.navbar[
+            prop.children [
+                Bulma.navbarBrand.div [
+                    color.isPrimary
+                    prop.children[
+                        Bulma.navbarItem.a [
+                            prop.text "Value driven UI"
+                        ]
+                    ]
                 ]
-                Bulma.navbarItem.a [
-                    prop.text "Home"
-                    prop.onClick (fun _ -> dispatch (ChangePage Overview))
+                Bulma.navbarMenu[
+                    Bulma.navbarStart.div[
+                        Bulma.navbarItem.a [
+                            color.isLink
+                            prop.text "Home"
+                            prop.onClick (fun _ -> dispatch (ChangePage Overview))
+                        ]
+                        Bulma.navbarItem.a [
+                            color.isLink
+                            prop.text "Editor"
+                            prop.onClick (fun _ -> dispatch (ChangePage Editor))
+                        ]
+                    ]
                 ]
-                Bulma.navbarItem.a [
-                    prop.text "Editor"
-                    prop.onClick (fun _ -> dispatch (ChangePage Editor))
-                ]
+            ]
         ]
-    ]
 
     let mainView =
-        Html.div [
+        Bulma.block [
             navBar
             match model.CurrentPage with
             | Overview ->
@@ -83,9 +94,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             | Editor ->
                    Editor.view model.EditorModel (EditorMsg >> dispatch)
             | Preview ->
-                Bulma.columns [
-
-                ]
+                Bulma.columns []
         ]
 
     mainView
