@@ -7,6 +7,7 @@ open Fable.SimpleJson
 open DataLoading
 open Overview
 open Editor
+open System
 
 type Page =
     | Overview
@@ -45,8 +46,13 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             let updatedOverview, overviewCmd = Overview.update msg model.OverviewModel
             {model with OverviewModel = updatedOverview}, Cmd.none
     | EditorMsg msg ->
-        let updatedEditor, editorCmd = Editor.update msg model.EditorModel
-        {model with EditorModel = updatedEditor}, Cmd.none
+        match msg with
+        | SaveComponent newComponent ->
+            let updatedMap = model.OverviewModel.CreatedComponents.Add(newComponent.Id, newComponent)
+            {model with OverviewModel = {model.OverviewModel with CreatedComponents = updatedMap}}, Cmd.none
+        | _ ->
+            let updatedEditor, editorCmd = Editor.update msg model.EditorModel
+            {model with EditorModel = updatedEditor}, Cmd.none
 
 
 open FileUpload

@@ -1,7 +1,7 @@
 module Types
 
 open Fable.SimpleJson
-
+open System
 
 type Reference =
     | Field of string
@@ -22,5 +22,6 @@ type RenderingCode =
 
 type Component =
     {   Name : string
+        Id : Guid
         JsonData : Json
         Code : RenderingCode}

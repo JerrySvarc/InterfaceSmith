@@ -7,10 +7,12 @@ open Types
 open Fable.SimpleJson
 open DataLoading
 open FileUpload
+open System
 
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
+
       EditingName : bool
       Input : string }
 
@@ -19,9 +21,10 @@ type Msg =
     | ChangeName of string
     | SetInput of string
     | NameEditMode of bool
+    | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Hole   }; FileUploadError = false; EditingName = false; Input = ""}
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Hole; Id = Guid.Empty  }; FileUploadError = false; EditingName = false; Input = ""}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -29,7 +32,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let loadedDataOption = loadJson data
         match loadedDataOption with
         | Some(data)  ->
-            let newComponent = {Name = "New component"; JsonData = data ; Code= Hole}
+            let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
             {model with CurrentComponent = newComponent; FileUploadError = false}, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
@@ -38,7 +41,9 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SetInput input->
         {model with Input = input}, Cmd.none
     | NameEditMode value ->
-        {model with EditingName = value}, Cmd.none
+        {model with EditingName = value; Input = ""}, Cmd.none
+    | SaveComponent newComponent ->
+        model, Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
     let upploadButtonView onLoad =
@@ -97,11 +102,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         Bulma.button.button[
                             color.isPrimary
                             if model.EditingName then
-                                prop.text "Save"
                                 if model.Input.Length > 0 then
+                                    prop.text "Save"
                                     prop.onClick (fun _ -> dispatch (ChangeName model.Input))
                                 else
                                     color.isWarning
+                                    button.isText
                                     prop.text "Name must be at least one character"
                             else
                                 prop.text "Edit"
@@ -112,6 +118,17 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 prop.text "Cancel"
                                 color.isDanger
                                 prop.onClick (fun _ -> dispatch (NameEditMode false))
+                            ]
+                        else
+                             Bulma.button.button[
+                                if model.CurrentComponent.JsonData = JNull then
+                                    color.isWarning
+                                    button.isText
+                                    prop.text "Upload data first to save a component"
+                                else
+                                    prop.text "Save component"
+                                    color.isSuccess
+                                    prop.onClick (fun _ -> dispatch (SaveComponent model.CurrentComponent))
                             ]
                     ]
                 ]
