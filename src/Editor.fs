@@ -8,23 +8,24 @@ open Fable.SimpleJson
 open DataLoading
 open FileUpload
 open System
+open FSharp.Data
 
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
-
       EditingName : bool
-      Input : string }
+      NameInput : string
+      ElementChoices : RenderingCode list }
 
 type Msg =
     | UploadData of string
     | ChangeName of string
     | SetInput of string
-    | NameEditMode of bool
+    | ChangeNameEditMode of bool
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Hole; Id = Guid.Empty  }; FileUploadError = false; EditingName = false; Input = ""}
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Hole; Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = ""; ElementChoices = List.Empty}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -37,15 +38,16 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | None ->
             {model with FileUploadError = true}, Cmd.none
     | ChangeName newName->
-        {model with CurrentComponent = {model.CurrentComponent with Name = newName}; Input = ""; EditingName = false}, Cmd.none
+        {model with CurrentComponent = {model.CurrentComponent with Name = newName}; NameInput = ""; EditingName = false}, Cmd.none
     | SetInput input->
-        {model with Input = input}, Cmd.none
-    | NameEditMode value ->
-        {model with EditingName = value; Input = ""}, Cmd.none
+        {model with NameInput = input}, Cmd.none
+    | ChangeNameEditMode value ->
+        {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent newComponent ->
         model, Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
+
     let upploadButtonView onLoad =
         Bulma.block[
             Bulma.file[
@@ -73,14 +75,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
 
 
-    let sideMenuView =
-        Bulma.block[
-            Bulma.menu [
-                Bulma.menuLabel [
-                    Html.text "Upload data to start"
-                ]
-                Bulma.menuList [ upploadButtonView (UploadData >> dispatch)]
+    let uploadMenuView =
+        Bulma.menu [
+            Bulma.menuLabel [
+                Html.text "Upload data to start"
             ]
+            Bulma.menuList [ upploadButtonView (UploadData >> dispatch)]
         ]
 
     let nameEditView =
@@ -102,22 +102,22 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         Bulma.button.button[
                             color.isPrimary
                             if model.EditingName then
-                                if model.Input.Length > 0 then
+                                if model.NameInput.Length > 0 then
                                     prop.text "Save"
-                                    prop.onClick (fun _ -> dispatch (ChangeName model.Input))
+                                    prop.onClick (fun _ -> dispatch (ChangeName model.NameInput))
                                 else
                                     color.isWarning
                                     button.isText
                                     prop.text "Name must be at least one character"
                             else
                                 prop.text "Edit"
-                                prop.onClick (fun _ -> dispatch (NameEditMode (model.EditingName |> not )))
+                                prop.onClick (fun _ -> dispatch (ChangeNameEditMode (model.EditingName |> not )))
                         ]
                         if model.EditingName then
                             Bulma.button.button[
                                 prop.text "Cancel"
                                 color.isDanger
-                                prop.onClick (fun _ -> dispatch (NameEditMode false))
+                                prop.onClick (fun _ -> dispatch (ChangeNameEditMode false))
                             ]
                         else
                              Bulma.button.button[
@@ -133,18 +133,25 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
+
+    let elementSelectionView =
+        Bulma.columns[
+            Bulma.column[
+                Html.text (SimpleJson.toString(model.CurrentComponent.JsonData))
+            ]
+
+            Bulma.column[]
+        ]
     let editorView  =
         Bulma.box[
-            nameEditView
+            if model.CurrentComponent.JsonData <> JNull then
+                nameEditView
             Bulma.box[
-                Bulma.columns[
-                    if model.CurrentComponent.JsonData = JNull then
-                        Bulma.column[
-                            sideMenuView
-                        ]
-                    else
-                        Bulma.column[ Html.text ( model.CurrentComponent.JsonData.ToString())]
-                ]
+                if model.CurrentComponent.JsonData = JNull then
+                    uploadMenuView
+                else
+
+                elementSelectionView
             ]
         ]
     editorView

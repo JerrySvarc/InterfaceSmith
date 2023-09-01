@@ -39,7 +39,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | EditComponent guid ->
             let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
             if found then
-                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; Input = ""}; CurrentPage = Editor}, Cmd.none
+                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; ElementChoices = List.empty}; CurrentPage = Editor}, Cmd.none
             else
                 model,Cmd.none
         | _  ->
@@ -49,7 +49,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         match msg with
         | SaveComponent newComponent ->
             let updatedMap = model.OverviewModel.CreatedComponents.Add(newComponent.Id, newComponent)
-            {model with OverviewModel = {model.OverviewModel with CreatedComponents = updatedMap}}, Cmd.none
+            {model with OverviewModel = {model.OverviewModel with CreatedComponents = updatedMap}; EditorModel = Editor.init(); CurrentPage = Overview}, Cmd.none
         | _ ->
             let updatedEditor, editorCmd = Editor.update msg model.EditorModel
             {model with EditorModel = updatedEditor}, Cmd.none
