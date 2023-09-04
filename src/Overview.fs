@@ -18,7 +18,7 @@ type Msg =
 
 let code = Sequence [
     HtmlElement("h1", [], Constant("TODO list"))
-    HtmlList(false, Field("tasks"), Hole) ]
+    HtmlList(false, Field("tasks"), [Hole]) ]
 
 let init() =
     {  CreatedComponents = Map.empty; FileUploadError  = false}

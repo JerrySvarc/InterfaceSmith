@@ -17,9 +17,26 @@ type RenderingCode =
     | HtmlList of numbered: bool * innerData: Reference * itemCode: RenderingCode list
     | Sequence of (RenderingCode list)
     | Hole
+    override this.ToString() =
+        match this with
+        | HtmlElement (tag, attrs, innerText) ->
+            "HtmlElement: "
+            + tag
+            + (List.map (fun (key, value) -> key + " " + value.ToString()) attrs
+               |> String.concat (", "))
+            + innerText.ToString()
+        | HtmlList (numbered, innerData, itemCode) ->
+            "HtmlList: "
+            + (List.map (fun item -> item.ToString()) itemCode
+               |> String.concat (", "))
+        | Sequence (items) ->
+            "Sequence: "
+            + (List.map (fun item -> item.ToString()) items
+               |> String.concat (", "))
+        | Hole -> " !Hole! "
 
 type Component =
-    {   Name : string
-        Id : Guid
-        JsonData : Json
-        Code : RenderingCode}
+    { Name: string
+      Id: Guid
+      JsonData: Json
+      Code: RenderingCode }

@@ -6,6 +6,7 @@ open Feliz.Bulma
 open Types
 open Fable.SimpleJson
 open DataLoading
+open DataRecognition
 open FileUpload
 open System
 open FSharp.Data
@@ -33,7 +34,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let loadedDataOption = loadJson data
         match loadedDataOption with
         | Some(data)  ->
-            let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
+            let renderingCodes = componentOptions data
+            let newComponent = {Name = "New component"; JsonData = data ; Code= renderingCodes; Id = Guid.NewGuid()}
             {model with CurrentComponent = newComponent; FileUploadError = false}, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
@@ -140,7 +142,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Html.text (SimpleJson.toString(model.CurrentComponent.JsonData))
             ]
 
-            Bulma.column[]
+            Bulma.column[
+                Html.text (model.CurrentComponent.Code.ToString())
+
+            ]
         ]
     let editorView  =
         Bulma.box[
