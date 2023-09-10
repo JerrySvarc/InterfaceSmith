@@ -26,6 +26,7 @@ type Msg =
     | ChangeNameEditMode of bool
     | SaveComponent of Component
     | EditField of Json
+    | CancelEditField
 
 let init() =
     {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";
@@ -51,6 +52,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with CurrentField = (field, fieldToCode field)}, Cmd.none
     | SaveComponent newComponent ->
         model, Cmd.none
+    | CancelEditField ->
+        {model with CurrentField = (model.CurrentComponent.JsonData, Hole)}, Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -81,6 +84,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
 
     let uploadButton = upploadButtonView (UploadData >> dispatch)
+
     let menuView (label: string) (menuItems : ReactElement)  =
         Bulma.menu [
             Bulma.menuLabel [
@@ -149,39 +153,44 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
     let elementSelectionView =
         Bulma.columns[
-                Bulma.column[
-                    column.is3
-                    prop.children[
-                        match model.CurrentField with
-                        | JNull, _ ->
-                            Html.text "No field to edit"
-                        | json,code  ->
-                            match json with
-                            | JObject object ->
-                                let sequenceElementsButtons =
-                                    Map.map (fun key item ->editButton key item) object
-                                    |> Map.toSeq
-                                    |> Seq.map snd
-                                    |> List.ofSeq
-                                menuView "Select field to edit" (sequenceElementsButtons|> Html.div)
-                            | JArray array ->
-                                let childEditButton  =
-                                    array.Head |> editButton "Array element"
-                                menuView "Select field to edit" childEditButton
-                            | _ ->
-                                Html.text "No children to edit"
-                    ]
+            Bulma.column[
+                column.is3
+                prop.children[
+                    match model.CurrentField with
+                    | JNull, _ ->
+                        Html.text "No field to edit"
+                    | json,code  ->
+                        match json with
+                        | JObject object ->
+                            let sequenceElementsButtons =
+                                Map.map (fun key item ->editButton key item) object
+                                |> Map.toSeq
+                                |> Seq.map snd
+                                |> List.ofSeq
+                            menuView "Select field to edit" (sequenceElementsButtons|> Html.div)
+                        | JArray array ->
+                            let childEditButton  =
+                                array.Head |> editButton "Array element"
+                            menuView "Select field to edit" childEditButton
+                        | _ ->
+                            Html.text "No children to edit"
                 ]
+            ]
 
-                Bulma.column[
-                    Bulma.box[
-                        Html.h1 "Selected field"
-                        Html.div[
-                            Html.text (model.CurrentField.ToString())
+            Bulma.column[
+                Bulma.box[
+                    Html.h1 "Selected field"
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Cancel"
+                            color.isPrimary
+                            prop.onClick (fun _ -> dispatch (CancelEditField))
                         ]
                     ]
                 ]
+            ]
         ]
+
 
     let editorView  =
         Bulma.box[
