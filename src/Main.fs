@@ -39,7 +39,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | EditComponent guid ->
             let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
             if found then
-                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; ElementChoices = List.empty}; CurrentPage = Editor}, Cmd.none
+                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; ElementChoices = List.empty; CurrentField = (JNull, Hole)}; CurrentPage = Editor}, Cmd.none
             else
                 model,Cmd.none
         | _  ->
@@ -93,7 +93,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let mainView =
         Bulma.block [
-            navBar
+            Bulma.box[
+                navBar
+            ]
             match model.CurrentPage with
             | Overview ->
                    Overview.view model.OverviewModel  (OverviewMsg >> dispatch)

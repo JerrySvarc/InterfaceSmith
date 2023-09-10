@@ -16,7 +16,8 @@ type Model =
       FileUploadError : bool
       EditingName : bool
       NameInput : string
-      ElementChoices : RenderingCode list }
+      ElementChoices : RenderingCode list
+      CurrentField : Json * RenderingCode}
 
 type Msg =
     | UploadData of string
@@ -24,9 +25,11 @@ type Msg =
     | SetInput of string
     | ChangeNameEditMode of bool
     | SaveComponent of Component
+    | EditField of Json
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Hole; Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = ""; ElementChoices = List.Empty}
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";
+     ElementChoices = List.Empty; CurrentField = (JNull, Hole)}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -34,9 +37,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let loadedDataOption = loadJson data
         match loadedDataOption with
         | Some(data)  ->
-            let renderingCodes = componentOptions data
-            let newComponent = {Name = "New component"; JsonData = data ; Code= renderingCodes; Id = Guid.NewGuid()}
-            {model with CurrentComponent = newComponent; FileUploadError = false}, Cmd.none
+            let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
+            {model with CurrentComponent = newComponent; FileUploadError = false; CurrentField = (newComponent.JsonData, Hole)}, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
     | ChangeName newName->
@@ -45,6 +47,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with NameInput = input}, Cmd.none
     | ChangeNameEditMode value ->
         {model with EditingName = value; NameInput = ""}, Cmd.none
+    | EditField field ->
+        {model with CurrentField = (field, fieldToCode field)}, Cmd.none
     | SaveComponent newComponent ->
         model, Cmd.none
 
@@ -76,13 +80,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
         ]
 
-
-    let uploadMenuView =
+    let uploadButton = upploadButtonView (UploadData >> dispatch)
+    let menuView (label: string) (menuItems : ReactElement)  =
         Bulma.menu [
             Bulma.menuLabel [
-                Html.text "Upload data to start"
+                Html.text label
             ]
-            Bulma.menuList [ upploadButtonView (UploadData >> dispatch)]
+            Bulma.menuList [menuItems]
         ]
 
     let nameEditView =
@@ -97,7 +101,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 else
                     Bulma.block[
                         let nameText = "Component name: " + model.CurrentComponent.Name
-                        Html.text (nameText)
+                        Html.h1 (nameText)
                     ]
                 Bulma.block[
                     Bulma.buttons[
@@ -112,7 +116,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     button.isText
                                     prop.text "Name must be at least one character"
                             else
-                                prop.text "Edit"
+                                prop.text "Edit name"
                                 prop.onClick (fun _ -> dispatch (ChangeNameEditMode (model.EditingName |> not )))
                         ]
                         if model.EditingName then
@@ -136,27 +140,64 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-    let elementSelectionView =
-        Bulma.columns[
-            Bulma.column[
-                Html.text (SimpleJson.toString(model.CurrentComponent.JsonData))
-            ]
-
-            Bulma.column[
-                Html.text (model.CurrentComponent.Code.ToString())
-
+    let editButton (name:string) (data : Json) =
+        Bulma.block[
+            Bulma.button.a [
+                prop.text name
+                prop.onClick (fun _ -> dispatch (EditField data))
             ]
         ]
+    let elementSelectionView =
+        Bulma.columns[
+                Bulma.column[
+                    column.is3
+                    prop.children[
+                        match model.CurrentField with
+                        | JNull, _ ->
+                            Html.text "No field to edit"
+                        | json,code  ->
+                            match json with
+                            | JObject object ->
+                                let sequenceElementsButtons =
+                                    Map.map (fun key item ->editButton key item) object
+                                    |> Map.toSeq
+                                    |> Seq.map snd
+                                    |> List.ofSeq
+                                menuView "Select field to edit" (sequenceElementsButtons|> Html.div)
+                            | JArray array ->
+                                let childEditButton  =
+                                    array.Head |> editButton "Array element"
+                                menuView "Select field to edit" childEditButton
+                            | _ ->
+                                Html.text "No children to edit"
+                    ]
+                ]
+
+                Bulma.column[
+                    Bulma.box[
+                        Html.h1 "Selected field"
+                        Html.div[
+                            Html.text (model.CurrentField.ToString())
+                        ]
+                    ]
+                ]
+        ]
+
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.JsonData <> JNull then
                 nameEditView
             Bulma.box[
                 if model.CurrentComponent.JsonData = JNull then
-                    uploadMenuView
+                    //center
+                    prop.className "is-centered"
+                    prop.children [
+                        menuView "Upload data" uploadButton
+                    ]
                 else
-
-                elementSelectionView
+                    prop.children[
+                        elementSelectionView
+                    ]
             ]
         ]
     editorView

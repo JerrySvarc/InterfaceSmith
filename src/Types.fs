@@ -14,7 +14,7 @@ type Value =
 
 type RenderingCode =
     | HtmlElement of tag: string * attrs: (string * Value) list * innerText: Value
-    | HtmlList of numbered: bool * innerData: Reference * itemCode: RenderingCode list
+    | HtmlList of numbered: bool * innerData: Reference * itemCode: RenderingCode
     | Sequence of (RenderingCode list)
     | Hole
     override this.ToString() =
@@ -26,9 +26,7 @@ type RenderingCode =
                |> String.concat (", "))
             + innerText.ToString()
         | HtmlList (numbered, innerData, itemCode) ->
-            "HtmlList: "
-            + (List.map (fun item -> item.ToString()) itemCode
-               |> String.concat (", "))
+            "HtmlList: " + innerData.ToString() + " " + itemCode.ToString()
         | Sequence (items) ->
             "Sequence: "
             + (List.map (fun item -> item.ToString()) items
