@@ -35,7 +35,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let loadedDataOption = loadJson data
         match loadedDataOption with
         | Some(data)  ->
-            let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
+            let newComponent = {Name = "New component"; JsonData = data ; Code= DataRecognition.recognizeJson data; Id = Guid.NewGuid()}
             {model with CurrentComponent = newComponent; FileUploadError = false; }, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
@@ -54,6 +54,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         Bulma.block[
             Bulma.file[
                 file.isNormal
+                prop.classes ["is-centered"]
                 prop.children [
                     Bulma.fileLabel.label [
                         Bulma.fileInput [
@@ -73,18 +74,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Html.text "The selected file could not be used for creation."
             else
                 Html.text ""
-
         ]
 
     let uploadButton = upploadButtonView (UploadData >> dispatch)
-
-    let menuView (label: string) (menuItems : ReactElement)  =
-        Bulma.menu [
-            Bulma.menuLabel [
-                Html.text label
-            ]
-            Bulma.menuList [menuItems]
-        ]
 
     let nameEditView =
         Bulma.box[
@@ -137,23 +129,19 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-
-
+    let codeMenu =
+        Bulma.block[]
+    let codeEditor =
+        Html.div[]
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.JsonData <> JNull then
                 nameEditView
             Bulma.box[
                 if model.CurrentComponent.JsonData = JNull then
-                    //center
-                    prop.className "is-centered"
-                    prop.children [
-                        menuView "Upload data" uploadButton
-                    ]
+                    uploadButton
                 else
-                    prop.children[
-
-                    ]
+                codeEditor
             ]
         ]
     editorView
