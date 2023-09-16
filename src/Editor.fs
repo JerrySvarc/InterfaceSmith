@@ -16,8 +16,7 @@ type Model =
       FileUploadError : bool
       EditingName : bool
       NameInput : string
-      ElementChoices : RenderingCode list
-      CurrentField : Json * RenderingCode}
+    }
 
 type Msg =
     | UploadData of string
@@ -25,12 +24,10 @@ type Msg =
     | SetInput of string
     | ChangeNameEditMode of bool
     | SaveComponent of Component
-    | EditField of Json
-    | CancelEditField
 
 let init() =
     {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";
-     ElementChoices = List.Empty; CurrentField = (JNull, Hole)}
+    }
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -39,7 +36,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         match loadedDataOption with
         | Some(data)  ->
             let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
-            {model with CurrentComponent = newComponent; FileUploadError = false; CurrentField = (newComponent.JsonData, Hole)}, Cmd.none
+            {model with CurrentComponent = newComponent; FileUploadError = false; }, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
     | ChangeName newName->
@@ -48,12 +45,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with NameInput = input}, Cmd.none
     | ChangeNameEditMode value ->
         {model with EditingName = value; NameInput = ""}, Cmd.none
-    | EditField field ->
-        {model with CurrentField = (field, fieldToCode field)}, Cmd.none
     | SaveComponent newComponent ->
         model, Cmd.none
-    | CancelEditField ->
-        {model with CurrentField = (model.CurrentComponent.JsonData, Hole)}, Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -144,52 +137,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-    let editButton (name:string) (data : Json) =
-        Bulma.block[
-            Bulma.button.a [
-                prop.text name
-                prop.onClick (fun _ -> dispatch (EditField data))
-            ]
-        ]
-    let elementSelectionView =
-        Bulma.columns[
-            Bulma.column[
-                column.is3
-                prop.children[
-                    match model.CurrentField with
-                    | JNull, _ ->
-                        Html.text "No field to edit"
-                    | json,code  ->
-                        match json with
-                        | JObject object ->
-                            let sequenceElementsButtons =
-                                Map.map (fun key item ->editButton key item) object
-                                |> Map.toSeq
-                                |> Seq.map snd
-                                |> List.ofSeq
-                            menuView "Select field to edit" (sequenceElementsButtons|> Html.div)
-                        | JArray array ->
-                            let childEditButton  =
-                                array.Head |> editButton "Array element"
-                            menuView "Select field to edit" childEditButton
-                        | _ ->
-                            Html.text "No children to edit"
-                ]
-            ]
-
-            Bulma.column[
-                Bulma.box[
-                    Html.h1 "Selected field"
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Cancel"
-                            color.isPrimary
-                            prop.onClick (fun _ -> dispatch (CancelEditField))
-                        ]
-                    ]
-                ]
-            ]
-        ]
 
 
     let editorView  =
@@ -205,7 +152,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 else
                     prop.children[
-                        elementSelectionView
+
                     ]
             ]
         ]
