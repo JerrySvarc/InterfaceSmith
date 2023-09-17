@@ -9,7 +9,7 @@ open DataLoading
 open DataRecognition
 open FileUpload
 open System
-open FSharp.Data
+open CodeGeneration
 
 type Model =
     { CurrentComponent : Component
@@ -26,8 +26,7 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";
-    }
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -128,11 +127,38 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
+    let collapsableElement (menu : Fable.React.ReactElement )=
+        Html.div[
+            Html.details[
+                menu
+            ]
+        ]
 
-    let codeMenu =
-        Bulma.block[]
+    let codeMenu (code : RenderingCode) =
+        let rec traverse (code : RenderingCode) =
+            match code with
+            | HtmlList (numbered, data,elementsCode)  ->
+               Bulma.block[
+                Html.text "list"
+                collapsableElement (traverse (elementsCode))
+               ]
+            | HtmlElement(tag, attrs, innerText) -> collapsableElement (Bulma.block[Html.text "element"])
+            | Sequence seq->
+                Bulma.block [
+                    Html.text "sequence"
+                    collapsableElement ((List.map(fun item -> traverse item) seq) |> Bulma.block)]
+            | Hole -> collapsableElement (Bulma.block[Html.text "dira"])
+        traverse code
+
     let codeEditor =
-        Html.div[]
+        Html.div[ codeMenu model.CurrentComponent.Code]
+
+    let codePreview  (code : RenderingCode)=
+        Bulma.box[
+        Html.html[
+            prop.innerHtml (toHtml model.CurrentComponent.Code )
+        ]]
+
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.JsonData <> JNull then
@@ -141,7 +167,15 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.JsonData = JNull then
                     uploadButton
                 else
-                codeEditor
+                    Bulma.columns[
+                        Bulma.column[
+                            codeEditor
+                        ]
+                        Bulma.column[
+                            codePreview model.CurrentComponent.Code
+                        ]
+                    ]
+
             ]
         ]
     editorView

@@ -10,6 +10,7 @@
     <Compile Include="Types.fs" />
     <Compile Include="DataLoading.fs" />
     <Compile Include="DataRecognition.fs" />
+    <Compile Include="CodeGeneration.fs" />
     <Compile Include="Editor.fs" />
     <None Include="paket.references" />
     <Compile Include="Overview.fs" />

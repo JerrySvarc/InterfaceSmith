@@ -15,7 +15,10 @@ open System
     | HtmlList (numbered, innerData, itemCode) ->
         let innerDataString = innerData.ToString()
         let itemCodeString = toHtml itemCode
-        "<ul>" + innerDataString + itemCodeString + "</ul>\n"
+        if numbered then
+            "<ol>" + innerDataString + itemCodeString + "</ol>\n"
+        else
+            "<ul>" + innerDataString + itemCodeString + "</ul>\n"
     | Sequence (items) ->
         items
         |> List.map (fun item -> toHtml item)
