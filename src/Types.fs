@@ -3,18 +3,14 @@ module Types
 open Fable.SimpleJson
 open System
 
-type Reference =
-    | Field of string
-    | Data of Json
-
 type Value =
-    | Reference of Reference
+    | Data of Json
     | Empty
     | Constant of string
 
 type RenderingCode =
     | HtmlElement of tag: string * attrs: (string * Value) list * innerText: Value
-    | HtmlList of numbered: bool * innerData: Reference * itemCode: RenderingCode
+    | HtmlList of numbered: bool * innerData: Value * itemCode: RenderingCode
     | Sequence of (RenderingCode list)
     | Hole
     override this.ToString() =

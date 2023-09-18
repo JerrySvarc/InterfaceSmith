@@ -17,5 +17,5 @@ let recognizeJson (json: Json) : RenderingCode =
             let codes = Array.Parallel.map(fun (key, value) -> parse value) jsonArray
             Sequence(codes |> Array.toList)
         | JNull -> Hole
-        | _ -> HtmlElement("", [], Reference(Data(json)))
+        | _ -> HtmlElement("", [], Data(json))
     parse json
