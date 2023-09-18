@@ -1,26 +1,23 @@
 module CodeGeneration
 open Types
 open Fable.SimpleJson
-open System
 
-//creates a string of HTML code from a RenderingCode
- let rec toHtml (code: RenderingCode) =
+let rec generateCode (code: RenderingCode) =
     match code with
-    | HtmlElement (tag, attrs, innerText) ->
-        let attrString =
-            attrs
-            |> List.map (fun (key, value) -> key + "=\"" + value.ToString() + "\"")
-            |> String.concat " "
-        "<" + tag + " " + attrString + ">" + innerText.ToString() + "</" + tag + ">\n"
-    | HtmlList (numbered, innerData, itemCode) ->
-        let innerDataString = innerData.ToString()
-        let itemCodeString = toHtml itemCode
-        if numbered then
-            "<ol>" + innerDataString + itemCodeString + "</ol>\n"
-        else
-            "<ul>" + innerDataString + itemCodeString + "</ul>\n"
-    | Sequence (items) ->
-        items
-        |> List.map (fun item -> toHtml item)
-        |> String.concat "\n"
     | Hole -> ""
+    | HtmlElement(tag, attrs, data) ->
+        let attrs = attrs |> List.map (fun (key, value) -> " " + key + "=\"" + value + "\"") |> String.concat ""
+        match data with
+        | Constant text ->
+            "<" + tag + attrs+ "> " + text + "</" + tag + ">"
+        | Empty ->
+            "<" + tag + attrs+ "/>"
+        | Data json ->
+            "<" + tag + attrs+ "> " + json.ToString() + "</" + tag + ">"
+    | HtmlList (numbered, codes) ->
+        let tag = if numbered then "ol" else "ul"
+        let codes =
+            List.map (fun item -> "<li>" + generateCode item + "</li>") (codes) |> String.concat "\n"
+        "<" + tag + ">\n" + codes + "</" + tag + ">"
+    | Sequence (items) ->
+        List.map (fun item -> generateCode item) (items) |> String.concat "\n"
