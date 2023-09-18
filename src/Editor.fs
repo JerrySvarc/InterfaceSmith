@@ -134,29 +134,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
 
-    let codeMenu (code : RenderingCode) =
-        let rec traverse (code : RenderingCode) =
-            match code with
-            | HtmlList (numbered, data,elementsCode)  ->
-               Bulma.block[
-                Html.text "list"
-                collapsableElement (traverse (elementsCode))
-               ]
-            | HtmlElement(tag, attrs, innerText) -> collapsableElement (Bulma.block[Html.text "element"])
-            | Sequence seq->
-                Bulma.block [
-                    Html.text "sequence"
-                    collapsableElement ((List.map(fun item -> traverse item) seq) |> Bulma.block)]
-            | Hole -> collapsableElement (Bulma.block[Html.text "dira"])
-        traverse code
 
-    let codeEditor =
-        Html.div[ codeMenu model.CurrentComponent.Code]
+
 
     let codePreview  (code : RenderingCode)=
         Bulma.box[
         Html.html[
-            prop.innerHtml (toHtml model.CurrentComponent.Code )
+            prop.innerHtml (generateCode model.CurrentComponent.Code )
         ]]
 
     let editorView  =
@@ -169,13 +153,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 else
                     Bulma.columns[
                         Bulma.column[
-                            codeEditor
                         ]
                         Bulma.column[
                             codePreview model.CurrentComponent.Code
                         ]
-                    ]
 
+                    ]
             ]
         ]
     editorView

@@ -13,11 +13,19 @@ let rec generateCode (code: RenderingCode) =
         | Empty ->
             "<" + tag + attrs+ "/>"
         | Data json ->
-            "<" + tag + attrs+ "> " + json.ToString() + "</" + tag + ">"
+            "<" + tag + attrs+ "> " + SimpleJson.toString json + "</" + tag + ">"
     | HtmlList (numbered, codes) ->
         let tag = if numbered then "ol" else "ul"
-        let codes =
-            List.map (fun item -> "<li>" + generateCode item + "</li>") (codes) |> String.concat "\n"
-        "<" + tag + ">\n" + codes + "</" + tag + ">"
+        let code =
+            codes
+            |> List.map (fun item ->
+            match item with
+            | Sequence (subItems) ->
+                let subCodes = List.map (fun subItem -> "<li>" + generateCode subItem + "</li>") subItems |> String.concat "\n"
+                "<div>\n" + subCodes + "</div>"
+            | _ ->  "<li>" + generateCode item + "</li>"
+            )
+            |> String.concat "\n"
+        "<" + tag + ">\n" + code + "</" + tag + ">"
     | Sequence (items) ->
-        List.map (fun item -> generateCode item) (items) |> String.concat "\n"
+         generateCode (HtmlElement("div",List.Empty , Constant(List.map (fun item -> generateCode item) (items) |> String.concat "\n")))

@@ -9,8 +9,8 @@ type Value =
     | Constant of string
 
 type RenderingCode =
-    | HtmlElement of tag: string * attrs: (string * Value) list * innerText: Value
-    | HtmlList of numbered: bool * innerData: Value * itemCode: RenderingCode
+    | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
+    | HtmlList of numbered: bool *  codes : RenderingCode list
     | Sequence of (RenderingCode list)
     | Hole
     override this.ToString() =
@@ -21,8 +21,8 @@ type RenderingCode =
             + (List.map (fun (key, value) -> key + " " + value.ToString()) attrs
                |> String.concat (", "))
             + innerText.ToString()
-        | HtmlList (numbered, innerData, itemCode) ->
-            "HtmlList: " + innerData.ToString() + " " + itemCode.ToString()
+        | HtmlList (numbered, itemCode) ->
+            "HtmlList: "
         | Sequence (items) ->
             "Sequence: "
             + (List.map (fun item -> item.ToString()) items
