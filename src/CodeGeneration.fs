@@ -6,12 +6,12 @@ open Fable.SimpleJson
 let rec combineDataAndCode (inputData : Json) (inputCode : RenderingCode) : RenderingCode =
     match inputData,inputCode with
     | JObject obj, Sequence(objects) ->
-        let newObjects,newCodes = List.map (fun (key, value) object -> (key, combineDataAndCode value object)) (obj |> Map.toList),objects
+        let newCodes = List.map2 (fun (key, value) object -> ( combineDataAndCode value object)) (obj |> Map.toList) objects
         Sequence (newCodes )
     | JArray array, HtmlList(listType,numbered,data, code) ->
         HtmlList(listType,numbered, inputData, code)
     | JNull, _ -> Hole
-    | _ , HtmlElement(tag, attrs, data) -> HtmlElement(tag, attrs, data)
+    | _ , HtmlElement(tag, attrs, data) -> HtmlElement(tag, attrs, Data inputData)
     | _, _ -> Hole
 
 
@@ -55,7 +55,7 @@ let rec generateCode (code: RenderingCode) =
                 |> List.map (fun item ->
                 match item,code with
                 | JObject obj, Sequence(objects) ->
-                    let newObjects,newCodes = List.map (fun (key, value) object -> (key, combineDataAndCode value object)) (obj |> Map.toList),objects
+                    let newCodes = List.map2 (fun (key, value) object -> ( combineDataAndCode value object)) (obj |> Map.toList) objects
                     let html = List.map (fun item -> "<" + itemTag + ">" + generateCode item + "</" + itemTag + ">") newCodes |> String.concat "\n"
                     "<" + optionalTableTag + ">" + html + "</" + optionalTableTag + ">"
                 | JArray array, HtmlList(listType,numbered,data, code) ->

@@ -150,7 +150,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let codePreview  (code : RenderingCode) =
         Bulma.box[
-            prop.innerHtml (generateCode code )
+            Html.div[
+            prop.dangerouslySetInnerHTML (generateCode code )]
         ]
 
     let editorView  =
