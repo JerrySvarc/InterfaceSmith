@@ -16,6 +16,7 @@ type Model =
       FileUploadError : bool
       EditingName : bool
       NameInput : string
+      RenderingCodes : RenderingCode list
     }
 
 type Msg =
@@ -26,7 +27,7 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";}
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -34,8 +35,13 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let loadedDataOption = loadJson data
         match loadedDataOption with
         | Some(data)  ->
-            let newComponent = {Name = "New component"; JsonData = data ; Code= DataRecognition.recognizeJson data; Id = Guid.NewGuid()}
-            {model with CurrentComponent = newComponent; FileUploadError = false; }, Cmd.none
+            match data with
+            | JObject obj ->
+                let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
+                let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
+                {model with CurrentComponent = newComponent; FileUploadError = false; RenderingCodes = codes }, Cmd.none
+            | _ ->
+                {model with FileUploadError = true}, Cmd.none
         | None ->
             {model with FileUploadError = true}, Cmd.none
     | ChangeName newName->
@@ -46,6 +52,19 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent newComponent ->
         model, Cmd.none
+
+
+let changeTag (code : RenderingCode)(tag: string)  =
+    match code with
+    | HtmlElement(_, attrs, data) ->
+        HtmlElement(tag, attrs, data)
+    | _ -> code
+
+let addAttr (code : RenderingCode)(attr: (string * string) list)  =
+    match code with
+    | HtmlElement(tag, attrs, data) ->
+        HtmlElement(tag, attrs @ attr, data)
+    | _ -> code
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -127,21 +146,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
-    let collapsableElement (menu : Fable.React.ReactElement )=
-        Html.div[
-            Html.details[
-                menu
-            ]
-        ]
 
 
-
-
-    let codePreview  (code : RenderingCode)=
+    let codePreview  (code : RenderingCode) =
         Bulma.box[
-        Html.html[
-            prop.innerHtml (generateCode model.CurrentComponent.Code )
-        ]]
+            prop.innerHtml (generateCode code )
+        ]
 
     let editorView  =
         Bulma.box[
@@ -153,9 +163,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 else
                     Bulma.columns[
                         Bulma.column[
+                            //List.map (fun code -> codeMenu code) model.RenderingCodes |> Html.div
                         ]
                         Bulma.column[
-                            codePreview model.CurrentComponent.Code
+
+                            List.map (fun item -> codePreview item) model.RenderingCodes |> Html.div
                         ]
 
                     ]

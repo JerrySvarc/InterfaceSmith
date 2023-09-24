@@ -10,11 +10,11 @@ let recognizeJson (json: Json) : RenderingCode =
     let rec parse (json : Json) =
         match json with
         | JArray array ->
-            let itemCode =  Array.Parallel.map(fun value -> parse value) (array |> List.toArray)
-            HtmlList(false, itemCode |> Array.toList)
+            let itemCode =  array.Head |> parse
+            HtmlList(List, false, json, itemCode)
         | JObject obj ->
             let jsonArray = obj |> Map.toArray
-            let codes = Array.Parallel.map(fun (key, value) -> parse value) jsonArray
+            let codes = Array.map(fun (key, value) -> parse value) jsonArray
             Sequence(codes |> Array.toList)
         | JNull -> Hole
         | _ -> HtmlElement("", [], Data(json))

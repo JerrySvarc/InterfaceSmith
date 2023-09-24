@@ -7,10 +7,13 @@ type Value =
     | Data of Json
     | Empty
     | Constant of string
+type ListType =
+    | List
+    | Table
 
 type RenderingCode =
     | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
-    | HtmlList of numbered: bool *  codes : RenderingCode list
+    | HtmlList of listType: ListType * numbered: bool * data : Json* code: RenderingCode
     | Sequence of (RenderingCode list)
     | Hole
     override this.ToString() =
@@ -21,7 +24,7 @@ type RenderingCode =
             + (List.map (fun (key, value) -> key + " " + value.ToString()) attrs
                |> String.concat (", "))
             + innerText.ToString()
-        | HtmlList (numbered, itemCode) ->
+        | HtmlList (listType ,numbered, data,code) ->
             "HtmlList: "
         | Sequence (items) ->
             "Sequence: "

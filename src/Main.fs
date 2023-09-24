@@ -39,7 +39,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | EditComponent guid ->
             let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
             if found then
-                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""}; CurrentPage = Editor}, Cmd.none
+                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; RenderingCodes = []}; CurrentPage = Editor}, Cmd.none
             else
                 model,Cmd.none
         | _  ->
