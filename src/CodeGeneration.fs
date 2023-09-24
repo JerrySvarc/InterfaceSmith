@@ -12,7 +12,6 @@ let rec combineDataAndCode (inputData : Json) (inputCode : RenderingCode) : Rend
         HtmlList(listType,numbered, inputData, code)
     | JNull, _ -> Hole
     | _ , HtmlElement(tag, attrs, data) -> HtmlElement(tag, attrs, data)
-    | _, Hole -> Hole
     | _, _ -> Hole
 
 
@@ -46,6 +45,10 @@ let rec generateCode (code: RenderingCode) =
             let itemTag =
                 match listType with
                 | List -> "li"
+                | Table -> "td"
+            let optionalTableTag =
+                match listType with
+                | List -> ""
                 | Table -> "tr"
             let html : string =
                 array
@@ -54,10 +57,11 @@ let rec generateCode (code: RenderingCode) =
                 | JObject obj, Sequence(objects) ->
                     let newObjects,newCodes = List.map (fun (key, value) object -> (key, combineDataAndCode value object)) (obj |> Map.toList),objects
                     let html = List.map (fun item -> "<" + itemTag + ">" + generateCode item + "</" + itemTag + ">") newCodes |> String.concat "\n"
-                    html
+                    "<" + optionalTableTag + ">" + html + "</" + optionalTableTag + ">"
                 | JArray array, HtmlList(listType,numbered,data, code) ->
                     let codes = List.map (fun item -> combineDataAndCode item code) array
-                    List.map (fun item -> "<" + itemTag + ">" + generateCode item + "</" + itemTag + ">") codes |> String.concat "\n"
+                    let html = List.map (fun item -> "<" + itemTag + ">" + generateCode item + "</" + itemTag + ">") codes |> String.concat "\n"
+                    "<" + optionalTableTag + ">" + html + "</" + optionalTableTag + ">"
                 | JNull, _ -> ""
                 | _ , _ ->
                     generateCode (combineDataAndCode item code)

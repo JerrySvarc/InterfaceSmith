@@ -11,7 +11,7 @@ let recognizeJson (json: Json) : RenderingCode =
         match json with
         | JArray array ->
             let itemCode =  array.Head |> parse
-            HtmlList(List, false, json, itemCode)
+            HtmlList(Table, false, json, itemCode)
         | JObject obj ->
             let jsonArray = obj |> Map.toArray
             let codes = Array.map(fun (key, value) -> parse value) jsonArray
