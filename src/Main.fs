@@ -19,17 +19,13 @@ type Model =
         OverviewModel : Overview.Model
         EditorModel : Editor.Model }
 
-
 type Msg =
     | ChangePage of Page
     | OverviewMsg of Overview.Msg
     | EditorMsg of Editor.Msg
 
-
-
 let init () : Model * Cmd<Msg> =
     {CurrentPage = Overview; OverviewModel = Overview.init(); EditorModel = Editor.init() }, Cmd.none
-
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -53,7 +49,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | _ ->
             let updatedEditor, editorCmd = Editor.update msg model.EditorModel
             {model with EditorModel = updatedEditor}, Cmd.none
-
 
 open FileUpload
 open Feliz

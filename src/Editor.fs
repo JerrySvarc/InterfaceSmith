@@ -10,7 +10,7 @@ open DataRecognition
 open FileUpload
 open System
 open CodeGeneration
-
+open Browser
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -147,12 +147,41 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
+    let listMenu (code : RenderingCode) =
+        match code with
+        | HtmlList(listType, numbered, data, code) ->
+            Bulma.box[]
+        | _ -> Html.div[Html.text ""]
+
+    let elementMenu (code : RenderingCode) =
+        match code with
+        | HtmlElement (tag, attrs, data) ->
+            Bulma.box[]
+        | _ -> Html.div[]
+
+    let rec codeMenu  (code : RenderingCode) : Fable.React.ReactElement =
+        match code with
+        | Sequence seq ->
+            Bulma.box[
+                Html.h3 [
+                    prop.text "Sequence"
+                ]
+                Bulma.block[
+                    List.map (fun item -> Bulma.menuItem.a[codeMenu item]) seq |> Html.div
+                ]
+            ]
+        | HtmlElement(tag, attrs, innerText) -> elementMenu code
+        | HtmlList(listType, numbered, data, code) -> listMenu code
+        | Hole -> Html.div[]
 
     let codePreview  (code : RenderingCode) =
-        Bulma.box[
-            Html.div[
-            prop.dangerouslySetInnerHTML (generateCode code )]
+        let htmlString = code |> generateCode
+        let script = "var newWindow = window.open(); newWindow.document.body.innerHTML = `" + htmlString + "`;"
+        Bulma.button.a [
+            prop.onClick (fun _ -> Browser.Dom.window.setTimeout(script, 100) |> ignore )
+            prop.text "Preview"
         ]
+
 
     let editorView  =
         Bulma.box[
@@ -164,7 +193,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 else
                     Bulma.columns[
                         Bulma.column[
-                            //List.map (fun code -> codeMenu code) model.RenderingCodes |> Html.div
+                            List.map (fun code -> codeMenu code) model.RenderingCodes |> Html.div
                         ]
                         Bulma.column[
 
