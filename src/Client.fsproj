@@ -5,11 +5,20 @@
     <DefineConstants>FABLE_COMPILER</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="FileUpload.fs" />
     <None Include="index.html" />
-    <None Include="paket.references" />
     <Compile Include="Types.fs" />
-    <Compile Include="Index.fs" />
+    <Compile Include="DataLoading.fs" />
+    <Compile Include="DataRecognition.fs" />
+    <Compile Include="CodeGeneration.fs" />
+    <Compile Include="Editor.fs" />
+    <None Include="paket.references" />
+    <Compile Include="Overview.fs" />
+    <Compile Include="Main.fs" />
     <Compile Include="App.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.JsonProvider" Version="1.1.1" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>
