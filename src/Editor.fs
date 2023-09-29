@@ -27,7 +27,8 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  }; FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  };
+        FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -51,7 +52,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | ChangeNameEditMode value ->
         {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent newComponent ->
-        model, Cmd.none
+        {model with CurrentComponent = {model.CurrentComponent with  Code = Sequence(model.RenderingCodes)}}, Cmd.none
 
 
 let changeTag (code : RenderingCode)(tag: string)  =
@@ -151,7 +152,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | HtmlList(listType, numbered, data, code) ->
             Bulma.box[]
-        | _ -> Html.div[Html.text ""]
+        | _ -> Html.div[]
 
     let elementMenu (code : RenderingCode) =
         match code with
@@ -177,11 +178,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let codePreview  (code : RenderingCode) =
         let htmlString = code |> generateCode
         let script = "var newWindow = window.open(); newWindow.document.body.innerHTML = `" + htmlString + "`;"
-        Bulma.button.a [
-            prop.onClick (fun _ -> Browser.Dom.window.setTimeout(script, 100) |> ignore )
-            prop.text "Preview"
+        Bulma.block[
+            Bulma.button.a [
+                prop.onClick (fun _ -> Browser.Dom.window.setTimeout(script, 100) |> ignore )
+                prop.text "Preview"
+            ]
         ]
-
 
     let editorView  =
         Bulma.box[
@@ -191,16 +193,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.JsonData = JNull then
                     uploadButton
                 else
-                    Bulma.columns[
-                        Bulma.column[
-                            List.map (fun code -> codeMenu code) model.RenderingCodes |> Html.div
+                    List.map (fun code ->
+                        Bulma.block[
+                            codeMenu code
+                            codePreview code
                         ]
-                        Bulma.column[
-
-                            List.map (fun item -> codePreview item) model.RenderingCodes |> Html.div
-                        ]
-
-                    ]
+                        ) model.RenderingCodes
+                        |> Html.div
             ]
         ]
     editorView

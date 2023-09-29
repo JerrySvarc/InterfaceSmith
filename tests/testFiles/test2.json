@@ -1,0 +1,24 @@
+{
+    "data" : {
+        "name": "ahoj",
+        "type": "karele",
+        "value": "10kc",
+        "tasks": [
+            {
+            "id": 1,
+            "task": "Complete project proposal",
+            "completed": false
+            },
+            {
+            "id": 2,
+            "task": "Prepare presentation slides",
+            "completed": true
+            },
+            {
+            "id": 3,
+            "task": "Send meeting agenda to team",
+            "completed": false
+            }
+        ]
+    }
+}
