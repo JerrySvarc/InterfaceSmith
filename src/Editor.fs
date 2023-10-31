@@ -164,12 +164,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | Sequence seq ->
             Bulma.box[
-                Html.h3 [
-                    prop.text "Sequence"
-                ]
-                Bulma.block[
-                    List.map (fun item -> Bulma.menuItem.a[codeMenu item]) seq |> Html.div
-                ]
+
             ]
         | HtmlElement(tag, attrs, innerText) -> elementMenu code
         | HtmlList(listType, numbered, data, code) -> listMenu code
@@ -184,11 +179,15 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 prop.text "Preview"
             ]
         ]
-
+    let fullPreview  =
+        Bulma.block[
+            codePreview (Sequence(model.RenderingCodes))
+        ]
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.JsonData <> JNull then
                 nameEditView
+                fullPreview
             Bulma.box[
                 if model.CurrentComponent.JsonData = JNull then
                     uploadButton
