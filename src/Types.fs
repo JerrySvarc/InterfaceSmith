@@ -35,5 +35,5 @@ type RenderingCode =
 type Component =
     { Name: string
       Id: Guid
-      JsonData: Json
+
       Code: RenderingCode }

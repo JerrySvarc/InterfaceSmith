@@ -35,7 +35,15 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | EditComponent guid ->
             let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
             if found then
-                {model with EditorModel = { CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; RenderingCodes = []}; CurrentPage = Editor}, Cmd.none
+                match chosenComponent.Code with
+                | Sequence codes ->
+                    let updatedEditor = {model.EditorModel with CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""; RenderingCodes = codes}
+                    {model with EditorModel = updatedEditor; CurrentPage = Editor}, Cmd.none
+                | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
+                | HtmlList(listType, numbered, data, code) -> failwith "Not Implemented"
+                | Hole(_) -> failwith "HELOO"
+
+
             else
                 model,Cmd.none
         | _  ->
@@ -43,7 +51,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             {model with OverviewModel = updatedOverview}, Cmd.none
     | EditorMsg msg ->
         match msg with
-        | SaveComponent newComponent ->
+        | SaveComponent _ ->
+            let newComponent = {model.EditorModel.CurrentComponent with Code = Sequence(model.EditorModel.RenderingCodes)}
             let updatedMap = model.OverviewModel.CreatedComponents.Add(newComponent.Id, newComponent)
             {model with OverviewModel = {model.OverviewModel with CreatedComponents = updatedMap}; EditorModel = Editor.init(); CurrentPage = Overview}, Cmd.none
         | _ ->

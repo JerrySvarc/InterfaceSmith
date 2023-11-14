@@ -29,7 +29,7 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code =  Hole JNull; Id = Guid.Empty};
+    {CurrentComponent = {Name = "New component"; Code = Hole JNull; Id = Guid.Empty};
         FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -41,7 +41,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match data with
             | JObject obj ->
                 let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; JsonData = data ; Code= Sequence codes; Id = Guid.NewGuid()}
+                let newComponent = {Name = "New component"; Code = Hole data; Id = Guid.NewGuid()}
                 {model with CurrentComponent = newComponent; FileUploadError = false; RenderingCodes = codes }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -53,11 +53,41 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with NameInput = input}, Cmd.none
     | ChangeNameEditMode value ->
         {model with EditingName = value; NameInput = ""}, Cmd.none
-    | SaveComponent newComponent ->
-        {model with CurrentComponent = {model.CurrentComponent with  Code = Sequence(model.RenderingCodes)}}, Cmd.none
+    | SaveComponent _ ->
+        model, Cmd.none
 
 
+type PathItem =
+    | InList
+    | InSeq of int
 
+let rec replace currentCode path replacementCode =
+    match path with
+    | [] -> replacementCode
+    | InList::path ->
+        match currentCode with
+        | HtmlList(lt, n, d, c) ->
+            HtmlList(lt, n, d, replace c path replacementCode)
+        | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
+        | Sequence(_) -> failwith "Not Implemented"
+        | Hole(_) -> failwith "Not Implemented"
+    | InSeq(i)::path ->
+        match currentCode with
+        | HtmlList(lt, n, d, c) -> failwith "Not Implemented"
+        | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
+        | Sequence(items) ->
+            let newItems = List.mapi (fun index item -> if index = i then replace item path replacementCode else item) items
+            Sequence(newItems)
+        | Hole(_) -> failwith "Not Implemented"
+
+let rec render path rc =
+    match rc with
+    | Sequence items ->
+        for i, item in Seq.indexed items do
+            render (path @ [InSeq i]) rc
+    | HtmlList(_, _, _, rc) ->
+        render (path @ [InList]) rc
+    | _ -> ()
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -125,7 +155,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             ]
                         else
                              Bulma.button.button[
-                                if model.CurrentComponent.JsonData = JNull then
+                                if model.CurrentComponent.Code = Hole JNull then
                                     color.isWarning
                                     prop.text "Upload data first to save a component"
                                 else
@@ -136,19 +166,21 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
-    let htmlString = "<span>Hello, world!</span>"
-    let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
-    let element = ReactBindings.React.createElement("div", props, children = [])
+    let codeToHtml code  =
+        let htmlString =  generateCode code
+        let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
+        ReactBindings.React.createElement("div", props, children = [])
+
 
     let editorView  =
         Bulma.box[
-            if model.CurrentComponent.JsonData <> JNull then
+            if model.CurrentComponent.Code <> Hole JNull then
                 nameEditView
             Bulma.box[
-                if model.CurrentComponent.JsonData = JNull then
+                if model.CurrentComponent.Code = Hole JNull then
                     uploadButton
                 else
-                    element
+                    codeToHtml (Sequence model.RenderingCodes)
 
             ]
         ]
