@@ -12,6 +12,7 @@ open System
 open CodeGeneration
 open Browser
 open Fable.React
+open Fable.Core.JsInterop
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -28,7 +29,7 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole JNull]); Id = Guid.Empty};
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code =  Hole JNull; Id = Guid.Empty};
         FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -40,7 +41,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match data with
             | JObject obj ->
                 let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; JsonData = data ; Code= Hole JNull; Id = Guid.NewGuid()}
+                let newComponent = {Name = "New component"; JsonData = data ; Code= Sequence codes; Id = Guid.NewGuid()}
                 {model with CurrentComponent = newComponent; FileUploadError = false; RenderingCodes = codes }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -135,8 +136,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
-    let x = createEmptyObject
-    let c = ReactBindings.React.createElement("div",x,children = [])
+    let htmlString = "<span>Hello, world!</span>"
+    let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
+    let element = ReactBindings.React.createElement("div", props, children = [])
 
     let editorView  =
         Bulma.box[
@@ -146,12 +148,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.JsonData = JNull then
                     uploadButton
                 else
-                    List.map (fun code ->
-                        Bulma.block[
+                    element
 
-                        ]
-                        ) model.RenderingCodes
-                        |> Html.div
             ]
         ]
     editorView

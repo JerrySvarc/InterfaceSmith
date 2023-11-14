@@ -9,7 +9,6 @@ initializeContext ()
 
 let clientPath = Path.getFullName "src/"
 let deployPath = Path.getFullName "deploy"
-let clientTestsPath = Path.getFullName "tests/"
 
 Target.create "Clean" (fun _ ->
     Shell.cleanDir deployPath
@@ -22,8 +21,6 @@ Target.create "Bundle" (fun _ -> run dotnet "fable -o output -s --run npm run bu
 
 Target.create "Run" (fun _ -> run dotnet "fable watch -o output -s --run npm run start" clientPath)
 
-Target.create "RunTests" (fun _ -> run dotnet "fable watch -o output -s --run npm run test:live" clientTestsPath)
-
 Target.create "Format" (fun _ -> run dotnet "fantomas . -r" "src")
 
 open Fake.Core.TargetOperators
@@ -31,9 +28,7 @@ open Fake.Core.TargetOperators
 let dependencies =
     [ "Clean" ==> "InstallClient" ==> "Bundle"
 
-      "Clean" ==> "InstallClient" ==> "Run"
-
-      "InstallClient" ==> "RunTests" ]
+      "Clean" ==> "InstallClient" ==> "Run"]
 
 [<EntryPoint>]
 let main args = runOrDefault args
