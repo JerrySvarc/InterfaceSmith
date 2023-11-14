@@ -11,6 +11,7 @@ open FileUpload
 open System
 open CodeGeneration
 open Browser
+open Fable.React
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -27,7 +28,7 @@ type Msg =
     | SaveComponent of Component
 
 let init() =
-    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole]); Id = Guid.Empty  };
+    {CurrentComponent = {Name = "New component"; JsonData = JNull; Code = Sequence([Hole JNull]); Id = Guid.Empty};
         FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -39,7 +40,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match data with
             | JObject obj ->
                 let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; JsonData = data ; Code= Hole; Id = Guid.NewGuid()}
+                let newComponent = {Name = "New component"; JsonData = data ; Code= Hole JNull; Id = Guid.NewGuid()}
                 {model with CurrentComponent = newComponent; FileUploadError = false; RenderingCodes = codes }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -55,17 +56,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with CurrentComponent = {model.CurrentComponent with  Code = Sequence(model.RenderingCodes)}}, Cmd.none
 
 
-let changeTag (code : RenderingCode)(tag: string)  =
-    match code with
-    | HtmlElement(_, attrs, data) ->
-        HtmlElement(tag, attrs, data)
-    | _ -> code
 
-let addAttr (code : RenderingCode)(attr: (string * string) list)  =
-    match code with
-    | HtmlElement(tag, attrs, data) ->
-        HtmlElement(tag, attrs @ attr, data)
-    | _ -> code
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -102,7 +93,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.EditingName then
                     Bulma.block[
                         Bulma.input.text[
-                        text.hasTextLeft
                         prop.onTextChange (fun text -> dispatch (SetInput text))
                         ]
                     ]
@@ -121,7 +111,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     prop.onClick (fun _ -> dispatch (ChangeName model.NameInput))
                                 else
                                     color.isWarning
-                                    button.isText
                                     prop.text "Name must be at least one character"
                             else
                                 prop.text "Edit name"
@@ -137,7 +126,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                              Bulma.button.button[
                                 if model.CurrentComponent.JsonData = JNull then
                                     color.isWarning
-                                    button.isText
                                     prop.text "Upload data first to save a component"
                                 else
                                     prop.text "Save component"
@@ -147,55 +135,20 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
+    let x = createEmptyObject
+    let c = ReactBindings.React.createElement("div",x,children = [])
 
-    let listMenu (code : RenderingCode) =
-        match code with
-        | HtmlList(listType, numbered, data, code) ->
-            Bulma.box[]
-        | _ -> Html.div[]
-
-    let elementMenu (code : RenderingCode) =
-        match code with
-        | HtmlElement (tag, attrs, data) ->
-            Bulma.box[]
-        | _ -> Html.div[]
-
-    let rec codeMenu  (code : RenderingCode) : Fable.React.ReactElement =
-        match code with
-        | Sequence seq ->
-            Bulma.box[
-
-            ]
-        | HtmlElement(tag, attrs, innerText) -> elementMenu code
-        | HtmlList(listType, numbered, data, code) -> listMenu code
-        | Hole -> Html.div[]
-
-    let codePreview  (code : RenderingCode) =
-        let htmlString = code |> generateCode
-        let script = "var newWindow = window.open(); newWindow.document.body.innerHTML = `" + htmlString + "`;"
-        Bulma.block[
-            Bulma.button.a [
-                prop.onClick (fun _ -> Browser.Dom.window.setTimeout(script, 100) |> ignore )
-                prop.text "Preview"
-            ]
-        ]
-    let fullPreview  =
-        Bulma.block[
-            codePreview (Sequence(model.RenderingCodes))
-        ]
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.JsonData <> JNull then
                 nameEditView
-                fullPreview
             Bulma.box[
                 if model.CurrentComponent.JsonData = JNull then
                     uploadButton
                 else
                     List.map (fun code ->
                         Bulma.block[
-                            codeMenu code
-                            codePreview code
+
                         ]
                         ) model.RenderingCodes
                         |> Html.div

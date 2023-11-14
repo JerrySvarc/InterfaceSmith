@@ -12,14 +12,14 @@ let rec combineDataAndCode (inputData: Json) (inputCode: RenderingCode) : Render
 
         Sequence(newCodes)
     | JArray array, HtmlList (listType, numbered, data, code) -> HtmlList(listType, numbered, inputData, code)
-    | JNull, _ -> Hole
+    | JNull, _ -> Hole JNull
     | _, HtmlElement (tag, attrs, data) -> HtmlElement(tag, attrs, Data inputData)
-    | _, _ -> Hole
+    | _, _ -> Hole JNull
 
 
 let rec generateCode (code: RenderingCode) =
     match code with
-    | Hole -> ""
+    | Hole _ -> ""
     | HtmlElement (tag, attrs, data) ->
         let attrs =
             attrs

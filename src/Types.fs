@@ -15,7 +15,7 @@ type RenderingCode =
     | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
     | HtmlList of listType: ListType * numbered: bool * data : Json* code: RenderingCode
     | Sequence of (RenderingCode list)
-    | Hole
+    | Hole of Json
     override this.ToString() =
         match this with
         | HtmlElement (tag, attrs, innerText) ->
@@ -30,7 +30,7 @@ type RenderingCode =
             "Sequence: "
             + (List.map (fun item -> item.ToString()) items
                |> String.concat (", "))
-        | Hole -> " !Hole! "
+        | Hole _-> " !Hole! "
 
 type Component =
     { Name: string

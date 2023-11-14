@@ -11,7 +11,7 @@ let recognizeJson (json: Json) : RenderingCode =
         match json with
         | JArray array ->
             match array.IsEmpty with
-            | true -> HtmlList(List, false, json, Hole)
+            | true -> HtmlList(List, false, json, Hole json)
             | false ->
                 let itemCode = array.Head |> parse
                 HtmlList(List, false, json, itemCode)
@@ -19,7 +19,6 @@ let recognizeJson (json: Json) : RenderingCode =
             let jsonArray = obj |> Map.toArray
             let codes = Array.map (fun (key, value) -> parse value) jsonArray
             Sequence(codes |> Array.toList)
-        | JNull -> Hole
+        | JNull -> Hole JNull
         | _ -> HtmlElement("", [], Data(json))
-
-    parse json
+    Hole json
