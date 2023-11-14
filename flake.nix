@@ -28,7 +28,7 @@
         default = pkgs.mkShell {
           # The Nix packages provided in the environment
           packages = with pkgs; [
-            dotnet-sdk_6
+            dotnet-sdk_8
             nodejs-18_x # Node.js 18, plus npm, npx, and corepack
           ];
         };
