@@ -171,6 +171,20 @@ let view (model: Model) (dispatch: Msg -> unit) =
         let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
         ReactBindings.React.createElement("div", props, children = [])
 
+    let rec options : ReactElement =
+        model.RenderingCodes |> List.map (fun (code) ->
+            match code with
+            | Hole json ->
+                Bulma.box[
+                    prop.text "HOOOOOLE"
+                ]
+            | HtmlList (listType, numbered, data, code) ->
+                Bulma.box[
+                    prop.text "HOOOOOLE"
+                ]
+            | _ -> codeToHtml code)
+        |> Html.div
+
 
     let editorView  =
         Bulma.box[
@@ -180,8 +194,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.Code = Hole JNull then
                     uploadButton
                 else
-                    codeToHtml (Sequence model.RenderingCodes)
-
+                    options
             ]
         ]
     editorView
