@@ -35,15 +35,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | EditComponent guid ->
             let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
             if found then
-                match chosenComponent.Code with
-                | Sequence codes ->
-                    let updatedEditor = {model.EditorModel with CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = "";}
-                    {model with EditorModel = updatedEditor; CurrentPage = Editor}, Cmd.none
-                | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
-                | HtmlList(listType, numbered, data, code) -> failwith "Not Implemented"
-                | Hole(_) -> failwith "HELOO"
-
-
+                let updatedEditor = {model.EditorModel with CurrentComponent = chosenComponent; FileUploadError = false; EditingName = false; NameInput = ""}
+                {model with EditorModel = updatedEditor; CurrentPage = Editor}, Cmd.none
             else
                 model,Cmd.none
         | _  ->

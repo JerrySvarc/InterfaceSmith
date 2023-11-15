@@ -34,5 +34,4 @@ and RenderingCode =
 type Component =
     { Name: string
       Id: Guid
-
       Code: RenderingCode }

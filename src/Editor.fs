@@ -52,7 +52,15 @@ let rec getPath path rc =
     | HtmlElement(_, _, _) -> getPath (path @ [InElement]) rc
     | _ -> ()
 
-
+let j = JNull;
+let rc =
+  Sequence
+    [
+      HtmlElement("h1", [], Constant "hi")
+      Hole j
+      HtmlElement("h1", [], Constant "hi")
+      Hole j
+    ]
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -94,7 +102,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with NameInput = input}, Cmd.none
     | ChangeNameEditMode value ->
         {model with EditingName = value; NameInput = ""}, Cmd.none
-    | SaveComponent _ ->
+    | SaveComponent comp ->
         model, Cmd.none
     | EditCode(_) -> failwith "Not Implemented"
 
