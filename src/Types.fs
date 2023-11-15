@@ -4,14 +4,13 @@ open Fable.SimpleJson
 open System
 
 type Value =
-    | Data of Json
+    | Data of RenderingCode
     | Empty
     | Constant of string
-type ListType =
+and ListType =
     | List
     | Table
-
-type RenderingCode =
+and RenderingCode =
     | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
     | HtmlList of listType: ListType * numbered: bool * data : Json* code: RenderingCode
     | Sequence of (RenderingCode list)

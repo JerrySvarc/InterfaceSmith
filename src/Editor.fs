@@ -13,12 +13,52 @@ open CodeGeneration
 open Browser
 open Fable.React
 open Fable.Core.JsInterop
+
+type PathItem =
+    | InList
+    | InSeq of int
+    | InElement
+
+
+let rec replace currentCode path replacementCode =
+    match path with
+    | [] -> replacementCode
+    | InList::path ->
+        match currentCode with
+        | HtmlList(lt, n, d, c) ->
+            HtmlList(lt, n, d, replace c path replacementCode)
+        | _ -> failwith "Invalid path"
+    | InSeq(i)::path ->
+        match currentCode with
+        | Sequence(items) ->
+            let newItems = List.mapi (fun index item -> if index = i then replace item path replacementCode else item) items
+            Sequence(newItems)
+        | _-> failwith "Invalid path"
+    | InElement::path ->
+        match currentCode with
+        | HtmlElement(tag, attrs, innerText) ->
+            match innerText with
+            | Data(code) ->
+                HtmlElement(tag, attrs, Data(replace code path replacementCode))
+            | _ -> HtmlElement(tag, attrs, Data(replacementCode))
+        | _ -> failwith "Invalid path"
+let rec getPath path rc =
+    match rc with
+    | Sequence items ->
+        for i, item in Seq.indexed items do
+            getPath (path @ [InSeq i]) rc
+    | HtmlList(_, _, _, rc) ->
+        getPath (path @ [InList]) rc
+    | HtmlElement(_, _, _) -> getPath (path @ [InElement]) rc
+    | _ -> ()
+
+
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
       EditingName : bool
+      EditingCode : bool
       NameInput : string
-      RenderingCodes : RenderingCode list
     }
 
 type Msg =
@@ -27,10 +67,11 @@ type Msg =
     | SetInput of string
     | ChangeNameEditMode of bool
     | SaveComponent of Component
+    | EditCode of RenderingCode
 
 let init() =
     {CurrentComponent = {Name = "New component"; Code = Hole JNull; Id = Guid.Empty};
-        FileUploadError = false; EditingName = false; NameInput = "";RenderingCodes = []}
+        FileUploadError = false; EditingName = false; EditingCode=false; NameInput = "";}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -42,7 +83,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             | JObject obj ->
                 let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
                 let newComponent = {Name = "New component"; Code = Hole data; Id = Guid.NewGuid()}
-                {model with CurrentComponent = newComponent; FileUploadError = false; RenderingCodes = codes }, Cmd.none
+                {model with CurrentComponent = newComponent; FileUploadError = false;  }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
         | None ->
@@ -55,39 +96,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent _ ->
         model, Cmd.none
+    | EditCode(_) -> failwith "Not Implemented"
 
 
-type PathItem =
-    | InList
-    | InSeq of int
 
-let rec replace currentCode path replacementCode =
-    match path with
-    | [] -> replacementCode
-    | InList::path ->
-        match currentCode with
-        | HtmlList(lt, n, d, c) ->
-            HtmlList(lt, n, d, replace c path replacementCode)
-        | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
-        | Sequence(_) -> failwith "Not Implemented"
-        | Hole(_) -> failwith "Not Implemented"
-    | InSeq(i)::path ->
-        match currentCode with
-        | HtmlList(lt, n, d, c) -> failwith "Not Implemented"
-        | HtmlElement(tag, attrs, innerText) -> failwith "Not Implemented"
-        | Sequence(items) ->
-            let newItems = List.mapi (fun index item -> if index = i then replace item path replacementCode else item) items
-            Sequence(newItems)
-        | Hole(_) -> failwith "Not Implemented"
-
-let rec render path rc =
-    match rc with
-    | Sequence items ->
-        for i, item in Seq.indexed items do
-            render (path @ [InSeq i]) rc
-    | HtmlList(_, _, _, rc) ->
-        render (path @ [InList]) rc
-    | _ -> ()
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -166,25 +178,63 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                 ]
             ]
+
     let codeToHtml code  =
         let htmlString =  generateCode code
         let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
         ReactBindings.React.createElement("div", props, children = [])
 
-    let rec options : ReactElement =
-        model.RenderingCodes |> List.map (fun (code) ->
-            match code with
-            | Hole json ->
-                Bulma.box[
-                    prop.text "HOOOOOLE"
+    let elementMenu code =
+        match code with
+        | HtmlElement (tag, attrs, innerText) ->
+            Bulma.box[
+                Bulma.block[
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Edit"
+                            prop.onClick (fun _ -> dispatch (EditCode code))
+                        ]
+                    ]
                 ]
-            | HtmlList (listType, numbered, data, code) ->
-                Bulma.box[
-                    prop.text "HOOOOOLE"
-                ]
-            | _ -> codeToHtml code)
-        |> Html.div
+            ]
+        | _ -> failwith "Not an element"
 
+    let sequenceMenu code =
+        match code with
+        | Sequence elements ->
+            Bulma.box[
+                Bulma.block[
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Edit"
+                            prop.onClick (fun _ -> dispatch (EditCode code))
+                        ]
+                    ]
+                ]
+            ]
+        | _ -> failwith "Not a sequence"
+
+    let listMenu code =
+        match code with
+        | HtmlList (listType, numbered, data, code) ->
+            Bulma.box[
+
+            ]
+        | _ -> failwith "Not a sequence"
+
+    let option code =
+        match code with
+        | Hole json ->
+            recognizeJson json
+        | _-> failwith "No options"
+
+    let rec options code =
+        match code with
+        | Hole json -> options ( option code)
+        | HtmlElement(tag, attrs, innerText) -> elementMenu code
+        | HtmlList(listType, numbered, data, code) ->
+            listMenu code
+        | Sequence(_) -> sequenceMenu code
 
     let editorView  =
         Bulma.box[
@@ -194,7 +244,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.Code = Hole JNull then
                     uploadButton
                 else
-                    options
+                    options model.CurrentComponent.Code
             ]
         ]
     editorView

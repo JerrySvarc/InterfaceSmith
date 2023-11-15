@@ -13,7 +13,7 @@ let rec combineDataAndCode (inputData: Json) (inputCode: RenderingCode) : Render
         Sequence(newCodes)
     | JArray array, HtmlList (listType, numbered, data, code) -> HtmlList(listType, numbered, inputData, code)
     | JNull, _ -> Hole JNull
-    | _, HtmlElement (tag, attrs, data) -> HtmlElement(tag, attrs, Data inputData)
+    | _, HtmlElement (tag, attrs, data) -> HtmlElement(tag, attrs, Data(Hole inputData))
     | _, _ -> Hole JNull
 
 
@@ -42,12 +42,12 @@ let rec generateCode (code: RenderingCode) =
             + outputTag
             + ">"
         | Empty -> ""
-        | Data json ->
+        | Data code ->
             "<"
             + outputTag
             + attrs
             + "> "
-            + SimpleJson.toString json
+            + generateCode code
             + "</"
             + outputTag
             + ">"
