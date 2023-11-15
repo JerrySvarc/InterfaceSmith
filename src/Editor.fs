@@ -90,7 +90,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match data with
             | JObject obj ->
                 let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; Code = Hole data; Id = Guid.NewGuid()}
+                let newComponent = {Name = "New component"; Code = Sequence codes; Id = Guid.NewGuid()}
                 {model with CurrentComponent = newComponent; FileUploadError = false;  }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -104,7 +104,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent comp ->
         model, Cmd.none
-    | EditCode(_) -> failwith "Not Implemented"
+    | EditCode(_) -> model, Cmd.none
 
 
 
@@ -196,6 +196,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | HtmlElement (tag, attrs, innerText) ->
             Bulma.box[
+                Bulma.block[codeToHtml code]
                 Bulma.block[
                     Bulma.buttons[
                         Bulma.button.button[
@@ -211,6 +212,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | Sequence elements ->
             Bulma.box[
+                Bulma.block[codeToHtml code]
                 Bulma.block[
                     Bulma.buttons[
                         Bulma.button.button[
@@ -226,7 +228,15 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | HtmlList (listType, numbered, data, code) ->
             Bulma.box[
-
+                Bulma.block[codeToHtml code]
+                Bulma.block[
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Edit"
+                            prop.onClick (fun _ -> dispatch (EditCode code))
+                        ]
+                    ]
+                ]
             ]
         | _ -> failwith "Not a sequence"
 
@@ -240,9 +250,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match code with
         | Hole json -> options ( option code)
         | HtmlElement(tag, attrs, innerText) -> elementMenu code
-        | HtmlList(listType, numbered, data, code) ->
+        | HtmlList _->
             listMenu code
-        | Sequence(_) -> sequenceMenu code
+        | Sequence seq ->seq |> List.map (fun code -> options code) |> Html.div
 
     let editorView  =
         Bulma.box[
