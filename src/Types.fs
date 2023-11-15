@@ -3,18 +3,22 @@ module Types
 open Fable.SimpleJson
 open System
 
+type Selector =
+    | FieldSelector of string
+    | AllChildrenSelector
+
 type Value =
-    | Data of RenderingCode
+    | Data of Selector list
     | Empty
     | Constant of string
 and ListType =
     | List
     | Table
 and RenderingCode =
-    | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
-    | HtmlList of listType: ListType * numbered: bool * data : Json* code: RenderingCode
-    | Sequence of (RenderingCode list)
-    | Hole of Json
+    | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value * selectors : Selector list
+    | HtmlList of listType: ListType * numbered: bool * selectors : Selector list * code: RenderingCode
+    | Sequence of (RenderingCode list) * selectors:  Selector list
+    | Hole of selectors : Selector list
     override this.ToString() =
         match this with
         | HtmlElement (tag, attrs, innerText) ->
@@ -34,4 +38,5 @@ and RenderingCode =
 type Component =
     { Name: string
       Id: Guid
-      Code: RenderingCode }
+      Code: RenderingCode
+      Data : Json}

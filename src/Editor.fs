@@ -42,25 +42,17 @@ let rec replace currentCode path replacementCode =
                 HtmlElement(tag, attrs, Data(replace code path replacementCode))
             | _ -> HtmlElement(tag, attrs, Data(replacementCode))
         | _ -> failwith "Invalid path"
-let rec getPath path rc =
+let rec render path rc =
     match rc with
     | Sequence items ->
         for i, item in Seq.indexed items do
-            getPath (path @ [InSeq i]) rc
+            render (path @ [InSeq i]) rc
     | HtmlList(_, _, _, rc) ->
-        getPath (path @ [InList]) rc
-    | HtmlElement(_, _, _) -> getPath (path @ [InElement]) rc
+        render (path @ [InList]) rc
+    | HtmlElement(_, _, _) -> render (path @ [InElement]) rc
     | _ -> ()
 
-let j = JNull;
-let rc =
-  Sequence
-    [
-      HtmlElement("h1", [], Constant "hi")
-      Hole j
-      HtmlElement("h1", [], Constant "hi")
-      Hole j
-    ]
+
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -89,8 +81,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | Some(data)  ->
             match data with
             | JObject obj ->
-                let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; Code = Sequence codes; Id = Guid.NewGuid()}
+                let newComponent = {Name = "New component"; Code = Hole data; Id = Guid.NewGuid()}
                 {model with CurrentComponent = newComponent; FileUploadError = false;  }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -188,71 +179,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
 
     let codeToHtml code  =
-        let htmlString =  generateCode code
-        let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
+        match code with
+        | HtmlElement () ->
         ReactBindings.React.createElement("div", props, children = [])
 
-    let elementMenu code =
-        match code with
-        | HtmlElement (tag, attrs, innerText) ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not an element"
 
-    let sequenceMenu code =
-        match code with
-        | Sequence elements ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not a sequence"
-
-    let listMenu code =
-        match code with
-        | HtmlList (listType, numbered, data, code) ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not a sequence"
-
-    let option code =
-        match code with
-        | Hole json ->
-            recognizeJson json
-        | _-> failwith "No options"
-
-    let rec options code =
-        match code with
-        | Hole json -> options ( option code)
-        | HtmlElement(tag, attrs, innerText) -> elementMenu code
-        | HtmlList _->
-            listMenu code
-        | Sequence seq ->seq |> List.map (fun code -> options code) |> Html.div
 
     let editorView  =
         Bulma.box[
@@ -262,7 +193,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 if model.CurrentComponent.Code = Hole JNull then
                     uploadButton
                 else
-                    options model.CurrentComponent.Code
+                    Html.div[]
             ]
         ]
     editorView
