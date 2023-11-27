@@ -12,7 +12,6 @@ open System
 type Page =
     | Overview
     | Editor
-    | Preview
 
 type Model =
     {   CurrentPage : Page
@@ -44,8 +43,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             {model with OverviewModel = updatedOverview}, Cmd.none
     | EditorMsg msg ->
         match msg with
-        | SaveComponent _ ->
-            let newComponent = model.EditorModel.CurrentComponent
+        | SaveComponent comp ->
+            let newComponent = comp
             let updatedMap = model.OverviewModel.CreatedComponents.Add(newComponent.Id, newComponent)
             {model with OverviewModel = {model.OverviewModel with CreatedComponents = updatedMap}; EditorModel = Editor.init(); CurrentPage = Overview}, Cmd.none
         | _ ->
@@ -89,7 +88,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
 
     let mainView =
-        Bulma.block [
+        Html.div[
             Bulma.box[
                 navBar
             ]
@@ -98,8 +97,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                    Overview.view model.OverviewModel  (OverviewMsg >> dispatch)
             | Editor ->
                    Editor.view model.EditorModel (EditorMsg >> dispatch)
-            | Preview ->
-                Bulma.columns []
+
         ]
 
     mainView

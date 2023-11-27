@@ -8,6 +8,7 @@
     <Compile Include="FileUpload.fs" />
     <None Include="index.html" />
     <Compile Include="Types.fs" />
+    <Compile Include="Selector.fs" />
     <Compile Include="DataLoading.fs" />
     <Compile Include="DataRecognition.fs" />
     <Compile Include="CodeGeneration.fs" />

@@ -3,7 +3,7 @@ module CodeGeneration
 open Types
 open Fable.SimpleJson
 
-
+(*
 let rec combineDataAndCode (inputData: Json) (inputCode: RenderingCode) : RenderingCode =
     match inputData, inputCode with
     | JObject obj, Sequence (objects) ->
@@ -143,3 +143,4 @@ let rec generateCode (code: RenderingCode) =
                 )
             )
         )
+        *)

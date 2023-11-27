@@ -10,16 +10,16 @@ open DataRecognition
 open FileUpload
 open System
 open CodeGeneration
-open Browser
 open Fable.React
 open Fable.Core.JsInterop
-
+open Selector
+open Fable.Core.JS
 type PathItem =
     | InList
     | InSeq of int
     | InElement
 
-
+(*
 let rec replace currentCode path replacementCode =
     match path with
     | [] -> replacementCode
@@ -52,15 +52,9 @@ let rec getPath path rc =
     | HtmlElement(_, _, _) -> getPath (path @ [InElement]) rc
     | _ -> ()
 
-let j = JNull;
-let rc =
-  Sequence
-    [
-      HtmlElement("h1", [], Constant "hi")
-      Hole j
-      HtmlElement("h1", [], Constant "hi")
-      Hole j
-    ]
+
+
+*)
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -78,8 +72,8 @@ type Msg =
     | EditCode of RenderingCode
 
 let init() =
-    {CurrentComponent = {Name = "New component"; Code = Hole JNull; Id = Guid.Empty};
-        FileUploadError = false; EditingName = false; EditingCode=false; NameInput = "";}
+    {CurrentComponent = {Name = "New component"; Code = Hole []; Id = Guid.NewGuid(); Data = JNull};
+        FileUploadError = false; EditingName = false; EditingCode=false; NameInput = ""}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -89,8 +83,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | Some(data)  ->
             match data with
             | JObject obj ->
-                let codes = List.map (fun (key , json)-> recognizeJson json) (obj |> Map.toList)
-                let newComponent = {Name = "New component"; Code = Sequence codes; Id = Guid.NewGuid()}
+                let newComponent = {model.CurrentComponent with Code = recognizeJson data; Data = data;}
                 {model with CurrentComponent = newComponent; FileUploadError = false;  }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -105,7 +98,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SaveComponent comp ->
         model, Cmd.none
     | EditCode(_) -> model, Cmd.none
-
 
 
 
@@ -175,7 +167,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             ]
                         else
                              Bulma.button.button[
-                                if model.CurrentComponent.Code = Hole JNull then
+                                if model.CurrentComponent.Code = Hole [] then
                                     color.isWarning
                                     prop.text "Upload data first to save a component"
                                 else
@@ -187,82 +179,64 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-    let codeToHtml code  =
-        let htmlString =  generateCode code
-        let props = createObj ["dangerouslySetInnerHTML" ==> createObj ["__html" ==> htmlString]]
-        ReactBindings.React.createElement("div", props, children = [])
+    let elementOptions element : ReactElement = Html.div[Html.text ""]
 
-    let elementMenu code =
+    let listOptions list  : ReactElement= Html.div[Html.text ""]
+    let sequenceOptions sequence : ReactElement= Html.div[Html.text ""]
+
+    let options code =
+        match code with
+        | HtmlElement _ ->
+            elementOptions code
+        | HtmlList _->
+            listOptions code
+        | Sequence(_) ->
+            sequenceOptions code
+        | Hole _ -> failwith "Hole cannot contain another hole"
+
+    let rec renderingCodeToReactElement (code: RenderingCode) =
         match code with
         | HtmlElement (tag, attrs, innerText) ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not an element"
-
-    let sequenceMenu code =
-        match code with
-        | Sequence elements ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not a sequence"
-
-    let listMenu code =
-        match code with
-        | HtmlList (listType, numbered, data, code) ->
-            Bulma.box[
-                Bulma.block[codeToHtml code]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode code))
-                        ]
-                    ]
-                ]
-            ]
-        | _ -> failwith "Not a sequence"
-
-    let option code =
-        match code with
-        | Hole json ->
-            recognizeJson json
-        | _-> failwith "No options"
-
-    let rec options code =
-        match code with
-        | Hole json -> options ( option code)
-        | HtmlElement(tag, attrs, innerText) -> elementMenu code
-        | HtmlList _->
-            listMenu code
-        | Sequence seq ->seq |> List.map (fun code -> options code) |> Html.div
-
+            let props = attrs |> List.toSeq |> dict
+            match innerText with
+                | Data data ->
+                    let selectedFields = (select model.CurrentComponent.Data [data])
+                    let jsonStr = selectedFields.Head |> Json.convertFromJsonAs<String>
+                    ReactBindings.React.createElement(tag, props, [str jsonStr])
+                | Value.Empty -> ReactBindings.React.createElement(tag, props, [])
+                | Constant s -> ReactBindings.React.createElement(tag, props, [str s])
+        | HtmlList (listType, numbered, code, _) ->
+            let tag = if numbered then "ol" else "ul"
+            let children = [code |> renderingCodeToReactElement]
+            ReactBindings.React.createElement(tag, null, children)
+        | Sequence codes ->
+            let children = codes |> List.map renderingCodeToReactElement
+            ReactBindings.React.createElement("div", null, children)
+        | Hole selectors ->
+            let selectedFields = (select model.CurrentComponent.Data selectors)
+            Html.div[Html.text ""]
     let editorView  =
         Bulma.box[
-            if model.CurrentComponent.Code <> Hole JNull then
+            if model.CurrentComponent.Code <> Hole [] then
                 nameEditView
             Bulma.box[
-                if model.CurrentComponent.Code = Hole JNull then
+                prop.children[
+                if model.CurrentComponent.Code = Hole [] then
                     uploadButton
                 else
-                    options model.CurrentComponent.Code
+                    Bulma.columns[
+                        prop.classes ["is-centered"]
+                        prop.children[
+                            Bulma.column[
+                                column.isHalf
+                                prop.children[
+                                    renderingCodeToReactElement model.CurrentComponent.Code
+
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
             ]
         ]
     editorView
