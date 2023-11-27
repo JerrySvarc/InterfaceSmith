@@ -42,14 +42,14 @@ let rec replace currentCode path replacementCode =
                 HtmlElement(tag, attrs, Data(replace code path replacementCode))
             | _ -> HtmlElement(tag, attrs, Data(replacementCode))
         | _ -> failwith "Invalid path"
-let rec getPath path rc =
+let rec render path rc =
     match rc with
     | Sequence items ->
         for i, item in Seq.indexed items do
-            getPath (path @ [InSeq i]) rc
+            render (path @ [InSeq i]) rc
     | HtmlList(_, _, _, rc) ->
-        getPath (path @ [InList]) rc
-    | HtmlElement(_, _, _) -> getPath (path @ [InElement]) rc
+        render (path @ [InList]) rc
+    | HtmlElement(_, _, _) -> render (path @ [InElement]) rc
     | _ -> ()
 
 
