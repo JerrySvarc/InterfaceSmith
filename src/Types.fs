@@ -3,6 +3,11 @@ module Types
 open Fable.SimpleJson
 open System
 
+type PathItem =
+    | InSeq of int
+    | InList of int
+    | InElement
+
 type Selector =
     | FieldSelector of string
     | ArraySelector of int
@@ -18,7 +23,7 @@ and ListType =
 and RenderingCode =
     | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
     | HtmlList of listType: ListType * numbered: bool * code: RenderingCode * selectors : Selector list
-    | Sequence of (RenderingCode list)
+    | Sequence of RenderingCode list
     | Hole of selectors : Selector list
 
 type Component =

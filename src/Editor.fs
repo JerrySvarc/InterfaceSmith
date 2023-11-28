@@ -14,47 +14,10 @@ open Fable.React
 open Fable.Core.JsInterop
 open Selector
 open Fable.Core.JS
-type PathItem =
-    | InList
-    | InSeq of int
-    | InElement
-
-(*
-let rec replace currentCode path replacementCode =
-    match path with
-    | [] -> replacementCode
-    | InList::path ->
-        match currentCode with
-        | HtmlList(lt, n, d, c) ->
-            HtmlList(lt, n, d, replace c path replacementCode)
-        | _ -> failwith "Invalid path"
-    | InSeq(i)::path ->
-        match currentCode with
-        | Sequence(items) ->
-            let newItems = List.mapi (fun index item -> if index = i then replace item path replacementCode else item) items
-            Sequence(newItems)
-        | _-> failwith "Invalid path"
-    | InElement::path ->
-        match currentCode with
-        | HtmlElement(tag, attrs, innerText) ->
-            match innerText with
-            | Data(code) ->
-                HtmlElement(tag, attrs, Data(replace code path replacementCode))
-            | _ -> HtmlElement(tag, attrs, Data(replacementCode))
-        | _ -> failwith "Invalid path"
-let rec render path rc =
-    match rc with
-    | Sequence items ->
-        for i, item in Seq.indexed items do
-            render (path @ [InSeq i]) rc
-    | HtmlList(_, _, _, rc) ->
-        render (path @ [InList]) rc
-    | HtmlElement(_, _, _) -> render (path @ [InElement]) rc
-    | _ -> ()
 
 
 
-*)
+
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -179,22 +142,38 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-    let elementOptions element : ReactElement = Html.div[Html.text ""]
+    let elementOptions (element : RenderingCode) path  : ReactElement =
+        match element with
+        | HtmlElement (tag, attrs, innerText) ->
+            Bulma.box[
 
-    let listOptions list  : ReactElement= Html.div[Html.text ""]
-    let sequenceOptions sequence : ReactElement= Html.div[Html.text ""]
+            ]
+        | _ -> failwith "Not an element"
 
-    let options code =
+    let listOptions list  path : ReactElement=
+        match list with
+        | HtmlList (listType, numbered, code, _) ->
+            Bulma.box[]
+        | _ -> failwith "Not a list"
+
+    let rec sequenceOptions sequence path : ReactElement=
+        match sequence with
+        | Sequence(_) ->
+            Bulma.box[]
+        | _ -> failwith "Not a sequence"
+
+
+    let options (code : RenderingCode) (path : RenderingCode list) =
         match code with
         | HtmlElement _ ->
-            elementOptions code
+            elementOptions code path
         | HtmlList _->
-            listOptions code
+            listOptions code path
         | Sequence(_) ->
-            sequenceOptions code
+            sequenceOptions code path
         | Hole _ -> failwith "Hole cannot contain another hole"
 
-    let rec renderingCodeToReactElement (code: RenderingCode) =
+    let rec renderingCodeToReactElement (code: RenderingCode) (path : RenderingCode list)  =
         match code with
         | HtmlElement (tag, attrs, innerText) ->
             let props = attrs |> List.toSeq |> dict
@@ -207,14 +186,40 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 | Constant s -> ReactBindings.React.createElement(tag, props, [str s])
         | HtmlList (listType, numbered, code, _) ->
             let tag = if numbered then "ol" else "ul"
-            let children = [code |> renderingCodeToReactElement]
+            let children = [path @ [code] |> renderingCodeToReactElement code]
             ReactBindings.React.createElement(tag, null, children)
         | Sequence codes ->
-            let children = codes |> List.map renderingCodeToReactElement
+            let children = List.map (fun code -> path @ [code] |> renderingCodeToReactElement code) codes |> List.toArray
             ReactBindings.React.createElement("div", null, children)
         | Hole selectors ->
-            let selectedFields = (select model.CurrentComponent.Data selectors)
-            Html.div[Html.text ""]
+            //let selectedFields = (select model.CurrentComponent.Data selectors)
+           // let optionPanes = List.map (fun field -> options (recognizeJson field)) selectedFields |> List.toArray
+           // ReactBindings.React.createElement("div", null, optionPanes)
+            ReactBindings.React.createElement("div", null, [str "Hole"])
+
+
+    let rec replace path replacementElement (currentCode : RenderingCode) =
+        match path with
+        | [] -> replacementElement
+        | head::tail ->
+            match currentCode with
+            | HtmlList(lt, n, items, c) ->
+                let newItems =
+                    items
+                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
+                HtmlList(lt, n, newItems, c)
+            | Sequence(items) ->
+                let newItems =
+                    items
+                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
+                Sequence(newItems)
+            | HtmlElement(tag, attrs, Data(code)) ->
+                if HashIdentity.Reference.Equals(code, head) then HtmlElement(tag, attrs, Data(replace tail replacementElement code))
+                else currentCode
+            | _ -> currentCode
+
+    let x = Sequence([HtmlElement("div", [], Data(FieldSelector ("name"))); Hole([FieldSelector ("type")])])
+
     let editorView  =
         Bulma.box[
             if model.CurrentComponent.Code <> Hole [] then
@@ -230,8 +235,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             Bulma.column[
                                 column.isHalf
                                 prop.children[
-                                    renderingCodeToReactElement model.CurrentComponent.Code
-
+                                    renderingCodeToReactElement x []
                                 ]
                             ]
                         ]
