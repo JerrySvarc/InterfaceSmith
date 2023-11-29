@@ -15,7 +15,6 @@ open Fable.Core.JsInterop
 open Selector
 open Fable.Core.JS
 
-
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -143,7 +142,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
         match element with
         | HtmlElement (tag, attrs, innerText) ->
             Bulma.box[
-
+                Bulma.block[
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Edit"
+                            prop.onClick (fun _ -> dispatch (EditCode element))
+                        ]
+                    ]
+                ]
             ]
         | _ -> failwith "Not an element"
 
@@ -158,7 +164,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | Sequence(_) ->
             Bulma.box[]
         | _ -> failwith "Not a sequence"
-
 
     let options (code : RenderingCode) (path : RenderingCode list) =
         match code with
@@ -178,21 +183,21 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 | Data data ->
                     let selectedFields = (select model.CurrentComponent.Data [data])
                     let jsonStr = selectedFields.Head |> Json.convertFromJsonAs<String>
-                    ReactBindings.React.createElement(tag, props, [str jsonStr])
-                | Value.Empty -> ReactBindings.React.createElement(tag, props, [])
-                | Constant s -> ReactBindings.React.createElement(tag, props, [str s])
+                    Bulma.block[ReactBindings.React.createElement(tag, props, [str jsonStr])]
+                | Value.Empty -> Bulma.block[ReactBindings.React.createElement(tag, props, [])]
+                | Constant s -> Bulma.block[ReactBindings.React.createElement(tag, props, [str s])]
         | HtmlList (listType, numbered, code, _) ->
             let tag = if numbered then "ol" else "ul"
             let children = [path @ [code] |> renderingCodeToReactElement code]
-            ReactBindings.React.createElement(tag, null, children)
+            Bulma.block[ReactBindings.React.createElement(tag, null, children)]
         | Sequence codes ->
             let children = List.map (fun code -> path @ [code] |> renderingCodeToReactElement code) codes |> List.toArray
-            ReactBindings.React.createElement("div", null, children)
+            Bulma.block[ReactBindings.React.createElement("div", null, children)]
         | Hole selectors ->
-            //let selectedFields = (select model.CurrentComponent.Data selectors)
-           // let optionPanes = List.map (fun field -> options (recognizeJson field)) selectedFields |> List.toArray
-           // ReactBindings.React.createElement("div", null, optionPanes)
-            ReactBindings.React.createElement("div", null, [str "Hole"])
+            let selectedFields = (select model.CurrentComponent.Data selectors)
+            let optionPanes = List.map (fun field -> options (recognizeJson field) path) selectedFields |> List.toArray
+            Bulma.block[ ReactBindings.React.createElement("div", null, optionPanes)]
+
 
 
     let rec replace path replacementElement (currentCode : RenderingCode) =

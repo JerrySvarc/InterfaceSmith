@@ -3,11 +3,6 @@ module Types
 open Fable.SimpleJson
 open System
 
-type PathItem =
-    | InSeq of int
-    | InList of int
-    | InElement
-
 type Selector =
     | FieldSelector of string
     | ArraySelector of int
