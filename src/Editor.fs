@@ -29,7 +29,28 @@ type Msg =
     | SetInput of string
     | ChangeNameEditMode of bool
     | SaveComponent of Component
-    | EditCode of RenderingCode
+    | EditCode of RenderingCode * RenderingCode list
+
+let rec replace path replacementElement (currentCode : RenderingCode) =
+        match path with
+        | [] -> replacementElement
+        | head::tail ->
+            match currentCode with
+            | HtmlList(lt, n, item, c) ->
+                let newItems =
+                    item
+                    |> fun item ->
+                        if HashIdentity.Reference.Equals(item, head) then
+                            replace tail replacementElement item
+                        else
+                            item
+                HtmlList(lt, n, newItems, c)
+            | Sequence(items) ->
+                let newItems =
+                    items
+                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
+                Sequence(newItems)
+            | _ -> currentCode
 
 let init() =
     {CurrentComponent = {Name = "New component"; Code = Hole []; Id = Guid.NewGuid(); Data = JNull};
@@ -57,7 +78,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {model with EditingName = value; NameInput = ""}, Cmd.none
     | SaveComponent comp ->
         model, Cmd.none
-    | EditCode(_) -> model, Cmd.none
+    | EditCode (code, path) ->
+        let newcodes = replace path code model.CurrentComponent.Code
+        let newComponent = {model.CurrentComponent with Code = newcodes}
+        {model with CurrentComponent = newComponent}, Cmd.none
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
@@ -146,7 +170,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     Bulma.buttons[
                         Bulma.button.button[
                             prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode element))
+                            prop.onClick (fun _ -> dispatch (EditCode (element, path)))
                         ]
                     ]
                 ]
@@ -200,26 +224,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
 
 
-    let rec replace path replacementElement (currentCode : RenderingCode) =
-        match path with
-        | [] -> replacementElement
-        | head::tail ->
-            match currentCode with
-            | HtmlList(lt, n, item, c) ->
-                let newItems =
-                    item
-                    |> fun item ->
-                        if HashIdentity.Reference.Equals(item, head) then
-                            replace tail replacementElement item
-                        else
-                            item
-                HtmlList(lt, n, newItems, c)
-            | Sequence(items) ->
-                let newItems =
-                    items
-                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
-                Sequence(newItems)
-            | _ -> currentCode
+
 
     let x = Sequence([HtmlElement("div", [], Data(FieldSelector ("name"))); Hole([FieldSelector ("type")])])
 
