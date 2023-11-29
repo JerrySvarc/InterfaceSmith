@@ -16,8 +16,6 @@ open Selector
 open Fable.Core.JS
 
 
-
-
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -61,7 +59,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SaveComponent comp ->
         model, Cmd.none
     | EditCode(_) -> model, Cmd.none
-
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
@@ -203,19 +200,20 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | [] -> replacementElement
         | head::tail ->
             match currentCode with
-            | HtmlList(lt, n, items, c) ->
+            | HtmlList(lt, n, item, c) ->
                 let newItems =
-                    items
-                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
+                    item
+                    |> fun item ->
+                        if HashIdentity.Reference.Equals(item, head) then
+                            replace tail replacementElement item
+                        else
+                            item
                 HtmlList(lt, n, newItems, c)
             | Sequence(items) ->
                 let newItems =
                     items
                     |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
                 Sequence(newItems)
-            | HtmlElement(tag, attrs, Data(code)) ->
-                if HashIdentity.Reference.Equals(code, head) then HtmlElement(tag, attrs, Data(replace tail replacementElement code))
-                else currentCode
             | _ -> currentCode
 
     let x = Sequence([HtmlElement("div", [], Data(FieldSelector ("name"))); Hole([FieldSelector ("type")])])
