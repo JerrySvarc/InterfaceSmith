@@ -1,5 +1,9 @@
 module App
 
+open Fable.Core.JsInterop
+
+importSideEffects "./index.css"
+
 open Elmish
 open Elmish.React
 
