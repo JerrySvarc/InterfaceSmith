@@ -3,13 +3,8 @@ module Types
 open Fable.SimpleJson
 open System
 
-type Selector =
-    | FieldSelector of string
-    | ArraySelector of int
-    | AllChildrenSelector
-
 type Value =
-    | Data of Selector
+    | Data
     | Empty
     | Constant of string
 and ListType =
@@ -17,9 +12,9 @@ and ListType =
     | Table
 and RenderingCode =
     | HtmlElement of tag: string * attrs: (string * string) list * innerText: Value
-    | HtmlList of listType: ListType * numbered: bool * code: RenderingCode * selectors : Selector list
+    | HtmlList of listType: ListType * numbered: bool * code: RenderingCode
     | Sequence of RenderingCode list
-    | Hole of selectors : Selector list
+    | Hole
 
 type Component =
     { Name: string
