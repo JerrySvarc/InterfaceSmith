@@ -9,10 +9,9 @@ open DataLoading
 open DataRecognition
 open FileUpload
 open System
-open CodeGeneration
+
 open Fable.React
-open Fable.Core.JsInterop
-open Fable.Core.JS
+
 
 type Model =
     { CurrentComponent : Component
@@ -31,28 +30,26 @@ type Msg =
     | EditCode of RenderingCode * RenderingCode list
 
 let rec replace path replacementElement (currentCode : RenderingCode) =
-        match path with
-        | [] -> replacementElement
-        | head::tail ->
-            match currentCode with
-            | HtmlList(lt, n, item) ->
-                let newItems =
-                    item
-                    |> fun item ->
-                        if HashIdentity.Reference.Equals(item, head) then
-                            replace tail replacementElement item
-                        else
-                            item
-                HtmlList(lt, n, newItems)
-            | Sequence(items) ->
-                let newItems =
-                    items
-                    |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replace tail replacementElement item else item)
-                Sequence(newItems)
-            | _ -> currentCode
+    match path with
+    | [] -> replacementElement
+    | head::tail ->
+        match currentCode with
+        | HtmlList(lt, n, item) ->
+            let newItems =
+                if HashIdentity.Reference.Equals(item, head) then
+                    replacementElement
+                else
+                    replace tail replacementElement item
+            HtmlList(lt, n, newItems)
+        | Sequence(items) ->
+            let newItems =
+                items
+                |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replacementElement else replace tail replacementElement item)
+            Sequence(newItems)
+        | _ -> currentCode
 
 let init() =
-    {CurrentComponent = {Name = "New component"; Code = Hole; Id = Guid.NewGuid(); Data = JNull};
+    {CurrentComponent = {Name = "New component"; Code = Hole (UnNamed); Id = Guid.NewGuid(); Data = JNull};
         FileUploadError = false; EditingName = false; EditingCode=false; NameInput = ""}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -106,7 +103,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
             if  model.FileUploadError then
-                Html.text "The selected file could not be used for creation."
+                Bulma.hero[prop.text "The selected file could not be used for creation."]
             else
                 Html.text ""
         ]
@@ -149,7 +146,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             ]
                         else
                              Bulma.button.button[
-                                if model.CurrentComponent.Code = Hole then
+                                if model.CurrentComponent.Data = JNull then
                                     color.isWarning
                                     prop.text "Upload data first to save a component"
                                 else
@@ -161,14 +158,17 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
 
-    let elementOptions (element : RenderingCode) path  : ReactElement =
+    let elementOptions (element : RenderingCode) path (name : string)  : ReactElement =
         match element with
         | HtmlElement (tag, attrs, innerText) ->
             Bulma.box[
+                Bulma.title[
+                    prop.text name
+                ]
                 Bulma.block[
                     Bulma.buttons[
                         Bulma.button.button[
-                            prop.text "Edit"
+                            prop.text "Add element"
                             prop.onClick (fun _ -> dispatch (EditCode (element, path)))
                         ]
                     ]
@@ -182,23 +182,35 @@ let view (model: Model) (dispatch: Msg -> unit) =
             Bulma.box[]
         | _ -> failwith "Not a list"
 
-    let rec sequenceOptions sequence path : ReactElement=
+    let rec sequenceOptions sequence path (name : string) : ReactElement=
         match sequence with
         | Sequence(_) ->
-            Bulma.box[]
+            Bulma.box[
+                Bulma.title[
+                    prop.text name
+                ]
+                Bulma.block[
+                    Bulma.buttons[
+                        Bulma.button.button[
+                            prop.text "Edit"
+                            prop.onClick (fun _ -> dispatch (EditCode (sequence, path)))
+                        ]
+                    ]
+                ]
+            ]
         | _ -> failwith "Not a sequence"
 
-    let options (code : RenderingCode) (path : RenderingCode list) =
+    let options (code : RenderingCode) (path : RenderingCode list) (name : string) =
         match code with
         | HtmlElement _ ->
-            elementOptions code path
+            elementOptions code path name
         | HtmlList _->
             listOptions code path
         | Sequence(_) ->
-            sequenceOptions code path
-        | Hole -> failwith "Hole cannot contain another hole"
+            sequenceOptions code path name
+        | Hole _ -> failwith "Hole cannot contain another hole"
 
-    let rec renderingCodeToReactElement (code: RenderingCode) (path : RenderingCode list) (json : Json)  =
+    let rec renderingCodeToReactElement (code: RenderingCode) (path : RenderingCode list) (json : Json) : ReactElement =
         match code with
         | HtmlElement (tag, attrs, innerText) ->
             let props = attrs |> List.toSeq |> dict
@@ -210,33 +222,39 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 | Value.Empty -> Bulma.block[ReactBindings.React.createElement(tag, props, [])]
                 | Constant s -> Bulma.block[ReactBindings.React.createElement(tag, props, [str s])]
         | HtmlList (listType, numbered, code) ->
-            let tag = if numbered then "ol" else "ul"
-            let children = 0
-            Bulma.block[]
+            Bulma.block[options code (path @ [code]) "List"]
+
         | Sequence codes ->
-            let children = List.map (fun code -> path @ [code] |> renderingCodeToReactElement code) codes |> List.toArray
-            Bulma.block[]
-        | Hole ->
-            let optionPanes = 0
-            Bulma.block[]
-
-
-
+            let jsonList =
+                match json with
+                | JObject object ->
+                    object |> Map.toList |> List.map (fun (key, value) -> value)
+                | _ -> failwith "Not a sequence"
+            let renderedElements =
+                List.mapi (fun index code -> renderingCodeToReactElement code (path @ [code]) (List.item index jsonList)) codes
+            Bulma.block[ReactBindings.React.createElement("div", dict [], renderedElements)]
+        | Hole named ->
+            let name =
+                match named with
+                | UnNamed -> "Unnamed"
+                | Named name -> name
+            let fieldType = json |> recognizeJson
+            let optionPane = options fieldType (path @ [code]) name
+            Bulma.block[optionPane]
 
     let editorView  =
         Bulma.box[
-            if model.CurrentComponent.Code <> Hole then
+            if model.CurrentComponent.Data <> JNull then
                 nameEditView
             Bulma.box[
                 prop.children[
-                if model.CurrentComponent.Code = Hole then
+                if model.CurrentComponent.Data = JNull then
                     uploadButton
                 else
                     Bulma.columns[
                         prop.classes ["is-centered"]
                         prop.children[
                             Bulma.column[
-                                column.isHalf
                                 prop.children[
                                     renderingCodeToReactElement model.CurrentComponent.Code [] model.CurrentComponent.Data
                                 ]
