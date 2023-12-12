@@ -2,6 +2,11 @@
     "data" : {
         "name": "ahoj",
         "type": "karele",
-        "value": "10kc"
+        "value": "10kc",
+        "boom" : {
+            "name": "asdasd",
+            "type": "ss",
+            "value": "10ffsskc"
+        }
     }
 }

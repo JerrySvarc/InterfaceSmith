@@ -23,4 +23,4 @@ type Component =
     { Name: string
       Id: Guid
       Data : Json
-      Code: RenderingCode }
+      Code: (RenderingCode * Json) }
