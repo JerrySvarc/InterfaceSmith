@@ -9,6 +9,7 @@ open DataLoading
 open DataRecognition
 open FileUpload
 open System
+
 open Fable.React
 
 
@@ -26,33 +27,29 @@ type Msg =
     | SetInput of string
     | ChangeNameEditMode of bool
     | SaveComponent of Component
-    | EditCode of (RenderingCode * Json list ) * RenderingCode  list
+    | EditCode of RenderingCode * RenderingCode list
 
-let rec replace path replacementElement (currentCode : RenderingCode * Json)  =
+let rec replace path replacementElement (currentCode : RenderingCode) =
     match path with
     | [] -> replacementElement
     | head::tail ->
-        match fst currentCode with
-        | HtmlElement _ -> currentCode
-        | HtmlList(lt, n, code) ->
-            if HashIdentity.Reference.Equals(code, head) then
-                (HtmlList(lt, n, fst replacementElement), snd replacementElement)
-            else
-                (HtmlList(lt, n, fst (replace tail replacementElement (code, snd currentCode))), snd currentCode)
+        match currentCode with
+        | HtmlList(lt, n, item) ->
+            let newItems =
+                if HashIdentity.Reference.Equals(item, head) then
+                    replacementElement
+                else
+                    replace tail replacementElement item
+            HtmlList(lt, n, newItems)
         | Sequence(items) ->
             let newItems =
                 items
-                |> List.map (fun item ->
-                    if HashIdentity.Reference.Equals(item, head) then
-                        replacementElement
-                    else
-                        (fst (replace tail replacementElement (item, snd currentCode)), snd currentCode))
-            let newRenderingCodes = newItems |> List.map fst
-            (Sequence(newRenderingCodes), snd currentCode)
-        | Hole _ -> currentCode
+                |> List.map (fun item -> if HashIdentity.Reference.Equals(item, head) then replacementElement else replace tail replacementElement item)
+            Sequence(newItems)
+        | _ -> currentCode
 
 let init() =
-    {CurrentComponent = {Name = "New component"; Code = Hole (UnNamed), JNull; Id = Guid.NewGuid(); Data = JNull};
+    {CurrentComponent = {Name = "New component"; Code = Hole (UnNamed); Id = Guid.NewGuid(); Data = JNull};
         FileUploadError = false; EditingName = false; EditingCode=false; NameInput = ""}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -63,7 +60,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | Some(data)  ->
             match data with
             | JObject obj ->
-                let newComponent = {model.CurrentComponent with Code = List.head (recognizeJson data)}
+                let newComponent = {model.CurrentComponent with Code = recognizeJson data; Data = data;}
                 {model with CurrentComponent = newComponent; FileUploadError = false;  }, Cmd.none
             | _ ->
                 {model with FileUploadError = true}, Cmd.none
@@ -78,7 +75,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SaveComponent comp ->
         model, Cmd.none
     | EditCode (code, path) ->
-        let newcodes = replace path (code) model.CurrentComponent.Code
+        let newcodes = replace path code model.CurrentComponent.Code
         let newComponent = {model.CurrentComponent with Code = newcodes}
         {model with CurrentComponent = newComponent}, Cmd.none
 
@@ -182,19 +179,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let listOptions list  path : ReactElement=
         match list with
         | HtmlList (listType, numbered, code) ->
-            Bulma.box[
-                Bulma.title[
-                    prop.text "List"
-                ]
-                Bulma.block[
-                    Bulma.buttons[
-                        Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (EditCode (list, path)))
-                        ]
-                    ]
-                ]
-            ]
+            Bulma.box[]
         | _ -> failwith "Not a list"
 
     let rec sequenceOptions sequence path (name : string) : ReactElement=
@@ -231,42 +216,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
             let props = attrs |> List.toSeq |> dict
             match innerText with
                 | Data ->
-                    let selectedField =
-                        match json with
-                        | JString str ->
-                            str
-                        | JNumber _
-                        | JBool _ ->
-                            json |> Json.convertFromJsonAs<String>
-                        | JNull ->
-                            "null"
-                        | _ -> failwith "Not a primitive"
-                    Bulma.block[ReactBindings.React.createElement(tag, props, [str selectedField])]
+                    let selectedFields = json
+                    let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
+                    Bulma.block[ReactBindings.React.createElement(tag, props, [str jsonStr])]
                 | Value.Empty -> Bulma.block[ReactBindings.React.createElement(tag, props, [])]
                 | Constant s -> Bulma.block[ReactBindings.React.createElement(tag, props, [str s])]
         | HtmlList (listType, numbered, code) ->
-            let topTag =
-                match listType with
-                | ListType.List -> if numbered then "ol" else "ul"
-                | Table -> "table"
+            Bulma.block[options code (path @ [code]) "List"]
 
-            let itemTag =
-                match listType with
-                | ListType.List  -> "li"
-                | Table -> "td"
-
-            let optionalTableTag =
-                match listType with
-                | ListType.List -> ""
-                | Table -> "tr"
-
-            let jsonList =
-                match json with
-                | JArray array -> array
-                | _ -> failwith "Not a list"
-
-            let renderedElements = Html.none
-            Bulma.block[ReactBindings.React.createElement(topTag, [], [])]
         | Sequence codes ->
             let jsonList =
                 match json with
@@ -274,23 +231,16 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     object |> Map.toList |> List.map (fun (key, value) -> value)
                 | _ -> failwith "Not a sequence"
             let renderedElements =
-                codes
-                |> List.collect (fun code ->
-                    match List.tryFind (fun (c, _) -> c = code) jsonList with
-                    | Some (_, json) -> [renderingCodeToReactElement code (path @ [code]) json]
-                    | None -> [])
+                List.mapi (fun index code -> renderingCodeToReactElement code (path @ [code]) (List.item index jsonList)) codes
             Bulma.block[ReactBindings.React.createElement("div", dict [], renderedElements)]
         | Hole named ->
             let name =
                 match named with
                 | UnNamed -> "Unnamed"
                 | Named name -> name
-            let fieldTypes = json |> recognizeJson
-            let optionPane =
-                fieldTypes
-                |> List.collect (fun (code, json) -> [options code (path @ [code]) name])
-            Bulma.block[ReactBindings.React.createElement("div", dict [], optionPane)]
-
+            let fieldType = json |> recognizeJson
+            let optionPane = options fieldType (path @ [code]) name
+            Bulma.block[optionPane]
 
     let editorView  =
         Bulma.box[
