@@ -19,7 +19,6 @@ type Model =
       EditingName : bool
       EditingCode : bool
       NameInput : string
-      CurrentlyEditedCode : RenderingCode * int list
     }
 
 type Msg =
@@ -29,7 +28,6 @@ type Msg =
     | ChangeNameEditMode of bool
     | SaveComponent of Component
     | ReplaceCode of RenderingCode * int list
-    | EditCode of RenderingCode * int list
 
 let rec replace path replacementElement (currentCode : RenderingCode) =
     printfn "Replacing %A with %A" path replacementElement
@@ -51,7 +49,7 @@ let rec replace path replacementElement (currentCode : RenderingCode) =
         | _ -> currentCode
 let init() =
     {CurrentComponent = {Name = "New component"; Code = Hole (UnNamed); Id = Guid.NewGuid(); Data = JNull};
-        FileUploadError = false; EditingName = false; NameInput = ""; EditingCode = false; CurrentlyEditedCode = (Hole UnNamed, [])}
+        FileUploadError = false; EditingName = false; NameInput = ""; EditingCode = false;}
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
@@ -79,7 +77,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         let newcodes = replace path code model.CurrentComponent.Code
         let newComponent = {model.CurrentComponent with Code = newcodes}
         {model with CurrentComponent = newComponent}, Cmd.none
-    | EditCode(_, _) -> failwith "Not Implemented"
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
@@ -210,76 +207,97 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
 
 
-    let elementOptions (element : RenderingCode) path (name : string)  : ReactElement =
-        let newElement =
-            match element with
-            | HtmlElement (tag, attrs, innerText) ->
-                let newElement =
-                    match innerText with
-                    | Data -> HtmlElement (tag, attrs, Data)
-                    | Value.Empty -> HtmlElement (tag, attrs, Value.Empty)
-                    | Constant s -> HtmlElement (tag, attrs, Constant s)
-                newElement
-            | _ -> failwith "Not an element"
-        Bulma.box[
-            Bulma.title[
-                prop.text name
-            ]
-            Bulma.block[
-                Bulma.buttons[
-                    Bulma.button.button[
-                        prop.text "Edit"
-                        prop.onClick (fun _ -> dispatch (EditCode (newElement, path)))
-                    ]
-                ]
-                Bulma.input.text[
-                    prop.onTextChange (fun text -> dispatch (SetInput text))
-                ]
-                Bulma.buttons[
-                    Bulma.button.button[
-                        prop.text "Save"
-                        prop.onClick (fun _ -> dispatch (ReplaceCode (newElement, path)))
-                    ]
-                    Bulma.button.button[
-                        prop.text "Cancel"
-                        prop.onClick (fun _ -> dispatch (ReplaceCode (element, path)))
-                    ]
-                ]
-            ]
-        ]
+    let elementOptionsComponent =
+        React.functionComponent(fun (props: {| element: RenderingCode; path: int list; name: string |}) ->
+            let (editedElement, setEditedElement) = React.useState props.element
+            let updateElement text element =
+                match element with
+                | HtmlElement (tag, attrs, innerText) ->
+                    let newElement =
+                        match innerText with
+                        | Data -> HtmlElement (tag, attrs, Data)
+                        | Value.Empty -> HtmlElement (tag, attrs, Value.Empty)
+                        | Constant s -> HtmlElement (tag, attrs, Constant text)
+                    newElement
+                | _ -> failwith "Not an element"
+            let newElement =
+                match editedElement with
+                | HtmlElement (tag, attrs, innerText) ->
+                    let newElement =
+                        match innerText with
+                        | Data -> HtmlElement (tag, attrs, Data)
+                        | Value.Empty -> HtmlElement (tag, attrs, Value.Empty)
+                        | Constant s -> HtmlElement (tag, attrs, Constant s)
+                    newElement
+                | _ -> failwith "Not an element"
 
-    let listOptions list  path : ReactElement=
-        match list with
-        | HtmlList (listType, numbered, code) ->
-            Bulma.box[]
-        | _ -> failwith "Not a list"
-
-    let rec sequenceOptions sequence path (name : string) : ReactElement=
-        match sequence with
-        | Sequence(_) ->
             Bulma.box[
                 Bulma.title[
-                    prop.text name
+                    prop.text props.name
                 ]
                 Bulma.block[
+                    Bulma.input.text[
+                        prop.onTextChange (fun text -> setEditedElement (updateElement text newElement))
+                    ]
                     Bulma.buttons[
                         Bulma.button.button[
-                            prop.text "Edit"
-                            prop.onClick (fun _ -> dispatch (ReplaceCode (sequence, path)))
+                            prop.text "Save"
+                            prop.onClick (fun _ -> dispatch (ReplaceCode (newElement, props.path)))
+                        ]
+                        Bulma.button.button[
+                            prop.text "Cancel"
+                            prop.onClick (fun _ -> dispatch (ReplaceCode (props.element, props.path)))
                         ]
                     ]
                 ]
             ]
-        | _ -> failwith "Not a sequence"
+        )
 
-    let options (code : RenderingCode) (path ) (name : string) =
+    let listOptionsComponent =
+        React.functionComponent(fun (props: {| list: RenderingCode; path: int list |}) ->
+            match props.list with
+            | HtmlList (listType, numbered, code) ->
+                Bulma.box[
+                    dropdownMenu [
+                        "Unordered list"
+                        "Ordered list"
+                    ]
+                    dropdownMenu [
+                        "List"
+                        "Table"
+                    ]
+                ]
+            | _ -> failwith "Not a list"
+        )
+
+    let sequenceOptionsComponent =
+        React.functionComponent(fun (props: {| sequence: RenderingCode; path: int list; name: string |}) ->
+            match props.sequence with
+            | Sequence(_) ->
+                Bulma.box[
+                    Bulma.title[
+                        prop.text props.name
+                    ]
+                    Bulma.block[
+                        Bulma.buttons[
+                            Bulma.button.button[
+                                prop.text "Edit"
+                                prop.onClick (fun _ -> dispatch (ReplaceCode (props.sequence, props.path)))
+                            ]
+                        ]
+                    ]
+                ]
+            | _ -> failwith "Not a sequence"
+        )
+
+    let options (code : RenderingCode) (path : int list) (name : string) =
         match code with
         | HtmlElement _ ->
-            elementOptions code path name
+            elementOptionsComponent {| element = code; path = path; name = name |}
         | HtmlList _->
-            listOptions code path
+            listOptionsComponent {| list = code; path = path |}
         | Sequence(_) ->
-            sequenceOptions code path name
+            sequenceOptionsComponent {| sequence = code; path = path; name = name |}
         | Hole _ -> failwith "Hole cannot contain another hole"
 
     let rec renderingCodeToReactElement (code: RenderingCode) (path : int list) (json : Json) : ReactElement =
