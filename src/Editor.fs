@@ -12,7 +12,6 @@ open System
 
 open Fable.React
 
-
 type Model =
     { CurrentComponent : Component
       FileUploadError : bool
@@ -30,7 +29,6 @@ type Msg =
     | ReplaceCode of RenderingCode * int list
 
 let rec replace path replacementElement (currentCode : RenderingCode) =
-    printfn "Replacing %A with %A" path replacementElement
     match path with
     | [] -> replacementElement
     | head::tail ->
@@ -44,7 +42,7 @@ let rec replace path replacementElement (currentCode : RenderingCode) =
         | Sequence(items) ->
             let newItems =
                 items
-                |> List.mapi (fun i item -> if i = head then replacementElement else item)
+                |> List.mapi (fun i item -> if i = head then replace tail replacementElement item else item)
             Sequence(newItems)
         | _ -> currentCode
 let init() =
@@ -74,8 +72,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SaveComponent comp ->
         model, Cmd.none
     | ReplaceCode (code, path) ->
+        Fable.Core.JS.console.log model.CurrentComponent.Code
         let newcodes = replace path code model.CurrentComponent.Code
-        let newComponent = {model.CurrentComponent with Code = newcodes}
+        Fable.Core.JS.console.log newcodes
+        let newComponent: Component = {model.CurrentComponent with Code = newcodes}
         {model with CurrentComponent = newComponent}, Cmd.none
 
 
@@ -165,8 +165,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
         ]
 
 
-    let dropdownMenu items =
-        Html.div [
+    let dropdownMenu items (defaultText :string)=
+        Bulma.block[
             prop.className "dropdown is-hoverable"
             prop.children [
                 Html.div [
@@ -174,7 +174,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.children [
                         Html.button [
                             prop.className "button"
-                            prop.text "Dropdown button"
+                            prop.text defaultText
                             prop.children [
                                 Html.span [
                                     prop.text "Dropdown button"
@@ -241,12 +241,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                     Bulma.buttons[
                         Bulma.button.button[
-                            prop.text "Save"
+                            prop.text ("Add element" + (props.path.ToString()))
                             prop.onClick (fun _ -> dispatch (ReplaceCode (newElement, props.path)))
-                        ]
-                        Bulma.button.button[
-                            prop.text "Cancel"
-                            prop.onClick (fun _ -> dispatch (ReplaceCode (props.element, props.path)))
                         ]
                     ]
                 ]
@@ -258,14 +254,17 @@ let view (model: Model) (dispatch: Msg -> unit) =
             match props.list with
             | HtmlList (listType, numbered, code) ->
                 Bulma.box[
+                    Bulma.title[
+                        prop.text "List"
+                    ]
                     dropdownMenu [
                         "Unordered list"
                         "Ordered list"
-                    ]
+                    ]   (listType.ToString())
                     dropdownMenu [
                         "List"
                         "Table"
-                    ]
+                    ] "List or table"
                 ]
             | _ -> failwith "Not a list"
         )
@@ -301,37 +300,37 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | Hole _ -> failwith "Hole cannot contain another hole"
 
     let rec renderingCodeToReactElement (code: RenderingCode) (path : int list) (json : Json) : ReactElement =
-       // printfn "Json %A with code %A" json code
-        match code with
-        | HtmlElement (tag, attrs, innerText) ->
-            let props = attrs |> List.toSeq |> dict
-            match innerText with
-                | Data ->
-                    let selectedFields = json
-                    let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-                    Bulma.block[ReactBindings.React.createElement(tag, props, [str jsonStr])]
-                | Value.Empty -> Bulma.block[ReactBindings.React.createElement(tag, props, [])]
-                | Constant s -> Bulma.block[ReactBindings.React.createElement(tag, props, [str s])]
-        | HtmlList (listType, numbered, code) ->
-            Bulma.block[options code path "List"]
-        | Sequence codes ->
-            let jsonList =
-                match json with
-                | JObject object -> object |> Map.toList
-                | _ -> failwith "Not a sequence"
-            let renderedElements =
-                List.mapi (fun index code ->
-                    let (_, jsonSubObject) = List.item index jsonList
-                    renderingCodeToReactElement code (path @ [index]) jsonSubObject) codes
-            Bulma.block[ReactBindings.React.createElement("div", dict [], renderedElements)]
-        | Hole named ->
-            let name =
-                match named with
-                | UnNamed -> "Unnamed"
-                | Named name -> name
-            let fieldType = json |> recognizeJson
-            let optionPane = options fieldType path name
-            Bulma.block[optionPane]
+        //printfn "Json %A with code %A" json code
+            match code with
+            | HtmlElement (tag, attrs, innerText) ->
+                let props = attrs |> List.toSeq |> dict
+                match innerText with
+                    | Data ->
+                        let selectedFields = json
+                        let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
+                        Bulma.block[ReactBindings.React.createElement("h1", props, [str jsonStr])]
+                    | Value.Empty -> Bulma.block[ReactBindings.React.createElement(tag, props, [])]
+                    | Constant s -> Bulma.block[ReactBindings.React.createElement(tag, props, [str s])]
+            | HtmlList (listType, numbered, code) ->
+                Bulma.block[options code path "List"]
+            | Sequence codes ->
+                let jsonList =
+                    match json with
+                    | JObject object -> object |> Map.toList
+                    | _ -> failwith "Not a sequence"
+                let renderedElements =
+                    List.mapi (fun index code ->
+                        let (_, jsonSubObject) = List.item index jsonList
+                        renderingCodeToReactElement code (path @ [index]) jsonSubObject) codes
+                Bulma.block[ReactBindings.React.createElement("h4", [], renderedElements)]
+            | Hole named ->
+                let name =
+                    match named with
+                    | UnNamed -> "Unnamed"
+                    | Named name -> name
+                let fieldType = json |> recognizeJson
+                let optionPane = options fieldType path name
+                Bulma.block[optionPane]
 
     let editorView  =
         Bulma.box[

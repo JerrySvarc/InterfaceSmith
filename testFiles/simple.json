@@ -1,12 +1,11 @@
 {
     "data" : {
-        "name": "ahoj",
-        "type": "karele",
-        "value": "10kc",
-        "boom" : {
-            "ssa": "sdadsad",
-            "swx": "karelassse",
-            "xxs": "10w2kcw22"
+        "name": "Data",
+        "type": "Android",
+        "value": "Invaluable",
+        "attributes" : {
+            "intelligence": "massive",
+            "computation": "Trillions of computations per second."
         }
     }
 }
