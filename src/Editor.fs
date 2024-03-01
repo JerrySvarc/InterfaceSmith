@@ -330,20 +330,24 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Bulma.block[optionPane]
 
     let editorView  =
-        Bulma.box[
-            if model.CurrentComponent.Data <> JNull then
-                nameEditView
-            Bulma.box[
-                prop.children[
-                if model.CurrentComponent.Data = JNull then
-                    uploadButton
-                else
-                    Bulma.columns[
-                        prop.classes ["is-centered"]
-                        prop.children[
-                            Bulma.column[
-                                prop.children[
-                                    renderingCodeToReactElement model.CurrentComponent.Code [] model.CurrentComponent.Data
+        Html.section [
+            prop.className "h-screen w-screen"
+            prop.children [
+                if model.CurrentComponent.Data <> JNull then
+                    nameEditView
+                Html.div[
+                    prop.children[
+                    if model.CurrentComponent.Data = JNull then
+                        uploadButton
+                    else
+                        Html.div [
+                            prop.className "flex justify-center"
+                            prop.children [
+                                Html.div [
+                                    prop.className "flex"
+                                    prop.children [
+                                        renderingCodeToReactElement model.CurrentComponent.Code [] model.CurrentComponent.Data
+                                    ]
                                 ]
                             ]
                         ]
