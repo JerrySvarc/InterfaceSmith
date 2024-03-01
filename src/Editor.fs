@@ -72,9 +72,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | SaveComponent comp ->
         model, Cmd.none
     | ReplaceCode (code, path) ->
-        Fable.Core.JS.console.log model.CurrentComponent.Code
         let newcodes = replace path code model.CurrentComponent.Code
-        Fable.Core.JS.console.log newcodes
         let newComponent: Component = {model.CurrentComponent with Code = newcodes}
         {model with CurrentComponent = newComponent}, Cmd.none
 
@@ -241,7 +239,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     ]
                     Bulma.buttons[
                         Bulma.button.button[
-                            prop.text ("Add element" + (props.path.ToString()))
+                            prop.text ("Add element " + props.name)
                             prop.onClick (fun _ -> dispatch (ReplaceCode (newElement, props.path)))
                         ]
                     ]
@@ -300,7 +298,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | Hole _ -> failwith "Hole cannot contain another hole"
 
     let rec renderingCodeToReactElement (code: RenderingCode) (path : int list) (json : Json) : ReactElement =
-        //printfn "Json %A with code %A" json code
             match code with
             | HtmlElement (tag, attrs, innerText) ->
                 let props = attrs |> List.toSeq |> dict
