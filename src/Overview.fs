@@ -42,8 +42,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.className "px-4 py-5 sm:p-6"
                     prop.children [
                         Html.div [
-                            prop.className "media-content"
-                            prop.children [ Html.h4 [ prop.className "title is-4"; prop.text createdComponent.Name ] ]
+                            prop.className "flex items-center"
+                            prop.children [ Html.h4 [ prop.className "text-lg font-medium"; prop.text createdComponent.Name ] ]
                         ]
                     ]
                 ]
