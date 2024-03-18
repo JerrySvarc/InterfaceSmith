@@ -8,7 +8,7 @@ const proxyTarget = "http://localhost:" + proxyPort;
 export default defineConfig({
     plugins: [react()],
     build: {
-        outDir: "../../deploy/public",
+        outDir: "../deploy/public",
     },
     server: {
         port: 8080,

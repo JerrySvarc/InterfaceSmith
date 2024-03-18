@@ -6,7 +6,15 @@ module.exports = {
         "./**/*.{fs,js,ts,jsx,tsx}",
     ],
     theme: {
-        extend: {},
+        extend: {typography: {
+        '.preview': {
+          css: {
+            '*': {
+              all: 'unset',
+            },
+          },
+        },
+      },},
     },
     plugins: []
 }

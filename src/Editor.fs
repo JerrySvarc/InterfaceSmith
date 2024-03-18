@@ -2,15 +2,14 @@ module Editor
 
 open Elmish
 open Feliz
-open Feliz.Bulma
 open Types
 open Fable.SimpleJson
 open DataLoading
 open DataRecognition
 open FileUpload
 open System
+open EditorUtils
 
-open Fable.React
 
 type Model = {
     CurrentComponent: Component
@@ -27,30 +26,6 @@ type Msg =
     | ChangeNameEditMode of bool
     | SaveComponent of Component
     | ReplaceCode of RenderingCode * int list
-
-let rec replace path replacementElement (currentCode: RenderingCode) =
-    match path with
-    | [] -> replacementElement
-    | head :: tail ->
-        match currentCode with
-        | HtmlList(lt, n, item) ->
-            let newItems =
-                match item with
-                | Hole _ -> item
-                | _ -> replace tail replacementElement item
-
-            HtmlList(lt, n, newItems)
-        | Sequence(items) ->
-            let newItems =
-                items
-                |> List.mapi (fun i item ->
-                    if i = head then
-                        replace tail replacementElement item
-                    else
-                        item)
-
-            Sequence(newItems)
-        | _ -> currentCode
 
 let init () = {
     CurrentComponent = {
@@ -127,7 +102,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let upploadButtonView onLoad =
         Html.div [
-            prop.className "mt-10 block "
+            prop.className "mt-10 w-full h-full flex items-center justify-center"
             prop.children [
                 Html.div [
                     prop.className "flex justify-center"
@@ -141,8 +116,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     prop.className "hidden"
                                 ]
                                 Html.span [
-                                    prop.className "px-4 py-2 bg-blue-500 text-white rounded cursor-pointer"
-                                    prop.children [ Html.text "Choose a file…" ]
+                                    prop.className
+                                        "px-8 py-4 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-700 transition duration-200 ease-in-out text-xl"
+                                    prop.children [ Html.text "Select a file" ]
                                 ]
                             ]
                         ]
@@ -161,115 +137,125 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let uploadButton = upploadButtonView (UploadData >> dispatch)
 
     let nameEditView =
-        Html.div [
-            prop.className "p-4 border rounded"
-            prop.children [
+        let nameInput =
+            Html.input [
+                prop.className "border-2 border-blue-500 rounded-md pl-3"
+                prop.onTextChange (fun text -> dispatch (SetInput text))
+            ]
+
+        let nameDisplay =
+            let nameText = "Component name: " + model.CurrentComponent.Name
+            Html.h1 [ prop.className "text-2xl font-semibold m-0 p-0 pl-3"; prop.text nameText ]
+
+        let nameContainer =
+            Html.div [
+                prop.className "p-0"
+                prop.children [
+                    if model.EditingName then nameInput else nameDisplay
+                ]
+            ]
+
+        let editButton =
+            let buttonText, buttonColor =
                 if model.EditingName then
-                    Html.div [
-                        prop.className "block"
-                        prop.children [
-                            Html.input [
-                                prop.className "border p-2 rounded"
-                                prop.onTextChange (fun text -> dispatch (SetInput text))
-                            ]
-                        ]
-                    ]
+                    if model.NameInput.Length > 0 then
+                        "Save", "bg-blue-500 hover:bg-blue-700"
+                    else
+                        "Name must be at least one character", "bg-yellow-500 hover:bg-yellow-700"
                 else
-                    Html.div [
-                        prop.className "block"
-                        prop.children [
-                            let nameText = "Component name: " + model.CurrentComponent.Name
-                            Html.h1 [ prop.className "text-xl font-bold" ]
-                            Html.text nameText
-                        ]
-                    ]
+                    "Edit name", "bg-gray-500 hover:bg-gray-700"
+
+            let onClick =
+                if model.EditingName && model.NameInput.Length > 0 then
+                    (fun _ -> dispatch (ChangeName model.NameInput))
+                else if not model.EditingName then
+                    (fun _ -> dispatch (ChangeNameEditMode(model.EditingName |> not)))
+                else
+                    (fun _ -> ())
+
+            Html.button [
+                prop.className (
+                    buttonColor
+                    + " text-white px-4 py-2 rounded-md transition duration-200 ease-in-out"
+                )
+                prop.children [ Html.text buttonText ]
+                prop.onClick onClick
+            ]
+
+        let cancelButton =
+            Html.button [
+                prop.className
+                    "bg-red-500 hover:bg-red-700 text-white px-4 py-2 rounded-md transition duration-200 ease-in-out"
+                prop.children [ Html.text "Cancel" ]
+                prop.onClick (fun _ -> dispatch (ChangeNameEditMode false))
+            ]
+
+        let saveButton =
+            let buttonText, buttonColor =
+                if model.CurrentComponent.Data = JNull then
+                    "Upload data first to save a component", "bg-yellow-500 hover:bg-yellow-700"
+                else
+                    "Save component", "bg-green-500 hover:bg-green-700"
+
+            Html.button [
+                prop.className (
+                    buttonColor
+                    + " text-white px-4 py-2 rounded-md transition duration-200 ease-in-out"
+                )
+                prop.children [ Html.text buttonText ]
+                prop.onClick (fun _ -> dispatch (SaveComponent model.CurrentComponent))
+            ]
+
+        Html.div [
+            prop.className "p-7 border-2 border-gray-300 rounded-md"
+            prop.children [
+                nameContainer
                 Html.div [
-                    prop.className "flex space-x-4"
-                    prop.children [
-                        Html.button [
-                            prop.className (
-                                if model.EditingName then
-                                    if model.NameInput.Length > 0 then
-                                        "bg-blue-500 text-white px-4 py-2 rounded"
-                                    else
-                                        "bg-yellow-500 text-white px-4 py-2 rounded"
-                                else
-                                    "bg-gray-500 text-white px-4 py-2 rounded"
-                            )
-                            prop.children [
-                                if model.EditingName then
-                                    if model.NameInput.Length > 0 then
-                                        Html.text "Save"
-                                    else
-                                        Html.text "Name must be at least one character"
-                                else
-                                    Html.text "Edit name"
-                            ]
-                            prop.onClick (
-                                if model.EditingName && model.NameInput.Length > 0 then
-                                    (fun _ -> dispatch (ChangeName model.NameInput))
-                                else if not model.EditingName then
-                                    (fun _ -> dispatch (ChangeNameEditMode(model.EditingName |> not)))
-                                else
-                                    (fun _ -> ())
-                            )
-                        ]
-                        if model.EditingName then
-                            Html.button [
-                                prop.className "bg-red-500 text-white px-4 py-2 rounded"
-                                prop.children [ Html.text "Cancel" ]
-                                prop.onClick (fun _ -> dispatch (ChangeNameEditMode false))
-                            ]
-                        else
-                            Html.button [
-                                prop.className (
-                                    if model.CurrentComponent.Data = JNull then
-                                        "bg-yellow-500 text-white px-4 py-2 rounded"
-                                    else
-                                        "bg-green-500 text-white px-4 py-2 rounded"
-                                )
-                                prop.children [
-                                    if model.CurrentComponent.Data = JNull then
-                                        Html.text "Upload data first to save a component"
-                                    else
-                                        Html.text "Save component"
-                                ]
-                                prop.onClick (fun _ -> dispatch (SaveComponent model.CurrentComponent))
-                            ]
-                    ]
+                    prop.className "flex space-x-4 mt-4"
+                    prop.children [ editButton; if model.EditingName then cancelButton else saveButton ]
                 ]
             ]
         ]
 
-    let dropdownItem (text: string) =
+    let dropdownItem (text: string) (setSelectedItem: string -> unit) =
         Html.a [
             prop.className "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             prop.href "#"
             prop.text text
+            prop.onClick (fun _ -> setSelectedItem text)
         ]
 
-
     let dropdownMenu items (defaultText: string) =
+        let (dropdownVisible, setDropdownVisible) = React.useState false
+        let (selectedItem, setSelectedItem) = React.useState defaultText
+
         Html.div [
-            prop.className "relative inline-block text-left"
+            prop.className "group relative inline-block text-left"
             prop.children [
                 Html.button [
                     prop.className
                         "inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    prop.text defaultText
+                    prop.text selectedItem
+                    prop.onClick (fun _ -> setDropdownVisible (not dropdownVisible))
                     prop.children [ Html.span [ prop.text "Dropdown button" ] ]
                 ]
                 Html.div [
-                    prop.className
-                        "origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5"
+                    prop.className (
+                        sprintf
+                            "origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 %s"
+                            (if dropdownVisible then "block" else "hidden")
+                    )
                     prop.custom ("role", "menu")
+                    prop.onMouseLeave (fun _ -> setDropdownVisible false)
                     prop.children [
-                        Html.div [ prop.className "py-1"; prop.children (items |> List.map dropdownItem) ]
+                        Html.div [
+                            prop.className "py-1"
+                            prop.children (items |> List.map (fun item -> dropdownItem item setSelectedItem))
+                        ]
                     ]
                 ]
             ]
         ]
-
 
     let elementOptionsComponent =
         React.functionComponent
@@ -281,33 +267,41 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         name: string
                     |}) ->
                 let (editedElement, setEditedElement) = React.useState props.element
+                let (tag, setTag) = React.useState ""
+                let (attributes, setAttributes) = React.useState ""
+                let (text, setText) = React.useState ""
 
-                let updateElement text element =
+                let updateElement (tag: string) (attributes: string) (text: string) element =
+                    let attributesList =
+                        if String.IsNullOrWhiteSpace(attributes) then
+                            []
+                        else
+                            attributes.Split(',')
+                            |> Array.map (fun (kv: string) -> kv.Split('='))
+                            |> Array.map (fun kv -> (kv.[0].Trim(), kv.[1].Trim()))
+                            |> Array.toList
+
                     match element with
-                    | HtmlElement(tag, attrs, innerText) ->
-                        let newElement =
-                            match innerText with
-                            | Data -> HtmlElement(tag, attrs, Data)
-                            | Value.Empty -> HtmlElement(tag, attrs, Value.Empty)
-                            | Constant s -> HtmlElement(tag, attrs, Constant text)
+                    | HtmlElement(oldTag, oldAttributes, oldText) ->
+                        let newTag = if String.IsNullOrWhiteSpace(tag) then oldTag else tag
 
-                        newElement
-                    | _ -> failwith "Not an element"
+                        let newAttributes =
+                            if attributesList.Length = 0 then
+                                oldAttributes
+                            else
+                                attributesList
 
-                let newElement =
-                    match editedElement with
-                    | HtmlElement(tag, attrs, innerText) ->
-                        let newElement =
-                            match innerText with
-                            | Data -> HtmlElement(tag, attrs, Data)
-                            | Value.Empty -> HtmlElement(tag, attrs, Value.Empty)
-                            | Constant s -> HtmlElement(tag, attrs, Constant s)
+                        let newText =
+                            if String.IsNullOrWhiteSpace(text) then oldText
+                            elif newTag = "input" then Value.Empty
+                            else Constant text
 
-                        newElement
+                        HtmlElement(newTag, newAttributes, newText)
                     | _ -> failwith "Not an element"
 
                 Html.div [
                     prop.className "p-4 bg-white rounded shadow"
+                    prop.draggable true
                     prop.children [
                         Html.h4 [ prop.className "text-lg font-medium"; prop.text props.name ]
                         Html.div [
@@ -315,12 +309,35 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             prop.children [
                                 Html.input [
                                     prop.className "border p-2 rounded"
-                                    prop.onTextChange (fun text -> setEditedElement (updateElement text newElement))
+                                    prop.placeholder "Tag"
+                                    prop.onTextChange (fun newTag ->
+                                        setTag newTag
+                                        let updatedElement = updateElement newTag attributes text editedElement
+                                        setEditedElement updatedElement)
+                                ]
+                                Html.input [
+                                    prop.className "border p-2 rounded mt-2"
+                                    prop.placeholder "Attributes"
+                                    prop.onTextChange (fun newAttributes ->
+                                        setAttributes newAttributes
+                                        let updatedElement = updateElement tag newAttributes text editedElement
+                                        setEditedElement updatedElement)
+                                ]
+                                Html.input [
+                                    prop.className "border p-2 rounded mt-2"
+                                    prop.placeholder "Text"
+                                    prop.onTextChange (fun newText ->
+                                        setText newText
+                                        let updatedElement = updateElement tag attributes newText editedElement
+                                        setEditedElement updatedElement)
                                 ]
                                 Html.button [
                                     prop.className "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4"
                                     prop.text ("Add element " + props.name)
-                                    prop.onClick (fun _ -> dispatch (ReplaceCode(newElement, props.path)))
+                                    prop.onClick (fun _ ->
+                                        let updatedElement = updateElement tag attributes text editedElement
+                                        setEditedElement updatedElement
+                                        dispatch (ReplaceCode(updatedElement, props.path)))
                                 ]
                             ]
                         ]
@@ -356,25 +373,39 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         path: int list
                         name: string
                     |}) ->
-                match props.sequence with
-                | Sequence(_) ->
-                    Html.div [
-                        prop.className "p-4 bg-white rounded shadow"
-                        prop.children [
-                            Html.h4 [ prop.className "text-lg font-medium"; prop.text props.name ]
+                let (isCollapsed, setCollapsed) = React.useState (true)
+
+                Html.div [
+                    Html.button [
+                        prop.onClick (fun _ -> setCollapsed (not isCollapsed))
+                        prop.text (if isCollapsed then "Show options" else "Hide options")
+                        prop.className "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    ]
+                    if not isCollapsed then
+                        match props.sequence with
+                        | Sequence(_) ->
                             Html.div [
-                                prop.className "mt-4"
+                                prop.className "p-4 bg-white rounded shadow"
                                 prop.children [
-                                    Html.button [
-                                        prop.className "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                        prop.text "Edit"
-                                        prop.onClick (fun _ -> dispatch (ReplaceCode(props.sequence, props.path)))
+                                    Html.h4 [ prop.className "text-lg font-medium"; prop.text props.name ]
+                                    Html.div [
+                                        prop.className "mt-4"
+                                        prop.children [
+                                            Html.button [
+                                                prop.className
+                                                    "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                prop.text "Edit"
+                                                prop.onClick (fun _ ->
+                                                    dispatch (ReplaceCode(props.sequence, props.path)))
+                                            ]
+                                        ]
                                     ]
                                 ]
                             ]
-                        ]
-                    ]
-                | _ -> failwith "Not a sequence")
+                        | _ -> failwith "Not a sequence"
+                    else
+                        Html.text ""
+                ])
 
     let options (code: RenderingCode) (path: int list) (name: string) =
         match code with
@@ -393,43 +424,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             |}
         | Hole _ -> failwith "Hole cannot contain another hole"
 
-    let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json: Json) : ReactElement =
-        match code with
-        | HtmlElement(tag, attrs, innerText) ->
-            let props = attrs |> List.toSeq |> dict
 
-            match innerText with
-            | Data ->
-                let selectedFields = json
-                let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-                ReactBindings.React.createElement ("div", props, [ str jsonStr ])
-            | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
-            | Constant s -> ReactBindings.React.createElement ("div", props, [ str s ])
-        | HtmlList(listType, numbered, code) ->
-            ReactBindings.React.createElement ("div", [], [ options code path "List" ])
-        | Sequence codes ->
-            let jsonList =
-                match json with
-                | JObject object -> object |> Map.toList
-                | _ -> failwith "Not a sequence"
-
-            let renderedElements =
-                List.mapi
-                    (fun index code ->
-                        let (_, jsonSubObject) = List.item index jsonList
-                        renderingCodeToReactElement code (path @ [ index ]) jsonSubObject)
-                    codes
-
-            ReactBindings.React.createElement ("div", [], renderedElements)
-        | Hole named ->
-            let name =
-                match named with
-                | UnNamed -> "Unnamed"
-                | Named name -> name
-
-            let fieldType = json |> recognizeJson
-            let optionPane = options fieldType path name
-            ReactBindings.React.createElement ("div", [], [ optionPane ])
 
     let editorView =
         Html.section [
@@ -437,23 +432,28 @@ let view (model: Model) (dispatch: Msg -> unit) =
             prop.children [
                 if model.CurrentComponent.Data <> JNull then
                     nameEditView
-                Html.div[prop.children[if model.CurrentComponent.Data = JNull then
-                                           uploadButton
-                                       else
-                                           Html.div [
-                                               prop.className "flex justify-center"
-                                               prop.children [
-                                                   Html.div [
-                                                       prop.className "flex"
-                                                       prop.children [
-                                                           renderingCodeToReactElement
-                                                               model.CurrentComponent.Code
-                                                               []
-                                                               model.CurrentComponent.Data
-                                                       ]
-                                                   ]
-                                               ]
-                                           ]]]
+                Html.div [
+                    prop.children [
+                        if model.CurrentComponent.Data = JNull then
+                            uploadButton
+                        else
+                            Html.div [
+                                prop.className "flex justify-center"
+                                prop.children [
+                                    Html.div [
+                                        prop.className "flex"
+                                        prop.children [
+                                            renderingCodeToReactElement
+                                                model.CurrentComponent.Code
+                                                []
+                                                model.CurrentComponent.Data
+                                                options
+                                        ]
+                                    ]
+                                ]
+                            ]
+                    ]
+                ]
             ]
         ]
 
