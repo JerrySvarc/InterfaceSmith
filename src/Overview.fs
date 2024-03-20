@@ -43,7 +43,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.children [
                         Html.div [
                             prop.className "flex items-center"
-                            prop.children [ Html.h4 [ prop.className "text-lg font-medium"; prop.text createdComponent.Name ] ]
+                            prop.children [
+                                Html.h4 [ prop.className "text-lg font-medium"; prop.text createdComponent.Name ]
+                            ]
                         ]
                     ]
                 ]
@@ -81,7 +83,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.className "px-4 py-5 sm:p-6 justify-center items-center flex"
                     prop.children [
                         Html.div [
-                            prop.children [ Html.h4 [ prop.className "text-lg font-medium"; prop.text "No components created" ] ]
+                            prop.children [
+                                Html.h4 [ prop.className "text-lg font-medium"; prop.text "No components created" ]
+                            ]
                         ]
                     ]
                 ]
