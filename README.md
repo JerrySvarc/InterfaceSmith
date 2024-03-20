@@ -8,8 +8,8 @@ The **specification** for the project can be found [here](project-specification.
 
 You'll need to install the following pre-requisites in order to build the applications
 
-* [.NET Core SDK](https://www.microsoft.com/net/download) 6.0 or higher
-* [Node 16](https://nodejs.org/en/download/)
+* [.NET Core SDK](https://www.microsoft.com/net/download) 8.0 or higher
+* [Node 20](https://nodejs.org/en/download/)
 
 ## Starting the application
 
