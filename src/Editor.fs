@@ -4,11 +4,13 @@ open Elmish
 open Feliz
 open Types
 open Fable.SimpleJson
+open Fable.React
 open DataLoading
 open DataRecognition
 open FileUpload
 open System
 open EditorUtils
+
 
 
 type Model = {
@@ -17,6 +19,7 @@ type Model = {
     EditingName: bool
     EditingCode: bool
     NameInput: string
+    JsonData: Json
 }
 
 type Msg =
@@ -26,6 +29,7 @@ type Msg =
     | ChangeNameEditMode of bool
     | SaveComponent of Component
     | ReplaceCode of RenderingCode * int list
+    | SelectFields of string list
 
 let init () = {
     CurrentComponent = {
@@ -38,6 +42,7 @@ let init () = {
     EditingName = false
     NameInput = ""
     EditingCode = false
+    JsonData = JNull
 }
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
@@ -52,13 +57,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 let newComponent = {
                     model.CurrentComponent with
                         Code = recognizeJson data
-                        Data = data
+                        Data = JNull
                 }
 
                 {
                     model with
                         CurrentComponent = newComponent
                         FileUploadError = false
+                        JsonData = data
                 },
                 Cmd.none
             | _ -> { model with FileUploadError = true }, Cmd.none
@@ -96,7 +102,26 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 CurrentComponent = newComponent
         },
         Cmd.none
+    | SelectFields(fields) ->
+        let newJsonData =
+            match model.JsonData with
+            | JObject originalFields ->
+                let selectedFields =
+                    originalFields |> Map.filter (fun key _ -> List.contains key fields)
 
+                JObject selectedFields
+            | _ -> model.JsonData
+
+        let newComponent = {
+            model.CurrentComponent with
+                Data = newJsonData
+        }
+
+        {
+            model with
+                CurrentComponent = newComponent
+        },
+        Cmd.none
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
@@ -217,6 +242,50 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
 
+
+    let selectFields =
+        React.functionComponent (fun (jsonData: Json, props: {| selectedFields: string list |}) ->
+            let jsonFields =
+                match jsonData with
+                | JObject fields -> fields |> Map.keys |> List.ofSeq
+                | _ -> []
+
+            let selectedFields, setSelectedFields = React.useState props.selectedFields
+
+            let addField (field: string) =
+                if List.exists ((=) field) selectedFields then
+                    List.filter ((<>) field) selectedFields
+                else
+                    field :: selectedFields
+
+            let checkboxForField (field: string) =
+                let isChecked = List.exists ((=) field) selectedFields
+
+                Html.div [
+                    prop.children [
+                        Html.input [
+                            prop.type' "checkbox"
+                            prop.id field
+                            prop.name field
+                            prop.defaultChecked isChecked
+                            prop.onChange (fun (_: Browser.Types.Event) -> setSelectedFields (addField field))
+                        ]
+                        Html.label [ prop.htmlFor field; prop.text field ]
+                    ]
+                ]
+
+            Html.div [
+                prop.children (
+                    [
+                        Html.form [ prop.children (jsonFields |> List.map checkboxForField) ]
+                        Html.button [
+                            prop.text "Submit"
+                            prop.onClick (fun _ -> dispatch (SelectFields selectedFields))
+                        ]
+                    ]
+                )
+            ])
+
     let dropdownItem (text: string) (setSelectedItem: string -> unit) =
         Html.a [
             prop.className "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -307,10 +376,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.className "p-4 bg-white rounded shadow w-64"
                     prop.onClick (fun _ -> setIsCollapsed (not isCollapsed))
                     prop.children [
-                        Html.p [
-                            prop.className "text-lg font-medium"
-                            prop.text props.name
-                        ]
+                        Html.p [ prop.className "text-lg font-medium"; prop.text props.name ]
                         if not isCollapsed then
                             Html.div [
 
@@ -323,7 +389,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                             setTag newTag
                                             let updatedElement = updateElement newTag attributes text editedElement
                                             setEditedElement updatedElement)
-                                        prop.onClick (fun e -> e.stopPropagation()) // Stop propagation of the click event
+                                        prop.onClick (fun e -> e.stopPropagation ()) // Stop propagation of the click event
                                     ]
                                     Html.input [
                                         prop.className "border p-2 rounded mt-2"
@@ -332,10 +398,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                             setAttributes newAttributes
                                             let updatedElement = updateElement tag newAttributes text editedElement
                                             setEditedElement updatedElement)
-                                        prop.onClick (fun e -> e.stopPropagation()) // Stop propagation of the click event
+                                        prop.onClick (fun e -> e.stopPropagation ()) // Stop propagation of the click event
                                     ]
                                     Html.button [
-                                        prop.className "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4"
+                                        prop.className
+                                            "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4"
                                         prop.text ("Add element " + props.name)
                                         prop.onClick (fun _ ->
                                             let updatedElement = updateElement tag attributes text editedElement
@@ -429,37 +496,41 @@ let view (model: Model) (dispatch: Msg -> unit) =
             |}
         | Hole _ -> failwith "Hole cannot contain another hole"
 
-
-
     let editorView =
-        Html.section [
-            prop.className "h-screen w-screen"
-            prop.children [
-                if model.CurrentComponent.Data <> JNull then
-                    nameEditView
-                Html.div [
-                    prop.children [
-                        if model.CurrentComponent.Data = JNull then
-                            uploadButton
-                        else
-                            Html.div [
-                                prop.className "flex justify-center"
-                                prop.children [
-                                    Html.div [
-                                        prop.className "flex"
-                                        prop.children [
-                                            renderingCodeToReactElement
-                                                model.CurrentComponent.Code
-                                                []
-                                                model.CurrentComponent.Data
-                                                options
-                                        ]
-                                    ]
-                                ]
-                            ]
+        let previewPanel =
+            Html.div [
+                prop.className "w-1/2 h-full p-4 border-r border-gray-300 flex"
+                prop.children [ Html.h2 [ prop.text "Preview" ] ]
+            ]
+
+        let modificationPanel =
+            Html.div [
+                prop.className "w-1/2 h-full p-4 flex"
+                prop.children [
+                    Html.h2 [
+                        prop.text "Modification"
+                        prop.children [
+                            (*renderingCodeToReactElement
+                                model.CurrentComponent.Code
+                                []
+                                model.CurrentComponent.Data
+                                options*)
+
+
+                        ]
                     ]
                 ]
             ]
+
+        Html.div [
+            prop.className "h-screen w-screen flex"
+            if model.JsonData = JNull then
+                prop.children [ uploadButton ]
+            else
+                if model.CurrentComponent.Data = JNull then
+                    prop.children [ selectFields (model.JsonData, {| selectedFields = [] |}) ]
+                else
+                    prop.children [ nameEditView; previewPanel; ]
         ]
 
     Html.div [ prop.className "mt-16 flex"; prop.children [ editorView ] ]
