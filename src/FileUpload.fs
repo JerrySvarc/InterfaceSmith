@@ -10,8 +10,7 @@ open Fable.Core.JsInterop
 open Browser.Types
 
 let isJsonFile (file: Browser.Types.File) =
-    file.GetType().Name.EndsWith("File")
-    && file.name.EndsWith(".json")
+    file.GetType().Name.EndsWith("File") && file.name.EndsWith(".json")
 
 let handleFileEvent onLoad (fileEvent: Browser.Types.Event) =
     let files: Browser.Types.FileList = !!fileEvent.target?files

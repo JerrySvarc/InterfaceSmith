@@ -96,9 +96,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let navButton (page: Page) (text: string) =
         Html.button [
             if model.CurrentPage = page then
-                prop.className "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium bg-gray-900"
+                prop.className
+                    "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium bg-gray-900"
             else
-                prop.className "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                prop.className
+                    "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
             prop.text text
             prop.onClick (fun _ -> dispatch (ChangePage page))
         ]
@@ -106,10 +108,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
     let navButtons =
         Html.div [
             prop.className "flex space-x-4"
-            prop.children [
-                navButton Overview "Overview"
-                navButton Editor "Editor"
-            ]
+            prop.children [ navButton Overview "Overview"; navButton Editor "Editor" ]
         ]
 
     let navBar =
@@ -126,7 +125,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     prop.className "relative flex h-16 items-center"
                                     prop.children [
                                         Html.div [
-                                            prop.className "flex items-center justify-start sm:items-stretch sm:justify-start"
+                                            prop.className
+                                                "flex items-center justify-start sm:items-stretch sm:justify-start"
                                             prop.children [
                                                 Html.div [
                                                     prop.className "sm:ml-6 sm:block"
@@ -142,6 +142,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
         ]
+
     let mainView =
         Html.div [
             prop.className "flex"
@@ -150,6 +151,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 match model.CurrentPage with
                 | Overview -> Overview.view model.OverviewModel (OverviewMsg >> dispatch)
                 | Editor -> Editor.view model.EditorModel (EditorMsg >> dispatch)
-            ]]
+            ]
+        ]
 
     mainView

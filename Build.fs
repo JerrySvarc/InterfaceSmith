@@ -11,8 +11,7 @@ initializeContext ()
 let clientPath = Path.getFullName "src/"
 
 
-Target.create "Clean" (fun _ ->
-    run dotnet [ "fable"; "clean"; "--yes" ] clientPath // Delete *.fs.js files created by Fable
+Target.create "Clean" (fun _ -> run dotnet [ "fable"; "clean"; "--yes" ] clientPath // Delete *.fs.js files created by Fable
 )
 
 Target.create "InstallClient" (fun _ -> run npm [ "install" ] ".")

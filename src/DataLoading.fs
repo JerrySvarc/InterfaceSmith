@@ -11,7 +11,7 @@ let loadJson json =
     json
     |> SimpleJson.tryParse
     |> function
-        | Some (JObject dict) ->
+        | Some(JObject dict) ->
             let value key = Map.tryFind key dict
 
             [ value "data" ]
