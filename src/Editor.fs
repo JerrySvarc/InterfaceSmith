@@ -507,11 +507,11 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     Html.h2 [
                         prop.text "Modification"
                         prop.children [
-                        (*renderingCodeToReactElement
+                            renderingCodeToReactElement
                                 model.CurrentComponent.Code
                                 []
                                 model.CurrentComponent.Data
-                                options*)
+                                options
 
 
                         ]
