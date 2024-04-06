@@ -40,7 +40,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             if found then
                 let updatedEditor = {
                     model.EditorModel with
-                        CurrentComponent = chosenComponent
+                        CurrentPage = chosenComponent
                         FileUploadError = false
                         EditingName = false
                         NameInput = ""
@@ -64,7 +64,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             Cmd.none
     | EditorMsg msg ->
         match msg with
-        | SaveComponent comp ->
+        | SavePage comp ->
             let newComponent = comp
 
             let updatedMap =

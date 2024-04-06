@@ -5,6 +5,7 @@ open Types
 open Fable.SimpleJson
 open System
 open DataRecognition
+open Feliz
 
 let rec replace path replacementElement (currentCode: RenderingCode) =
     match path with
@@ -40,7 +41,7 @@ let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json
         | Data ->
             let selectedFields = json
             let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-            ReactBindings.React.createElement (tag, props, [ str jsonStr ])
+            ReactBindings.React.createElement (tag, [], [ str jsonStr ])
         | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
         | Constant s -> ReactBindings.React.createElement (tag, props, [ str s ])
     | HtmlList(listType, numbered, code) -> ReactBindings.React.createElement ("div", [], [ options code path "List" ])
@@ -58,12 +59,4 @@ let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json
                 codes
 
         ReactBindings.React.createElement ("div", [], renderedElements)
-    | Hole named ->
-        let name =
-            match named with
-            | UnNamed -> "Unnamed"
-            | Named name -> name
-
-        let fieldType = json |> recognizeJson
-        let optionPane = options fieldType path name
-        optionPane
+    | Hole named -> Html.none

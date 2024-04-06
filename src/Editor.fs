@@ -12,7 +12,7 @@ open EditorUtils
 
 
 type Model = {
-    CurrentComponent: Component
+    CurrentPage: Page
     FileUploadError: bool
     EditingName: bool
     EditingCode: bool
@@ -24,11 +24,11 @@ type Msg =
     | ChangeName of string
     | SetInput of string
     | ChangeNameEditMode of bool
-    | SaveComponent of Component
+    | SavePage of Page
     | ReplaceCode of RenderingCode * int list
 
 let init () = {
-    CurrentComponent = {
+    CurrentPage = {
         Name = "New component"
         Code = Hole(UnNamed)
         Id = Guid.NewGuid()
@@ -50,14 +50,14 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             match data with
             | JObject obj ->
                 let newComponent = {
-                    model.CurrentComponent with
+                    model.CurrentPage with
                         Code = recognizeJson data
                         Data = data
                 }
 
                 {
                     model with
-                        CurrentComponent = newComponent
+                        CurrentPage = newComponent
                         FileUploadError = false
                 },
                 Cmd.none
@@ -66,8 +66,8 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     | ChangeName newName ->
         {
             model with
-                CurrentComponent = {
-                    model.CurrentComponent with
+                CurrentPage = {
+                    model.CurrentPage with
                         Name = newName
                 }
                 NameInput = ""
@@ -82,18 +82,18 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 NameInput = ""
         },
         Cmd.none
-    | SaveComponent comp -> model, Cmd.none
+    | SavePage comp -> model, Cmd.none
     | ReplaceCode(code, path) ->
-        let newcodes = replace path code model.CurrentComponent.Code
+        let newcodes = replace path code model.CurrentPage.Code
 
-        let newComponent: Component = {
-            model.CurrentComponent with
+        let newComponent: Page = {
+            model.CurrentPage with
                 Code = newcodes
         }
 
         {
             model with
-                CurrentComponent = newComponent
+                CurrentPage = newComponent
         },
         Cmd.none
 
@@ -144,7 +144,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
 
         let nameDisplay =
-            let nameText = "Component name: " + model.CurrentComponent.Name
+            let nameText = model.CurrentPage.Name
             Html.h1 [ prop.className "text-2xl font-semibold m-0 p-0 pl-3"; prop.text nameText ]
 
         let nameContainer =
@@ -192,7 +192,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
         let saveButton =
             let buttonText, buttonColor =
-                if model.CurrentComponent.Data = JNull then
+                if model.CurrentPage.Data = JNull then
                     "Upload data first to save a component", "bg-yellow-500 hover:bg-yellow-700"
                 else
                     "Save component", "bg-green-500 hover:bg-green-700"
@@ -203,7 +203,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     + " text-white px-4 py-2 rounded-md transition duration-200 ease-in-out"
                 )
                 prop.children [ Html.text buttonText ]
-                prop.onClick (fun _ -> dispatch (SaveComponent model.CurrentComponent))
+                prop.onClick (fun _ -> dispatch (SavePage model.CurrentPage))
             ]
 
         Html.div [
@@ -425,36 +425,45 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | Hole _ -> failwith "Hole cannot contain another hole"
 
 
+    let preview =
+        Html.div [
+            prop.className " w-1/2 flex justify-center"
+            prop.children [
+                renderingCodeToReactElement model.CurrentPage.Code [] model.CurrentPage.Data options
+            ]
+        ]
+
+    let componentsView =
+        Html.div [
+            prop.className "flex justify-center w-1/2"
+            prop.children [
+                Html.div [
+                    prop.className "flex"
+                    prop.children [
+                        renderingCodeToReactElement model.CurrentPage.Code [] model.CurrentPage.Data options
+                    ]
+                ]
+            ]
+        ]
 
     let editorView =
         Html.section [
             prop.className "h-screen w-screen"
             prop.children [
-                if model.CurrentComponent.Data <> JNull then
+                if model.CurrentPage.Data <> JNull then
                     nameEditView
                 Html.div [
                     prop.children [
-                        if model.CurrentComponent.Data = JNull then
+                        if model.CurrentPage.Data = JNull then
                             uploadButton
                         else
-                            Html.div [
-                                prop.className "flex justify-center"
-                                prop.children [
-                                    Html.div [
-                                        prop.className "flex"
-                                        prop.children [
-                                            renderingCodeToReactElement
-                                                model.CurrentComponent.Code
-                                                []
-                                                model.CurrentComponent.Data
-                                                options
-                                        ]
-                                    ]
-                                ]
-                            ]
+                            componentsView
+                            preview
                     ]
                 ]
             ]
         ]
+
+
 
     Html.div [ prop.className "mt-16 flex"; prop.children [ editorView ] ]

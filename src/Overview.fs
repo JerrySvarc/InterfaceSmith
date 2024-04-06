@@ -6,7 +6,7 @@ open System
 
 type Model = {
     FileUploadError: bool
-    CreatedComponents: Map<Guid, Component>
+    CreatedComponents: Map<Guid, Page>
 }
 
 type Msg =

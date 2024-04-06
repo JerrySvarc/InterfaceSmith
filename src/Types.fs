@@ -22,7 +22,7 @@ and RenderingCode =
     | Sequence of RenderingCode list
     | Hole of FieldHole
 
-type Component = {
+type Page = {
     Name: string
     Id: Guid
     Data: Json
