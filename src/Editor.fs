@@ -299,17 +299,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
         let (selectedItem, setSelectedItem) = React.useState defaultText
 
         Html.div [
-            prop.className "relative inline-block text-left"
+            prop.className "group relative inline-block text-left"
             prop.children [
-                Html.div [
-                    prop.children [
-                        Html.button [
-                            prop.className
-                                "inline-flex justify-center w-full rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                            prop.text selectedItem
-                            prop.onClick (fun _ -> setDropdownVisible (not dropdownVisible))
-                        ]
-                    ]
+                Html.button [
+                    prop.className
+                        "inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    prop.text selectedItem
+                    prop.onClick (fun _ -> setDropdownVisible (not dropdownVisible))
+                    prop.children [ Html.span [ prop.text "Dropdown button" ] ]
                 ]
                 Html.div [
                     prop.className (
@@ -342,7 +339,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 let (tag, setTag) = React.useState ""
                 let (attributes, setAttributes) = React.useState ""
                 let (text, setText) = React.useState ""
-                let (isCollapsed, setIsCollapsed) = React.useState true
 
                 let updateElement (tag: string) (attributes: string) (text: string) element =
                     let attributesList =
@@ -373,46 +369,47 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     | _ -> failwith "Not an element"
 
                 Html.div [
-                    prop.className "p-4 bg-white rounded shadow w-64"
-                    prop.onClick (fun _ -> setIsCollapsed (not isCollapsed))
+                    prop.className "p-4 bg-white rounded shadow"
+                    prop.draggable true
                     prop.children [
-                        Html.p [ prop.className "text-lg font-medium"; prop.text props.name ]
-                        if not isCollapsed then
-                            Html.div [
-
-                                prop.className "mt-4"
-                                prop.children [
-                                    Html.input [
-                                        prop.className "border p-2 rounded"
-                                        prop.placeholder "Tag"
-                                        prop.onTextChange (fun newTag ->
-                                            setTag newTag
-                                            let updatedElement = updateElement newTag attributes text editedElement
-                                            setEditedElement updatedElement)
-                                        prop.onClick (fun e -> e.stopPropagation ()) // Stop propagation of the click event
-                                    ]
-                                    Html.input [
-                                        prop.className "border p-2 rounded mt-2"
-                                        prop.placeholder "Attributes"
-                                        prop.onTextChange (fun newAttributes ->
-                                            setAttributes newAttributes
-                                            let updatedElement = updateElement tag newAttributes text editedElement
-                                            setEditedElement updatedElement)
-                                        prop.onClick (fun e -> e.stopPropagation ()) // Stop propagation of the click event
-                                    ]
-                                    Html.button [
-                                        prop.className
-                                            "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4"
-                                        prop.text ("Add element " + props.name)
-                                        prop.onClick (fun _ ->
-                                            let updatedElement = updateElement tag attributes text editedElement
-                                            setEditedElement updatedElement
-                                            dispatch (ReplaceCode(updatedElement, props.path)))
-                                    ]
+                        Html.h4 [ prop.className "text-lg font-medium"; prop.text props.name ]
+                        Html.div [
+                            prop.className "mt-4"
+                            prop.children [
+                                Html.input [
+                                    prop.className "border p-2 rounded"
+                                    prop.placeholder "Tag"
+                                    prop.onTextChange (fun newTag ->
+                                        setTag newTag
+                                        let updatedElement = updateElement newTag attributes text editedElement
+                                        setEditedElement updatedElement)
+                                ]
+                                Html.input [
+                                    prop.className "border p-2 rounded mt-2"
+                                    prop.placeholder "Attributes"
+                                    prop.onTextChange (fun newAttributes ->
+                                        setAttributes newAttributes
+                                        let updatedElement = updateElement tag newAttributes text editedElement
+                                        setEditedElement updatedElement)
+                                ]
+                                Html.input [
+                                    prop.className "border p-2 rounded mt-2"
+                                    prop.placeholder "Text"
+                                    prop.onTextChange (fun newText ->
+                                        setText newText
+                                        let updatedElement = updateElement tag attributes newText editedElement
+                                        setEditedElement updatedElement)
+                                ]
+                                Html.button [
+                                    prop.className "px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-4"
+                                    prop.text ("Add element " + props.name)
+                                    prop.onClick (fun _ ->
+                                        let updatedElement = updateElement tag attributes text editedElement
+                                        setEditedElement updatedElement
+                                        dispatch (ReplaceCode(updatedElement, props.path)))
                                 ]
                             ]
-                        else
-                            Html.none
+                        ]
                     ]
                 ])
 
@@ -510,7 +507,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     Html.h2 [
                         prop.text "Modification"
                         prop.children [
-                            (*renderingCodeToReactElement
+                        (*renderingCodeToReactElement
                                 model.CurrentComponent.Code
                                 []
                                 model.CurrentComponent.Data
@@ -526,11 +523,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
             prop.className "h-screen w-screen flex"
             if model.JsonData = JNull then
                 prop.children [ uploadButton ]
+            else if model.CurrentComponent.Data = JNull then
+                prop.children [ selectFields (model.JsonData, {| selectedFields = [] |}) ]
             else
-                if model.CurrentComponent.Data = JNull then
-                    prop.children [ selectFields (model.JsonData, {| selectedFields = [] |}) ]
-                else
-                    prop.children [ nameEditView; previewPanel; ]
+                prop.children [ nameEditView; previewPanel ]
         ]
 
     Html.div [ prop.className "mt-16 flex"; prop.children [ editorView ] ]
