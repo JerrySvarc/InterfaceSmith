@@ -1,5 +1,4 @@
 module EditorUtils
-
 open Fable.React
 open Types
 open Fable.SimpleJson
@@ -31,39 +30,40 @@ let rec replace path replacementElement (currentCode: RenderingCode) =
         | _ -> currentCode
 
 
-let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json: Json) (options) : ReactElement =
-    match code with
-    | HtmlElement(tag, attrs, innerText) ->
-        let props = attrs |> List.toSeq |> dict
+let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json: Json) (options ): ReactElement =
+        match code with
+        | HtmlElement(tag, attrs, innerText) ->
+            let props = attrs |> List.toSeq |> dict
 
-        match innerText with
-        | Data ->
-            let selectedFields = json
-            let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-            ReactBindings.React.createElement (tag, props, [ str jsonStr ])
-        | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
-        | Constant s -> ReactBindings.React.createElement (tag, props, [ str s ])
-    | HtmlList(listType, numbered, code) -> ReactBindings.React.createElement ("div", [], [ options code path "List" ])
-    | Sequence codes ->
-        let jsonList =
-            match json with
-            | JObject object -> object |> Map.toList
-            | _ -> failwith "Not a sequence"
+            match innerText with
+            | Data ->
+                let selectedFields = json
+                let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
+                ReactBindings.React.createElement (tag,  props , [ str jsonStr ])
+            | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
+            | Constant s -> ReactBindings.React.createElement (tag,  props , [ str s ])
+        | HtmlList(listType, numbered, code) ->
+            ReactBindings.React.createElement ("div", [], [ options code path "List" ])
+        | Sequence codes ->
+            let jsonList =
+                match json with
+                | JObject object -> object |> Map.toList
+                | _ -> failwith "Not a sequence"
 
-        let renderedElements =
-            List.mapi
-                (fun index code ->
-                    let (_, jsonSubObject) = List.item index jsonList
-                    renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options)
-                codes
+            let renderedElements =
+                List.mapi
+                    (fun index code ->
+                        let (_, jsonSubObject) = List.item index jsonList
+                        renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options)
+                    codes
 
-        ReactBindings.React.createElement ("div", [], renderedElements)
-    | Hole named ->
-        let name =
-            match named with
-            | UnNamed -> "Unnamed"
-            | Named name -> name
+            ReactBindings.React.createElement ("div", [], renderedElements)
+        | Hole named ->
+            let name =
+                match named with
+                | UnNamed -> "Unnamed"
+                | Named name -> name
 
-        let fieldType = json |> recognizeJson
-        let optionPane = options fieldType path name
-        optionPane
+            let fieldType = json |> recognizeJson
+            let optionPane = options fieldType path name
+            optionPane
