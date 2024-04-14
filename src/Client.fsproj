@@ -11,9 +11,7 @@
     <Compile Include="DataRecognition.fs" />
     <Compile Include="CodeGeneration.fs" />
     <Compile Include="EditorUtils.fs" />
-    <Compile Include="Editor.fs" />
     <None Include="paket.references" />
-    <Compile Include="Overview.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

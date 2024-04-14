@@ -1,157 +1,142 @@
-module Index
+module Main
 
 open Elmish
-open Types
-open Overview
-open Editor
 open Feliz
+open Types
+open Fable.SimpleJson
+open DataLoading
+open DataRecognition
+open FileUpload
+open System
+open EditorUtils
 
-type Page =
-    | Overview
-    | Editor
 
 type Model = {
     CurrentPage: Page
-    OverviewModel: Overview.Model
-    EditorModel: Editor.Model
+    FileUploadError: bool
+    EditingName: bool
+    EditingCode: bool
+    NameInput: string
 }
 
 type Msg =
-    | ChangePage of Page
-    | OverviewMsg of Overview.Msg
-    | EditorMsg of Editor.Msg
+    | UploadData of string
+    | ChangeName of string
+    | SetInput of string
+    | ChangeNameEditMode of bool
+    | SavePage of Page
+    | ReplaceCode of RenderingCode * int list
 
 let init () : Model * Cmd<Msg> =
     {
-        CurrentPage = Overview
-        OverviewModel = Overview.init ()
-        EditorModel = Editor.init ()
+        CurrentPage = {
+            Name = "New component"
+            Code = Hole(UnNamed)
+            Id = Guid.NewGuid()
+            Data = JNull
+        }
+        FileUploadError = false
+        EditingName = false
+        NameInput = ""
+        EditingCode = false
     },
     Cmd.none
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | ChangePage page -> { model with CurrentPage = page }, Cmd.none
-    | OverviewMsg msg ->
-        match msg with
-        | EditComponent guid ->
-            let found, chosenComponent = model.OverviewModel.CreatedComponents.TryGetValue(guid)
+    | UploadData data ->
+        let loadedDataOption = loadJson data
 
-            if found then
-                let updatedEditor = {
-                    model.EditorModel with
-                        CurrentPage = chosenComponent
-                        FileUploadError = false
-                        EditingName = false
-                        NameInput = ""
+        match loadedDataOption with
+        | Some(data) ->
+            match data with
+            | JObject obj ->
+                let newComponent = {
+                    model.CurrentPage with
+                        Code = recognizeJson data
+                        Data = data
                 }
 
                 {
                     model with
-                        EditorModel = updatedEditor
-                        CurrentPage = Editor
+                        CurrentPage = newComponent
+                        FileUploadError = false
                 },
                 Cmd.none
-            else
-                model, Cmd.none
-        | _ ->
-            let updatedOverview, overviewCmd = Overview.update msg model.OverviewModel
+            | _ -> { model with FileUploadError = true }, Cmd.none
+        | None -> { model with FileUploadError = true }, Cmd.none
+    | ChangeName newName ->
+        {
+            model with
+                CurrentPage = {
+                    model.CurrentPage with
+                        Name = newName
+                }
+                NameInput = ""
+                EditingName = false
+        },
+        Cmd.none
+    | SetInput input -> { model with NameInput = input }, Cmd.none
+    | ChangeNameEditMode value ->
+        {
+            model with
+                EditingName = value
+                NameInput = ""
+        },
+        Cmd.none
+    | SavePage comp -> model, Cmd.none
+    | ReplaceCode(code, path) ->
+        let newcodes = replace path code model.CurrentPage.Code
 
-            {
-                model with
-                    OverviewModel = updatedOverview
-            },
-            Cmd.none
-    | EditorMsg msg ->
-        match msg with
-        | SavePage comp ->
-            let newComponent = comp
+        let newComponent: Page = {
+            model.CurrentPage with
+                Code = newcodes
+        }
 
-            let updatedMap =
-                model.OverviewModel.CreatedComponents.Add(newComponent.Id, newComponent)
-
-            {
-                model with
-                    OverviewModel = {
-                        model.OverviewModel with
-                            CreatedComponents = updatedMap
-                    }
-                    EditorModel = Editor.init ()
-                    CurrentPage = Overview
-            },
-            Cmd.none
-        | _ ->
-            let updatedEditor, editorCmd = Editor.update msg model.EditorModel
-
-            {
-                model with
-                    EditorModel = updatedEditor
-            },
-            Cmd.none
-
+        {
+            model with
+                CurrentPage = newComponent
+        },
+        Cmd.none
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
-    let navButton (page: Page) (text: string) =
-        Html.button [
-            if model.CurrentPage = page then
-                prop.className
-                    "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium bg-gray-900"
-            else
-                prop.className
-                    "text-gray-300 hover:bg-gray-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
-            prop.text text
-            prop.onClick (fun _ -> dispatch (ChangePage page))
-        ]
-
-    let navButtons =
+    let upploadButtonView onLoad =
         Html.div [
-            prop.className "flex space-x-4"
-            prop.children [ navButton Overview "Overview"; navButton Editor "Editor" ]
-        ]
-
-    let navBar =
-        Html.div [
-            prop.className "fixed top-0 w-full"
+            prop.className "mt-10 w-full h-full flex items-center justify-center"
             prop.children [
-                Html.nav [
-                    prop.className "bg-gray-800"
+                Html.div [
+                    prop.className "flex justify-center"
                     prop.children [
-                        Html.div [
-                            prop.className "max-w-7xl px-2 sm:px-6 lg:px-8"
+                        Html.label [
                             prop.children [
-                                Html.div [
-                                    prop.className "relative flex h-16 items-center"
-                                    prop.children [
-                                        Html.div [
-                                            prop.className
-                                                "flex items-center justify-start sm:items-stretch sm:justify-start"
-                                            prop.children [
-                                                Html.div [
-                                                    prop.className "sm:ml-6 sm:block"
-                                                    prop.children [ navButtons ]
-                                                ]
-                                            ]
-                                        ]
-                                    ]
+                                Html.input [
+                                    prop.type' "file"
+                                    prop.name "component-data"
+                                    prop.onChange (handleFileEvent onLoad)
+                                    prop.className "hidden"
+                                ]
+                                Html.span [
+                                    prop.className
+                                        "px-8 py-4 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-700 transition duration-200 ease-in-out text-xl"
+                                    prop.children [ Html.text "Select a file" ]
                                 ]
                             ]
                         ]
                     ]
                 ]
+                if model.FileUploadError then
+                    Html.div [
+                        prop.className "mt-4 p-4 bg-red-500 text-white rounded"
+                        prop.children [ Html.text "The selected file could not be used for creation." ]
+                    ]
+                else
+                    Html.text ""
             ]
         ]
 
-    let mainView =
-        Html.div [
-            prop.className "flex"
-            prop.children [
-                navBar
-                match model.CurrentPage with
-                | Overview -> Overview.view model.OverviewModel (OverviewMsg >> dispatch)
-                | Editor -> Editor.view model.EditorModel (EditorMsg >> dispatch)
-            ]
-        ]
+    let uploadButton = upploadButtonView (UploadData >> dispatch)
 
-    mainView
+
+    Html.div [ prop.className "mt-16 flex"; prop.children [] ]
