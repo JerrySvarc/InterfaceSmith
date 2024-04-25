@@ -17,7 +17,4 @@ Program.mkProgram Main.init Main.update Main.view
 |> Program.withConsoleTrace
 #endif
 |> Program.withReactSynchronous "elmish-app"
-#if DEBUG
-|> Program.withDebugger
-#endif
 |> Program.run
