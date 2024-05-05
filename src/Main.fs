@@ -203,12 +203,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         ]
 
                         if model.CurrentPage.Data = JNull then
-                            block [ uploadButton ]
+                            uiBlock [ uploadButton ]
                         else
-                            block ([ Html.text "Data uploaded successfully!" ])
+                            uiBlock ([ Html.text "Data uploaded successfully!" ])
 
                         if model.FileUploadError then
-                            block (
+                            uiBlock (
                                 [
                                     Html.div [
                                         prop.className "w-full mt-4 p-4 bg-red-600 text-white rounded"
@@ -220,6 +220,34 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
         ]
+
+    let tags = [
+        "p"
+        "h1"
+        "h2"
+        "h3"
+        "h4"
+        "h5"
+        "h6"
+        "strong"
+        "em"
+        "a"
+        "li"
+        "ul"
+        "ol"
+        "pre"
+        "code"
+        "blockquote"
+        "div"
+        "span"
+        "article"
+        "section"
+        "header"
+        "footer"
+        "nav"
+        "main"
+        "input"
+    ]
 
 
 
@@ -237,6 +265,9 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
         ]
+
+
+
 
     let listOptionsComponent code path =
         Html.div [
@@ -268,12 +299,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
 
-    let options (code: RenderingCode) (path: int list) (name: string) =
+    let options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
         match code with
         | HtmlElement _ -> elementOptionsComponent code path
         | HtmlList _ -> listOptionsComponent code path
         | Sequence(_) -> sequenceOptionsComponent code path
-        | Hole _ -> block ([ Html.text "No options available." ])
+        | Hole _ -> uiBlock ([ Html.text "No options available." ])
 
     let editor =
         Html.div [
@@ -283,9 +314,15 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.className "flex flex-col justify-around w-full max-w-md"
                     prop.children [
                         if model.CurrentPage.Data = JNull then
-                            block ([ Html.text "Upload data to start!" ])
+                            uiBlock ([ Html.text "Upload data to start!" ])
                         else
-                            renderingCodeToReactElement model.CurrentPage.Code [] model.CurrentPage.Data options
+                            renderingCodeToReactElement
+                                model.CurrentPage.Code
+                                []
+                                model.CurrentPage.Data
+                                options
+                                model.IsPreview
+
                             Html.text (model.CurrModifiedElement.ToString())
 
                             Html.button [
@@ -293,6 +330,8 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 prop.text "Toggle preview"
                                 prop.onClick (fun _ -> dispatch TogglePreview)
                             ]
+
+                            uiBox ([ prettyPrint model.CurrentPage.Data ])
                     ]
                 ]
             ]
@@ -303,7 +342,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             prop.className "flex  w-full "
             prop.children [
                 match model.CurrentPage.Code with
-                | Hole _ -> block ([ Html.p [ prop.text "Create page elements first." ] ])
+                | Hole _ -> uiBlock ([ Html.p [ prop.text "Create page elements first." ] ])
                 | _ ->
                     Html.p [
                         prop.className "flex text-2xl mb-4"
@@ -330,7 +369,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     match model.CurrentTab with
                     | Main -> mainPage
                     | Editor -> editor
-                    | Download -> block [ download ]
+                    | Download -> uiBlock [ download ]
                 ]
             ]
         ]

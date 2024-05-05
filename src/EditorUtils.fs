@@ -5,6 +5,8 @@ open Types
 open Fable.SimpleJson
 open System
 open DataRecognition
+open Feliz
+open AppUtilities
 
 let rec replace path replacementElement (currentCode: RenderingCode) =
     match path with
@@ -31,19 +33,43 @@ let rec replace path replacementElement (currentCode: RenderingCode) =
         | _ -> currentCode
 
 
-let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json: Json) (options) : ReactElement =
+let rec renderingCodeToReactElement
+    (code: RenderingCode)
+    (path: int list)
+    (json: Json)
+    (options: RenderingCode -> int list -> string -> ReactElement)
+    (showOptions: bool)
+    =
     match code with
     | HtmlElement(tag, attrs, innerText) ->
         let props = attrs |> List.toSeq |> dict
 
-        match innerText with
-        | Data ->
-            let selectedFields = json
-            let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-            ReactBindings.React.createElement (tag, props, [ str jsonStr ])
-        | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
-        | Constant s -> ReactBindings.React.createElement (tag, props, [ str s ])
-    | HtmlList(listType, numbered, code) -> ReactBindings.React.createElement ("div", [], [ options code path "List" ])
+        let preview =
+            match innerText with
+            | Data ->
+                let selectedFields = json
+                let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
+                ReactBindings.React.createElement (tag, props, [ str jsonStr ])
+            | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
+            | Constant s -> ReactBindings.React.createElement (tag, props, [ str s ])
+
+        Html.div [
+            prop.children [
+                preview
+                match showOptions with
+                | true -> options code path "Element"
+                | false -> Html.none
+            ]
+        ]
+    | HtmlList(listType, numbered, listCode) ->
+        match json with
+        | JArray array ->
+            ReactBindings.React.createElement (
+                "div",
+                [],
+                [ renderingCodeToReactElement listCode path array[0] options showOptions ]
+            )
+        | _ -> failwith "not a list"
     | Sequence codes ->
         let jsonList =
             match json with
@@ -54,7 +80,7 @@ let rec renderingCodeToReactElement (code: RenderingCode) (path: int list) (json
             List.mapi
                 (fun index code ->
                     let (_, jsonSubObject) = List.item index jsonList
-                    renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options)
+                    renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options showOptions)
                 codes
 
         ReactBindings.React.createElement ("div", [], renderedElements)
