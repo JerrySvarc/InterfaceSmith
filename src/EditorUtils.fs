@@ -7,6 +7,8 @@ open System
 open DataRecognition
 open Feliz
 open AppUtilities
+open Browser
+open Fable.Core.JsInterop
 
 let rec replace path replacementElement (currentCode: RenderingCode) =
     match path with
@@ -23,7 +25,7 @@ let rec replace path replacementElement (currentCode: RenderingCode) =
         | Sequence(items) ->
             let newItems =
                 items
-                |> List.mapi (fun i item ->
+                |> Array.mapi (fun i item ->
                     if i = head then
                         replace tail replacementElement item
                     else
@@ -33,6 +35,63 @@ let rec replace path replacementElement (currentCode: RenderingCode) =
         | _ -> currentCode
 
 
+let tagToString tag =
+    match tag with
+    | P -> "p"
+    | H1 -> "h1"
+    | H2 -> "h2"
+    | H3 -> "h3"
+    | H4 -> "h4"
+    | H5 -> "h5"
+    | H6 -> "h6"
+    | Strong -> "strong"
+    | Em -> "em"
+    | A -> "a"
+    | Li -> "li"
+    | Ul -> "ul"
+    | Ol -> "ol"
+    | Pre -> "pre"
+    | Code -> "code"
+    | Blockquote -> "blockquote"
+    | Div -> "div"
+    | Span -> "span"
+    | Article -> "article"
+    | Section -> "section"
+    | Header -> "header"
+    | Footer -> "footer"
+    | Nav -> "nav"
+    | Main -> "main"
+    | Input -> "input"
+
+let stringToTag str =
+    match str with
+    | "p" -> P
+    | "h1" -> H1
+    | "h2" -> H2
+    | "h3" -> H3
+    | "h4" -> H4
+    | "h5" -> H5
+    | "h6" -> H6
+    | "strong" -> Strong
+    | "em" -> Em
+    | "a" -> A
+    | "li" -> Li
+    | "ul" -> Ul
+    | "ol" -> Ol
+    | "pre" -> Pre
+    | "code" -> Code
+    | "blockquote" -> Blockquote
+    | "div" -> Div
+    | "span" -> Tag.Span
+    | "article" -> Article
+    | "section" -> Section
+    | "header" -> Header
+    | "footer" -> Footer
+    | "nav" -> Nav
+    | "main" -> Main
+    | "input" -> Input
+    | _ -> failwith "Invalid tag"
+
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
@@ -41,17 +100,22 @@ let rec renderingCodeToReactElement
     (showOptions: bool)
     =
     match code with
-    | HtmlElement(tag, attrs, innerText) ->
-        let props = attrs |> List.toSeq |> dict
+    | HtmlElement(tag, attrs, innerValue) ->
+        console.log (tagToString tag)
 
         let preview =
-            match innerText with
+            match innerValue with
             | Data ->
                 let selectedFields = json
                 let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-                ReactBindings.React.createElement (tag, props, [ str jsonStr ])
-            | Value.Empty -> ReactBindings.React.createElement (tag, props, [])
-            | Constant s -> ReactBindings.React.createElement (tag, props, [ str s ])
+
+                ReactBindings.React.createElement (
+                    tagToString tag,
+                    createObj [ "className" ==> "preview" ],
+                    [ str jsonStr ]
+                )
+            | Empty -> ReactBindings.React.createElement (tagToString tag, [], [])
+            | Constant s -> ReactBindings.React.createElement (tagToString tag, [], [ str s ])
 
         Html.div [
             prop.children [
@@ -77,7 +141,7 @@ let rec renderingCodeToReactElement
             | _ -> failwith "Not a sequence"
 
         let renderedElements =
-            List.mapi
+            Array.mapi
                 (fun index code ->
                     let (_, jsonSubObject) = List.item index jsonList
                     renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options showOptions)

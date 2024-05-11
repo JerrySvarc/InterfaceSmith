@@ -10,6 +10,9 @@ open FileUpload
 open System
 open EditorUtils
 open AppUtilities
+open Microsoft.FSharp.Reflection
+open Browser
+open Fable.Core.JsInterop
 
 type TabType =
     | Main
@@ -221,89 +224,110 @@ let view (model: Model) (dispatch: Msg -> unit) =
             ]
         ]
 
-    let tags = [
-        "p"
-        "h1"
-        "h2"
-        "h3"
-        "h4"
-        "h5"
-        "h6"
-        "strong"
-        "em"
-        "a"
-        "li"
-        "ul"
-        "ol"
-        "pre"
-        "code"
-        "blockquote"
-        "div"
-        "span"
-        "article"
-        "section"
-        "header"
-        "footer"
-        "nav"
-        "main"
-        "input"
-    ]
 
 
 
-    let elementOptionsComponent code path =
-        Html.div [
-            prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
-            prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
-            prop.children [
-                Html.p [ prop.className "text-primary-700 mr-2"; prop.text "Tag: " ]
-                Html.input [ prop.className "border border-primary-500 rounded px-2 py-1 mr-2 flex-grow" ]
-                Html.button [
-                    prop.className "px-4 py-2 bg-secondary-500 text-white rounded hover:bg-secondary-600"
-                    prop.text "Save"
-                    prop.onClick (fun _ -> dispatch (ReplaceCode(code, path)))
+    let elementOptionsComponent =
+        React.functionComponent (fun (code: RenderingCode, path) ->
+            match code with
+            | HtmlElement(tag, attrs, innerValue) ->
+                Html.div [
+                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
+                    prop.children [
+                        let tagOptions =
+                            FSharpType.GetUnionCases(typeof<Tag>)
+                            |> Array.map (fun caseInfo -> caseInfo.Name)
+
+                        //tag selector
+                        Html.div [
+                            prop.className "flex items-center space-x-4"
+                            prop.children [
+                                Html.button [
+                                    prop.className
+                                        "flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                    prop.text "Change tag"
+                                ]
+                                Html.select [
+                                    prop.className
+                                        "tag-selector block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+                                    prop.defaultValue "Div"
+                                    prop.onMouseDown (fun e -> e.stopPropagation ())
+                                    prop.onChange (fun (e: Browser.Types.Event) ->
+
+                                        let selectedTag = e.target?value |> string
+                                        let newTag = selectedTag.ToLower() |> stringToTag
+                                        dispatch (ReplaceCode(HtmlElement(newTag, attrs, innerValue), path)))
+                                    prop.children (
+                                        tagOptions
+                                        |> Array.map (fun tag -> Html.option [ prop.value tag; prop.text tag ])
+                                    )
+                                ]
+                            ]
+                        ]
+
+                        Html.div [
+                            prop.children [
+                                Html.input [
+                                    prop.className
+                                        "border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none"
+                                    prop.placeholder "Attribute name"
+                                //prop.onChange (fun e -> dispatch (UpdateAttributeName e.target.Value.ToString()))
+                                ]
+                                Html.input [
+                                    prop.className
+                                        "border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none"
+                                    prop.placeholder "Attribute value"
+                                //prop.onChange (fun e -> dispatch (UpdateAttributeValue e.target.Value.ToString()))
+                                ]
+                                Html.button [
+                                    prop.className
+                                        "flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                    prop.text "Add attribute"
+                                //prop.onClick (fun _ -> dispatch AddAttribute)
+                                ]
+                            ]
+                        ]
+
+                        Html.button [ prop.className "flex-1"; prop.text "Change inner value" ]
+                    ]
                 ]
-            ]
-        ]
+
+            | _ -> failwith "Invalid code type.")
 
 
+    let listOptionsComponent =
+        React.functionComponent (fun (code: RenderingCode, path) ->
+            match code with
+            | HtmlList(listType, headers, elementCode) ->
+                Html.div [
+                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
+                    prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
+                    prop.children [
 
-
-    let listOptionsComponent code path =
-        Html.div [
-            prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
-            prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
-            prop.children [
-                Html.p [ prop.className "text-primary-700 mr-2"; prop.text "List: " ]
-                Html.input [ prop.className "border border-primary-500 rounded px-2 py-1 mr-2 flex-grow" ]
-                Html.button [
-                    prop.className "px-4 py-2 bg-secondary-500 text-white rounded hover:bg-secondary-600"
-                    prop.text "Save"
-                    prop.onClick (fun _ -> dispatch (ReplaceCode(code, path)))
+                    ]
                 ]
-            ]
-        ]
 
-    let sequenceOptionsComponent code path =
-        Html.div [
-            prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
-            prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
-            prop.children [
-                Html.p [ prop.className "text-primary-700 mr-2"; prop.text "Sequence: " ]
-                Html.input [ prop.className "border border-primary-500 rounded px-2 py-1 mr-2 flex-grow" ]
-                Html.button [
-                    prop.className "px-4 py-2 bg-secondary-500 text-white rounded hover:bg-secondary-600"
-                    prop.text "Save"
-                    prop.onClick (fun _ -> dispatch (ReplaceCode(code, path)))
+            | _ -> failwith "Invalid code type.")
+
+    let sequenceOptionsComponent =
+        React.functionComponent (fun (code: RenderingCode, path) ->
+            match code with
+            | Sequence(elements) ->
+                Html.div [
+                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
+                    prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
+                    prop.children [
+
+                    ]
                 ]
-            ]
-        ]
+
+            | _ -> failwith "Invalid code type.")
 
     let options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
         match code with
-        | HtmlElement _ -> elementOptionsComponent code path
-        | HtmlList _ -> listOptionsComponent code path
-        | Sequence(_) -> sequenceOptionsComponent code path
+        | HtmlElement _ -> elementOptionsComponent (code, path)
+        | HtmlList _ -> listOptionsComponent (code, path)
+        | Sequence(_) -> sequenceOptionsComponent (code, path)
         | Hole _ -> uiBlock ([ Html.text "No options available." ])
 
     let editor =
@@ -316,6 +340,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                         if model.CurrentPage.Data = JNull then
                             uiBlock ([ Html.text "Upload data to start!" ])
                         else
+
                             renderingCodeToReactElement
                                 model.CurrentPage.Code
                                 []
@@ -323,15 +348,14 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 options
                                 model.IsPreview
 
-                            Html.text (model.CurrModifiedElement.ToString())
-
                             Html.button [
                                 prop.className "self-center mt-4"
                                 prop.text "Toggle preview"
                                 prop.onClick (fun _ -> dispatch TogglePreview)
                             ]
+                            //suggestions for selected element
+                            Html.text (model.CurrModifiedElement.ToString())
 
-                            uiBox ([ prettyPrint model.CurrentPage.Data ])
                     ]
                 ]
             ]
@@ -368,7 +392,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     menu menuOptions
                     match model.CurrentTab with
                     | Main -> mainPage
-                    | Editor -> editor
+                    | Editor -> uiBlock [ editor ]
                     | Download -> uiBlock [ download ]
                 ]
             ]
