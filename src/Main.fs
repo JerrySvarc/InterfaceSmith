@@ -54,7 +54,7 @@ let init () : Model * Cmd<Msg> =
         NameInput = ""
         EditingCode = false
         CurrentTab = Main
-        IsPreview = false
+        IsPreview = true
         CurrModifiedElement = (Hole(UnNamed), [])
     },
     Cmd.none
@@ -131,108 +131,85 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
 let view (model: Model) (dispatch: Msg -> unit) =
 
-    let upploadButtonView onLoad =
+    let uploadButtonView onLoad =
         Html.div [
-            prop.className "items-center justify-center"
+            prop.onClick (fun _ ->
+                Browser.Dom.document.getElementById("file-input")?click()
+            )
             prop.children [
-                Html.div [
-                    prop.children [
-                        Html.label [
-                            prop.children [
-                                Html.input [
-                                    prop.type' "file"
-                                    prop.name "component-data"
-                                    prop.onChange (handleFileEvent onLoad)
-                                    prop.className "hidden"
-                                ]
-                                Html.span [
-                                    prop.className
-                                        "px-8 py-4 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 transition duration-200 ease-in-out text-xl"
-                                    prop.children [ Html.text "Select a file" ]
-                                ]
-                            ]
-                        ]
-                    ]
+                Html.button [
+                    prop.text "Upload a JSON file"
+                    prop.className "px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-700 transition duration-200 ease-in-out inline-block"
+                ]
+                Html.input [
+                    prop.id "file-input"
+                    prop.type' "file"
+                    prop.name "component-data"
+                    prop.onChange (handleFileEvent onLoad)
+                    prop.style [style.display.none]
                 ]
             ]
         ]
 
-    let uploadButton = upploadButtonView (UploadData >> dispatch)
+    let uploadButton = uploadButtonView (UploadData >> dispatch)
 
     let menu (options: (string * TabType) list) =
-        Html.div [
-            prop.className "flex border-b fixed top-0 left-0 w-full z-50 bg-white"
-            prop.children (
-                options
-                |> List.map (fun (name, page) ->
-                    Html.div [
-                        prop.className "flex-1 text-center py-4 cursor-pointer hover:bg-gray-100"
-                        prop.children [ Html.text name ]
-                        prop.onClick (fun _ -> dispatch (ChangeTab page))
-                    ])
-            )
-        ]
+            Html.div [
+                prop.className "flex flex-col bg-gray-800 text-white rounded-lg shadow-lg p-4"
+                prop.children (
+                    options
+                    |> List.map (fun (name, page) ->
+                        Html.div [
+                            prop.className "text-left py-2 pl-4 cursor-pointer hover:bg-blue-500 hover:text-white border-b border-gray-700 text-lg transition-colors duration-200"
+                            prop.children [ Html.text name ]
+                            prop.onClick (fun _ -> dispatch (ChangeTab page))
+                        ])
+                )]
 
     let menuOptions = [ ("Main", Main); ("Editor", Editor); ("Download", Download) ]
 
     let mainPage =
         Html.div [
-            prop.className
-                "flex flex-col items-center justify-center min-h-screen bg-primary-100 p-6 w-full max-w-full font-display"
+            prop.className "flex flex-col items-center justify-center h-screen bg-gradient-to-r from-green-400 to-blue-500 text-white"
             prop.children [
                 Html.h1 [
-                    prop.className "text-5xl font-bold text-primary-900 mb-8 w-full text-center"
-                    prop.text "Welcome to the data-driven UI editor!"
+                    prop.className "text-6xl font-bold text-center mb-4"
+                    prop.text "Welcome to Data-Driven UI editor"
                 ]
-                Html.div [
-                    prop.className
-                        "bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 flex flex-col my-2 w-full md:w-3/4 lg:w-1/2"
-                    prop.children [
-                        Html.p [
-                            prop.className "text-2xl text-primary-700 mb-4 w-full text-center"
-                            prop.text "Please upload a JSON file to get started."
-                        ]
-                        Html.p [
-                            prop.className "text-2xl text-primary-700 mb-4 w-full text-center"
-                            prop.text "You can also create a new component from scratch."
-                        ]
-                        Html.p [
-                            prop.className "text-2xl text-primary-700 mb-4 w-full text-center"
-                            prop.text "Select the 'Editor' tab to start editing the component."
-                        ]
-                        Html.p [
-                            prop.className "text-2xl text-primary-700 mb-4 w-full text-center"
-                            prop.text "Select the 'Download' tab to download the created page."
-                        ]
-
-                        if model.CurrentPage.Data = JNull then
-                            uiBlock [ uploadButton ]
-                        else
-                            uiBlock ([ Html.text "Data uploaded successfully!" ])
-
-                        if model.FileUploadError then
-                            uiBlock (
-                                [
-                                    Html.div [
-                                        prop.className "w-full mt-4 p-4 bg-red-600 text-white rounded"
-                                        prop.children [ Html.text "The selected file cannot be used." ]
-                                    ]
-                                ]
-                            )
-                    ]
+                Html.p [
+                    prop.className "text-2xl text-center mb-2"
+                    prop.text "The editor allows you to create web applications based on concrete data."
+                ]
+                Html.p [
+                    prop.className "text-2xl text-center mb-2"
+                    prop.text "Upload a JSON file to get started. Then use the menus to create and modify UI elements."
+                ]
+                Html.button [
+                    prop.className "mt-8 px-4 py-2 bg-white text-blue-500 rounded shadow font-bold text-xl"
+                    prop.text "Get Started"
+                    prop.onClick(fun _ -> dispatch (ChangeTab Editor))
                 ]
             ]
         ]
 
+    let rec options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+        match code with
+        | HtmlElement _ -> elementOptionsComponent (code, path)
+        | HtmlList _ -> listOptionsComponent (code, path)
+        | Sequence(_) -> sequenceOptionsComponent (code, path)
+        | Hole _ -> uiBlock ([ Html.text "No options available." ])
 
-
-
-    let elementOptionsComponent =
+    and elementOptionsComponent =
         React.functionComponent (fun (code: RenderingCode, path) ->
+            let (attributeName, setAttributeName) = React.useState ""
+            let (attributeValue, setAttributeValue) = React.useState ""
+            let (constantValue, setConstantValue) = React.useState ""
+
+            console.log code
             match code with
             | HtmlElement(tag, attrs, innerValue) ->
                 Html.div [
-                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
+                    prop.className "flex flex-row flex-nowrap p-1 border-1 border-gray-300 bg-white rounded"
                     prop.children [
                         let tagOptions =
                             FSharpType.GetUnionCases(typeof<Tag>)
@@ -240,81 +217,157 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
                         //tag selector
                         Html.div [
-                            prop.className "flex items-center space-x-4"
+                            prop.className "p-1 bg-gray-100  my-1"
                             prop.children [
-                                Html.button [
-                                    prop.className
-                                        "flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                                    prop.text "Change tag"
-                                ]
+                                Html.p [ prop.className "font-bold text-gray-700"; prop.text "Change tag" ]
                                 Html.select [
-                                    prop.className
-                                        "tag-selector block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
-                                    prop.defaultValue "Div"
+                                    prop.className "p-1  bg-white "
                                     prop.onMouseDown (fun e -> e.stopPropagation ())
+                                    prop.value ""
                                     prop.onChange (fun (e: Browser.Types.Event) ->
-
                                         let selectedTag = e.target?value |> string
                                         let newTag = selectedTag.ToLower() |> stringToTag
                                         dispatch (ReplaceCode(HtmlElement(newTag, attrs, innerValue), path)))
                                     prop.children (
-                                        tagOptions
-                                        |> Array.map (fun tag -> Html.option [ prop.value tag; prop.text tag ])
+                                        [ Html.option [ prop.value ""; prop.text "Select tag" ] ]
+                                        @ (tagOptions
+                                           |> Array.toList
+                                           |> List.map (fun tag -> Html.option [ prop.value tag; prop.text tag ]))
                                     )
                                 ]
                             ]
                         ]
-
+                        //attribute editor
                         Html.div [
+                            prop.className "p-1  bg-gray-100 rounded my-1"
                             prop.children [
                                 Html.input [
-                                    prop.className
-                                        "border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none"
+                                    prop.className "p-2 border-2 border-gray-200 bg-white rounded my-2"
                                     prop.placeholder "Attribute name"
-                                //prop.onChange (fun e -> dispatch (UpdateAttributeName e.target.Value.ToString()))
+                                    prop.onTextChange (fun e -> setAttributeName (e))
                                 ]
                                 Html.input [
-                                    prop.className
-                                        "border-2 border-gray-300 bg-white h-10 px-5 pr-16 rounded-lg text-sm focus:outline-none"
+                                    prop.className "p-2 border-2 border-gray-200 bg-white rounded my-2"
                                     prop.placeholder "Attribute value"
-                                //prop.onChange (fun e -> dispatch (UpdateAttributeValue e.target.Value.ToString()))
+                                    prop.onTextChange (fun e -> setAttributeValue (e))
                                 ]
                                 Html.button [
-                                    prop.className
-                                        "flex-1 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                    prop.className "p-2 border-2 border-gray-200 bg-green-500 text-white rounded my-2"
                                     prop.text "Add attribute"
-                                //prop.onClick (fun _ -> dispatch AddAttribute)
+                                    prop.onClick (fun _ ->
+                                        let newAttribute = Types.Attribute(attributeName, attributeValue)
+                                        let updatedAttrs = [newAttribute] @ attrs
+                                        dispatch (ReplaceCode(HtmlElement(tag, updatedAttrs, innerValue), path)))
                                 ]
                             ]
                         ]
 
-                        Html.button [ prop.className "flex-1"; prop.text "Change inner value" ]
+                        let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
+
+                        Html.div [
+                            prop.className "p-1  bg-gray-100 rounded my-1"
+                            prop.children [
+                                Html.select [
+                                    prop.className "p-1 border-2 border-gray-200 bg-white rounded"
+                                    prop.onMouseDown (fun e -> e.stopPropagation ())
+                                    prop.value "Data" // Set the initial value to "Data"
+                                    prop.onChange (fun (e: Browser.Types.Event) ->
+                                        let selectedValue = e.target?value |> string
+
+                                        match selectedValue with
+                                        | "Data" ->
+                                            dispatch (ReplaceCode(HtmlElement(tag, attrs, InnerValue.Data), path))
+                                        | "Constant" ->
+                                            dispatch (
+                                                ReplaceCode(HtmlElement(tag, attrs, InnerValue.Constant ""), path)
+                                            )
+                                        | "Empty" ->
+                                            dispatch (ReplaceCode(HtmlElement(tag, attrs, InnerValue.Empty), path))
+                                        | _ -> ())
+                                    prop.children (
+                                        innerValueOptions
+                                        |> List.map (fun value -> Html.option [ prop.value value; prop.text value ])
+                                    )
+                                ]
+
+                                match innerValue with
+                                | InnerValue.Constant _ ->
+                                    Html.input [
+                                        prop.className "p-1 border-2 border-gray-200 bg-white rounded"
+                                        prop.placeholder "Enter constant value"
+                                        prop.value constantValue
+                                        prop.onInput (fun e -> setConstantValue (e.target?value |> string))
+                                        prop.onBlur (fun _ ->
+                                            dispatch (
+                                                ReplaceCode(
+                                                    HtmlElement(tag, attrs, InnerValue.Constant constantValue),
+                                                    path
+                                                )
+                                            ))
+                                    ]
+                                | _ -> Html.none
+                            ]
+                        ]
                     ]
                 ]
+            | _ -> failwith "Not a valid code type.")
 
-            | _ -> failwith "Invalid code type.")
-
-
-    let listOptionsComponent =
+    and listOptionsComponent =
         React.functionComponent (fun (code: RenderingCode, path) ->
             match code with
             | HtmlList(listType, headers, elementCode) ->
-                Html.div [
-                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
-                    prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
-                    prop.children [
+                let listTypeOptions =
+                    FSharpType.GetUnionCases(typeof<ListType>)
+                    |> Array.map (fun caseInfo -> caseInfo.Name)
 
+                Html.div [
+                    prop.className "p-4 border-2 border-gray-300 bg-white rounded"
+                    prop.children [
+                        // List type selector
+                        Html.select [
+                            prop.className "p-2 border-2 border-gray-200 bg-white rounded"
+                            prop.onMouseDown (fun e -> e.stopPropagation ())
+                            prop.onClick (fun e -> e.stopPropagation ())
+                            prop.value (listType.ToString())
+                            prop.onChange (fun (e: Browser.Types.Event) ->
+                                let selectedListType = e.target?value |> string
+                                let newListType = selectedListType.ToLower() |> stringToListType
+                                dispatch (ReplaceCode(HtmlList(newListType, headers, elementCode), path)))
+                            prop.children (
+                                listTypeOptions
+                                |> Array.toList
+                                |> List.map (fun listType -> Html.option [ prop.value listType; prop.text listType ])
+                            )
+                        ]
+                        // Header editor
+                        match headers with
+                        | None -> Html.none
+                        | Some headers ->
+                            Html.div [
+                                prop.className "p-2 border-2 border-gray-200 bg-gray-100 rounded my-2"
+                                prop.children [
+                                    Html.button [
+                                        prop.className "p-2 border-2 border-gray-200 bg-green-500 text-white rounded my-2"
+                                        prop.text "Add header"
+                                        prop.onClick (fun _ ->
+                                            let newHeader = "New header"
+                                            let updatedHeaders = newHeader :: headers
+                                            dispatch (ReplaceCode(HtmlList(listType, Some(updatedHeaders), elementCode), path)))
+                                    ]
+                                ]
+                            ]
+                        ]
                     ]
-                ]
+
 
             | _ -> failwith "Invalid code type.")
 
-    let sequenceOptionsComponent =
+    and sequenceOptionsComponent =
         React.functionComponent (fun (code: RenderingCode, path) ->
             match code with
             | Sequence(elements) ->
                 Html.div [
-                    prop.className "flex items-center bg-white shadow-md rounded px-4 py-2 mb-4 font-display"
+                    prop.className ""
                     prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
                     prop.children [
 
@@ -323,24 +376,31 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
             | _ -> failwith "Invalid code type.")
 
-    let options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
-        match code with
-        | HtmlElement _ -> elementOptionsComponent (code, path)
-        | HtmlList _ -> listOptionsComponent (code, path)
-        | Sequence(_) -> sequenceOptionsComponent (code, path)
-        | Hole _ -> uiBlock ([ Html.text "No options available." ])
+
 
     let editor =
         Html.div [
-            prop.className "flex justify-center items-center h-full w-full pt-16"
+            prop.className "p-4 border-2 border-gray-300 bg-white rounded"
             prop.children [
                 Html.div [
-                    prop.className "flex flex-col justify-around w-full max-w-md"
+                    prop.className "p-4 bg-white rounded"
                     prop.children [
                         if model.CurrentPage.Data = JNull then
-                            uiBlock ([ Html.text "Upload data to start!" ])
-                        else
+                            if model.CurrentPage.Data = JNull then
+                                uploadButton
+                            else
+                                uiBlock ([ Html.text "Data uploaded successfully!" ])
 
+                            if model.FileUploadError then
+                                uiBlock (
+                                    [
+                                        Html.div [
+                                            prop.className "w-full mt-4 p-4 bg-red-600 text-white rounded"
+                                            prop.children [ Html.text "The selected file cannot be used." ]
+                                        ]
+                                    ]
+                                )
+                        else
                             renderingCodeToReactElement
                                 model.CurrentPage.Code
                                 []
@@ -349,13 +409,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 model.IsPreview
 
                             Html.button [
-                                prop.className "self-center mt-4"
+                                prop.className "px-2 py-2 bg-green-200 text-green-800 font-semibold rounded hover:bg-green-300 transition duration-200 ease-in-out inline-block"
                                 prop.text "Toggle preview"
                                 prop.onClick (fun _ -> dispatch TogglePreview)
                             ]
                             //suggestions for selected element
                             Html.text (model.CurrModifiedElement.ToString())
-
                     ]
                 ]
             ]
@@ -363,36 +422,34 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let download =
         Html.div [
-            prop.className "flex  w-full "
+            prop.className " "
             prop.children [
                 match model.CurrentPage.Code with
                 | Hole _ -> uiBlock ([ Html.p [ prop.text "Create page elements first." ] ])
                 | _ ->
-                    Html.p [
-                        prop.className "flex text-2xl mb-4"
-                        prop.text "Download the source code of the page."
-                    ]
+                    Html.p [ prop.className ""; prop.text "Download the source code of the page." ]
 
-                    Html.button [
-                        prop.className
-                            " flex px-8 py-4 bg-blue-500 text-white rounded cursor-pointer hover:bg-blue-600 transition duration-200 ease-in-out text-xl"
-                        prop.text "Download"
-                    ]
+                    Html.button [ prop.className " "; prop.text "Download" ]
             ]
         ]
 
 
 
     Html.div [
-        prop.className "flex justify-center items-center h-full w-full pt-16"
+        prop.className "flex"
         prop.children [
             Html.div [
-                prop.className "flex justify-around w-full"
+                prop.className "w-64  overflow-auto"
                 prop.children [
                     menu menuOptions
+                ]
+            ]
+            Html.div [
+                prop.className "flex-grow bg-white p-4 overflow-auto h-full min-h-screen"
+                prop.children [
                     match model.CurrentTab with
                     | Main -> mainPage
-                    | Editor -> uiBlock [ editor ]
+                    | Editor -> editor
                     | Download -> uiBlock [ download ]
                 ]
             ]

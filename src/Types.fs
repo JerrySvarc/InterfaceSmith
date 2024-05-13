@@ -14,9 +14,6 @@ type Tag =
     | Strong
     | Em
     | A
-    | Li
-    | Ul
-    | Ol
     | Pre
     | Code
     | Blockquote
@@ -30,9 +27,9 @@ type Tag =
     | Main
     | Input
 
-type Attribute = Attribute of string * string
+type Attribute = string * string
 
-type Attributes = Attributes of Attribute list
+type Attributes = Attribute list
 
 type InnerValue =
     | Data

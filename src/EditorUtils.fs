@@ -47,9 +47,6 @@ let tagToString tag =
     | Strong -> "strong"
     | Em -> "em"
     | A -> "a"
-    | Li -> "li"
-    | Ul -> "ul"
-    | Ol -> "ol"
     | Pre -> "pre"
     | Code -> "code"
     | Blockquote -> "blockquote"
@@ -75,9 +72,7 @@ let stringToTag str =
     | "strong" -> Strong
     | "em" -> Em
     | "a" -> A
-    | "li" -> Li
-    | "ul" -> Ul
-    | "ol" -> Ol
+
     | "pre" -> Pre
     | "code" -> Code
     | "blockquote" -> Blockquote
@@ -92,6 +87,20 @@ let stringToTag str =
     | "input" -> Input
     | _ -> failwith "Invalid tag"
 
+
+let stringToListType str =
+    match str with
+    | "UnorderedList" -> UnorderedList
+    | "OrderedList" -> OrderedList
+    | "Table" -> Table
+    | _ -> failwith "Invalid list type"
+
+let listTypeToString listType =
+    match listType with
+    | UnorderedList -> "ul"
+    | OrderedList -> "ol"
+    | Table -> "table"
+
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
@@ -101,7 +110,12 @@ let rec renderingCodeToReactElement
     =
     match code with
     | HtmlElement(tag, attrs, innerValue) ->
-        console.log (tagToString tag)
+        let attributes =
+            attrs
+            |> List.map (fun (key, value) -> (key, box value))
+            |> List.toSeq
+            |> Seq.append [ ("className", box "preview") ]
+            |> createObj
 
         let preview =
             match innerValue with
@@ -109,13 +123,9 @@ let rec renderingCodeToReactElement
                 let selectedFields = json
                 let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
 
-                ReactBindings.React.createElement (
-                    tagToString tag,
-                    createObj [ "className" ==> "preview" ],
-                    [ str jsonStr ]
-                )
+                ReactBindings.React.createElement (tagToString tag, attributes, [ str jsonStr ])
             | Empty -> ReactBindings.React.createElement (tagToString tag, [], [])
-            | Constant s -> ReactBindings.React.createElement (tagToString tag, [], [ str s ])
+            | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
 
         Html.div [
             prop.children [
@@ -128,10 +138,25 @@ let rec renderingCodeToReactElement
     | HtmlList(listType, numbered, listCode) ->
         match json with
         | JArray array ->
+            let first = array |> List.item 0
+
             ReactBindings.React.createElement (
-                "div",
+                listTypeToString listType,
                 [],
-                [ renderingCodeToReactElement listCode path array[0] options showOptions ]
+                [
+                    match listType with
+                    | UnorderedList ->
+                        array
+                        |> List.map (fun item -> renderingCodeToReactElement listCode path item options showOptions)
+                        |> Html.div
+                    | OrderedList ->
+                        array
+                        |> List.mapi (fun index item ->
+                            renderingCodeToReactElement listCode path item options showOptions)
+                        |> Html.div
+                    | Table -> failwith "Not implemented"
+                ]
+
             )
         | _ -> failwith "not a list"
     | Sequence codes ->

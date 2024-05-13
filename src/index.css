@@ -6,3 +6,7 @@
     all: revert;
 
 }
+
+body {
+    min-width: 1000px;
+}

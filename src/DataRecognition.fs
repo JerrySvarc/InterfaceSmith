@@ -16,4 +16,4 @@ let recognizeJson (json: Json) =
         let codes = List.map (fun (key, value) -> Hole(Named key)) jsonArray
         Sequence(codes |> Array.ofList)
     | JNull -> Hole UnNamed
-    | _ -> HtmlElement(Div, Attributes([]), Data)
+    | _ -> HtmlElement(Div, [], Data)
