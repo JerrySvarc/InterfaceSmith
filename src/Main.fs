@@ -139,7 +139,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             prop.children [
                 Html.button [
                     prop.text "Upload a JSON file"
-                    prop.className "px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-700 transition duration-200 ease-in-out inline-block"
+                    prop.className "px-4 py-2 bg-secondary-200 text-white font-semibold rounded hover:bg-secondary-500 transition duration-200 ease-in-out inline-block"
                 ]
                 Html.input [
                     prop.id "file-input"
@@ -148,6 +148,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.onChange (handleFileEvent onLoad)
                     prop.style [style.display.none]
                 ]
+                Html.p [
+                    prop.className "text-sm text-gray-500 mt-2 bg-yellow-100 p-3 rounded border border-yellow-200"
+                    prop.text "Make sure the JSON file is valid and contains a field called 'data' containing the data you want to use."
+                ]
             ]
         ]
 
@@ -155,7 +159,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let menu (options: (string * TabType) list) =
             Html.div [
-                prop.className "flex flex-col bg-gray-800 text-white rounded-lg shadow-lg p-4"
+                prop.className "flex flex-col bg-gray-800 text-white p-4"
                 prop.children (
                     options
                     |> List.map (fun (name, page) ->
@@ -185,7 +189,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     prop.text "Upload a JSON file to get started. Then use the menus to create and modify UI elements."
                 ]
                 Html.button [
-                    prop.className "mt-8 px-4 py-2 bg-white text-blue-500 rounded shadow font-bold text-xl"
+                    prop.className "mt-8 px-4 py-2 text-black border-black bg-amber-400 rounded shadow font-bold text-xl"
                     prop.text "Get Started"
                     prop.onClick(fun _ -> dispatch (ChangeTab Editor))
                 ]
@@ -194,18 +198,17 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
     let rec options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
         match code with
-        | HtmlElement _ -> elementOptionsComponent (code, path)
-        | HtmlList _ -> listOptionsComponent (code, path)
-        | Sequence(_) -> sequenceOptionsComponent (code, path)
+        | HtmlElement _ -> elementOptionsComponent (name, code, path)
+        | HtmlList _ -> listOptionsComponent (name, code, path)
+        | Sequence(_) -> sequenceOptionsComponent (name ,code, path)
         | Hole _ -> uiBlock ([ Html.text "No options available." ])
 
     and elementOptionsComponent =
-        React.functionComponent (fun (code: RenderingCode, path) ->
+        React.functionComponent (fun (name, code: RenderingCode, path) ->
             let (attributeName, setAttributeName) = React.useState ""
             let (attributeValue, setAttributeValue) = React.useState ""
             let (constantValue, setConstantValue) = React.useState ""
 
-            console.log code
             match code with
             | HtmlElement(tag, attrs, innerValue) ->
                 Html.div [
@@ -313,7 +316,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             | _ -> failwith "Not a valid code type.")
 
     and listOptionsComponent =
-        React.functionComponent (fun (code: RenderingCode, path) ->
+        React.functionComponent (fun (name, code: RenderingCode, path) ->
             match code with
             | HtmlList(listType, headers, elementCode) ->
                 let listTypeOptions =
@@ -363,7 +366,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
             | _ -> failwith "Invalid code type.")
 
     and sequenceOptionsComponent =
-        React.functionComponent (fun (code: RenderingCode, path) ->
+        React.functionComponent (fun (name, code: RenderingCode, path) ->
             match code with
             | Sequence(elements) ->
                 Html.div [
@@ -392,14 +395,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 uiBlock ([ Html.text "Data uploaded successfully!" ])
 
                             if model.FileUploadError then
-                                uiBlock (
-                                    [
-                                        Html.div [
-                                            prop.className "w-full mt-4 p-4 bg-red-600 text-white rounded"
-                                            prop.children [ Html.text "The selected file cannot be used." ]
-                                        ]
-                                    ]
-                                )
+                                Html.div [
+                                    prop.className "w-full mt-4 p-4 bg-secondary-600 text-white rounded"
+                                    prop.children [ Html.text "The selected file cannot be used." ]
+                                ]
                         else
                             renderingCodeToReactElement
                                 model.CurrentPage.Code

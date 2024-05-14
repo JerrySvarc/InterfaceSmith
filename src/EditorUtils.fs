@@ -88,11 +88,14 @@ let stringToTag str =
     | _ -> failwith "Invalid tag"
 
 
-let stringToListType str =
-    match str with
-    | "UnorderedList" -> UnorderedList
-    | "OrderedList" -> OrderedList
-    | "Table" -> Table
+let stringToListType (str: string) =
+    console.log str
+    let loweredStr = str.ToLower()
+
+    match loweredStr with
+    | "unorderedlist" -> UnorderedList
+    | "orderedlist" -> OrderedList
+    | "table" -> Table
     | _ -> failwith "Invalid list type"
 
 let listTypeToString listType =
@@ -141,19 +144,19 @@ let rec renderingCodeToReactElement
             let first = array |> List.item 0
 
             ReactBindings.React.createElement (
-                listTypeToString listType,
+                div,
                 [],
                 [
                     match listType with
                     | UnorderedList ->
                         array
                         |> List.map (fun item -> renderingCodeToReactElement listCode path item options showOptions)
-                        |> Html.div
+                        |> Html.ul
                     | OrderedList ->
                         array
                         |> List.mapi (fun index item ->
                             renderingCodeToReactElement listCode path item options showOptions)
-                        |> Html.div
+                        |> Html.ol
                     | Table -> failwith "Not implemented"
                 ]
 
