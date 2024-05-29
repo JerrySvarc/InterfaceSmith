@@ -27,11 +27,11 @@ type Tag =
     | Main
     | Input
 
-type Attribute = string * string
+type Attribute = string * InnerValue
 
-type Attributes = Attribute list
+and Attributes = Attribute list
 
-type InnerValue =
+and InnerValue =
     | Data
     | Constant of string
     | Empty
@@ -48,7 +48,7 @@ type FieldHole =
 
 type RenderingCode =
     | HtmlElement of tag: Tag * attrs: Attributes * innerValue: InnerValue
-    | HtmlList of listType: ListType * headers: string list option * code: RenderingCode
+    | HtmlList of listType: ListType * headers: string list option * itemCode: RenderingCode list
     | Sequence of RenderingCode array
     | Hole of FieldHole
 

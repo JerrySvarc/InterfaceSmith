@@ -10,17 +10,20 @@ open AppUtilities
 open Browser
 open Fable.Core.JsInterop
 
+let rec addCode path newCode = 0
+
 let rec replace path replacementElement (currentCode: RenderingCode) =
     match path with
     | [] -> replacementElement
     | head :: tail ->
         match currentCode with
-        | HtmlList(lt, n, item) ->
+        | HtmlList(lt, n, items) ->
             let newItems =
-                match item with
-                | Hole _ -> item
-                | _ -> replace tail replacementElement item
+                match items with
+                | [] -> items
+                | _ -> items |> List.mapi (fun i item -> replace tail replacementElement item)
 
+            console.log (newItems.ToString())
             HtmlList(lt, n, newItems)
         | Sequence(items) ->
             let newItems =
@@ -72,7 +75,6 @@ let stringToTag str =
     | "strong" -> Strong
     | "em" -> Em
     | "a" -> A
-
     | "pre" -> Pre
     | "code" -> Code
     | "blockquote" -> Blockquote
@@ -89,7 +91,6 @@ let stringToTag str =
 
 
 let stringToListType (str: string) =
-    console.log str
     let loweredStr = str.ToLower()
 
     match loweredStr with
@@ -130,37 +131,50 @@ let rec renderingCodeToReactElement
             | Empty -> ReactBindings.React.createElement (tagToString tag, [], [])
             | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
 
-        Html.div [
-            prop.children [
-                preview
-                match showOptions with
-                | true -> options code path "Element"
-                | false -> Html.none
+        match showOptions with
+        | true ->
+            Html.div [
+                prop.children [
+                    preview
+                    match showOptions with
+                    | true -> options code path "Element"
+                    | false -> Html.none
+                ]
             ]
-        ]
-    | HtmlList(listType, numbered, listCode) ->
+        | false -> preview
+
+
+    | HtmlList(listType, headers, codes) ->
         match json with
         | JArray array ->
-            let first = array |> List.item 0
+            let listOptions = options code path "List"
+            let tag = listTypeToString listType
 
-            ReactBindings.React.createElement (
-                div,
-                [],
-                [
-                    match listType with
-                    | UnorderedList ->
-                        array
-                        |> List.map (fun item -> renderingCodeToReactElement listCode path item options showOptions)
-                        |> Html.ul
-                    | OrderedList ->
-                        array
-                        |> List.mapi (fun index item ->
-                            renderingCodeToReactElement listCode path item options showOptions)
-                        |> Html.ol
-                    | Table -> failwith "Not implemented"
-                ]
+            let elements =
+                List.mapi
+                    (fun index code ->
+                        let arrayItem = List.item index array
 
-            )
+                        let renderedItem =
+                            if index = 0 then
+                                renderingCodeToReactElement code (path @ [ index ]) arrayItem options showOptions
+                            else
+                                renderingCodeToReactElement code (path @ [ index ]) arrayItem options false
+
+                        let itemTag =
+                            match listType with
+                            | Table -> "td"
+                            | _ -> "li"
+
+                        ReactBindings.React.createElement (
+                            itemTag,
+                            [ ("className", box "preview") ] |> createObj,
+                            [ renderedItem ]
+                        ))
+                    codes
+
+            ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
+
         | _ -> failwith "not a list"
     | Sequence codes ->
         let jsonList =
@@ -184,4 +198,7 @@ let rec renderingCodeToReactElement
 
         let fieldType = json |> recognizeJson
         let optionPane = options fieldType path name
-        optionPane
+
+        match showOptions with
+        | true -> optionPane
+        | false -> Html.none

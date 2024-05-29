@@ -203,8 +203,26 @@ let view (model: Model) (dispatch: Msg -> unit) =
         | Sequence(_) -> sequenceOptionsComponent (name ,code, path)
         | Hole _ -> uiBlock ([ Html.text "No options available." ])
 
+    and collapsableOption =
+        React.functionComponent (fun (option : ReactElement) ->
+            let (collapsed, setCollapsed) = React.useState true
+
+            Html.div [
+                prop.children [
+                    Html.button [
+                        prop.text "Toggle options"
+                        prop.onClick (fun _ -> setCollapsed (not collapsed))
+                    ]
+                    match collapsed with
+                    | false -> option
+                    |true -> Html.none
+                ]
+            ]
+        )
+
+    //TODO: Refactor elementoptions
     and elementOptionsComponent =
-        React.functionComponent (fun (name, code: RenderingCode, path) ->
+        React.functionComponent (fun (name :string, code: RenderingCode, path) ->
             let (attributeName, setAttributeName) = React.useState ""
             let (attributeValue, setAttributeValue) = React.useState ""
             let (constantValue, setConstantValue) = React.useState ""
@@ -214,6 +232,10 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Html.div [
                     prop.className "flex flex-row flex-nowrap p-1 border-1 border-gray-300 bg-white rounded"
                     prop.children [
+                        Html.h1 [
+                            prop.className "p-4 bg-white rounded"
+                            prop.text name
+                        ]
                         let tagOptions =
                             FSharpType.GetUnionCases(typeof<Tag>)
                             |> Array.map (fun caseInfo -> caseInfo.Name)
@@ -226,7 +248,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 Html.select [
                                     prop.className "p-1  bg-white "
                                     prop.onMouseDown (fun e -> e.stopPropagation ())
-                                    prop.value ""
+                                    prop.value (tag.ToString())
                                     prop.onChange (fun (e: Browser.Types.Event) ->
                                         let selectedTag = e.target?value |> string
                                         let newTag = selectedTag.ToLower() |> stringToTag
@@ -234,13 +256,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     prop.children (
                                         [ Html.option [ prop.value ""; prop.text "Select tag" ] ]
                                         @ (tagOptions
-                                           |> Array.toList
-                                           |> List.map (fun tag -> Html.option [ prop.value tag; prop.text tag ]))
+                                        |> Array.toList
+                                        |> List.map (fun tag -> Html.option [ prop.value tag; prop.text tag ]))
                                     )
                                 ]
                             ]
                         ]
-                        //attribute editor
+                    //attribute editor
                         Html.div [
                             prop.className "p-1  bg-gray-100 rounded my-1"
                             prop.children [
@@ -258,7 +280,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                     prop.className "p-2 border-2 border-gray-200 bg-green-500 text-white rounded my-2"
                                     prop.text "Add attribute"
                                     prop.onClick (fun _ ->
-                                        let newAttribute = Types.Attribute(attributeName, attributeValue)
+                                        let newAttribute = Types.Attribute(attributeName, Constant(attributeValue))
                                         let updatedAttrs = [newAttribute] @ attrs
                                         dispatch (ReplaceCode(HtmlElement(tag, updatedAttrs, innerValue), path)))
                                 ]
@@ -267,13 +289,19 @@ let view (model: Model) (dispatch: Msg -> unit) =
 
                         let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
 
+                        let innerValueToString (innerValue: InnerValue) =
+                            match innerValue with
+                            | Data -> "Data"
+                            | Constant _ -> "Constant"
+                            | Empty -> "Empty"
+
                         Html.div [
                             prop.className "p-1  bg-gray-100 rounded my-1"
                             prop.children [
                                 Html.select [
                                     prop.className "p-1 border-2 border-gray-200 bg-white rounded"
                                     prop.onMouseDown (fun e -> e.stopPropagation ())
-                                    prop.value "Data" // Set the initial value to "Data"
+                                    prop.value (innerValue |> innerValueToString) // Set the initial value to the current innerValue
                                     prop.onChange (fun (e: Browser.Types.Event) ->
                                         let selectedValue = e.target?value |> string
 
@@ -292,7 +320,6 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                         |> List.map (fun value -> Html.option [ prop.value value; prop.text value ])
                                     )
                                 ]
-
                                 match innerValue with
                                 | InnerValue.Constant _ ->
                                     Html.input [
@@ -334,7 +361,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             prop.value (listType.ToString())
                             prop.onChange (fun (e: Browser.Types.Event) ->
                                 let selectedListType = e.target?value |> string
-                                let newListType = selectedListType.ToLower() |> stringToListType
+                                let newListType = selectedListType |> stringToListType
                                 dispatch (ReplaceCode(HtmlList(newListType, headers, elementCode), path)))
                             prop.children (
                                 listTypeOptions
@@ -342,38 +369,21 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 |> List.map (fun listType -> Html.option [ prop.value listType; prop.text listType ])
                             )
                         ]
-                        // Header editor
-                        match headers with
-                        | None -> Html.none
-                        | Some headers ->
-                            Html.div [
-                                prop.className "p-2 border-2 border-gray-200 bg-gray-100 rounded my-2"
-                                prop.children [
-                                    Html.button [
-                                        prop.className "p-2 border-2 border-gray-200 bg-green-500 text-white rounded my-2"
-                                        prop.text "Add header"
-                                        prop.onClick (fun _ ->
-                                            let newHeader = "New header"
-                                            let updatedHeaders = newHeader :: headers
-                                            dispatch (ReplaceCode(HtmlList(listType, Some(updatedHeaders), elementCode), path)))
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-
+                    ]]
 
             | _ -> failwith "Invalid code type.")
-
+    //TODO: implement this
     and sequenceOptionsComponent =
         React.functionComponent (fun (name, code: RenderingCode, path) ->
             match code with
             | Sequence(elements) ->
                 Html.div [
                     prop.className ""
-                    prop.onClick (fun _ -> dispatch (SetCurrentModifiedElement(code, path)))
                     prop.children [
-
+                        Html.button [
+                            prop.onClick(fun _ -> dispatch ( ReplaceCode (code,path)))
+                            prop.text "Add sequence"
+                        ]
                     ]
                 ]
 
@@ -407,18 +417,13 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 options
                                 model.IsPreview
 
-                            Html.button [
-                                prop.className "px-2 py-2 bg-green-200 text-green-800 font-semibold rounded hover:bg-green-300 transition duration-200 ease-in-out inline-block"
-                                prop.text "Toggle preview"
-                                prop.onClick (fun _ -> dispatch TogglePreview)
-                            ]
-                            //suggestions for selected element
+                           //suggestions for selected element
                             Html.text (model.CurrModifiedElement.ToString())
                     ]
                 ]
             ]
         ]
-
+    //TODO: Implement download page
     let download =
         Html.div [
             prop.className " "
@@ -431,7 +436,12 @@ let view (model: Model) (dispatch: Msg -> unit) =
                     Html.button [ prop.className " "; prop.text "Download" ]
             ]
         ]
-
+    let togglePreviewButton =
+        Html.button [
+            prop.className "px-2 py-2 bg-green-200 text-green-800 font-semibold rounded hover:bg-green-300 transition duration-200 ease-in-out inline-block"
+            prop.text "Toggle preview"
+            prop.onClick (fun _ -> dispatch TogglePreview)
+        ]
 
 
     Html.div [
@@ -448,7 +458,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 prop.children [
                     match model.CurrentTab with
                     | Main -> mainPage
-                    | Editor -> editor
+                    | Editor -> [editor; togglePreviewButton] |> Html.div
                     | Download -> uiBlock [ download ]
                 ]
             ]
