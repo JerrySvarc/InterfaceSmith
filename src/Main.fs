@@ -301,7 +301,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                                 Html.select [
                                     prop.className "p-1 border-2 border-gray-200 bg-white rounded"
                                     prop.onMouseDown (fun e -> e.stopPropagation ())
-                                    prop.value (innerValue |> innerValueToString) // Set the initial value to the current innerValue
+                                    prop.value (innerValue |> innerValueToString)
                                     prop.onChange (fun (e: Browser.Types.Event) ->
                                         let selectedValue = e.target?value |> string
 
@@ -358,15 +358,16 @@ let view (model: Model) (dispatch: Msg -> unit) =
                             prop.className "p-2 border-2 border-gray-200 bg-white rounded"
                             prop.onMouseDown (fun e -> e.stopPropagation ())
                             prop.onClick (fun e -> e.stopPropagation ())
-                            prop.value (listType.ToString())
+                            prop.value ""
                             prop.onChange (fun (e: Browser.Types.Event) ->
                                 let selectedListType = e.target?value |> string
                                 let newListType = selectedListType |> stringToListType
                                 dispatch (ReplaceCode(HtmlList(newListType, headers, elementCode), path)))
                             prop.children (
-                                listTypeOptions
-                                |> Array.toList
-                                |> List.map (fun listType -> Html.option [ prop.value listType; prop.text listType ])
+                                [ Html.option [ prop.value ""; prop.text "Select list type" ] ]
+                                @ (listTypeOptions
+                                   |> Array.toList
+                                   |> List.map (fun listType -> Html.option [ prop.value listType; prop.text listType ]))
                             )
                         ]
                     ]]
