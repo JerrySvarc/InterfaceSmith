@@ -4,15 +4,19 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="FileUpload.fs" />
     <None Include="index.html" />
     <Compile Include="Types.fs" />
-    <Compile Include="DataLoading.fs" />
-    <Compile Include="DataRecognition.fs" />
     <Compile Include="CodeGeneration.fs" />
-    <Compile Include="AppUtils.fs" />
-    <Compile Include="EditorUtils.fs" />
     <None Include="paket.references" />
+    <Compile Include="DataProcessing\DataLoading.fs" />
+    <Compile Include="DataProcessing\DataRecognition.fs" />
+    <Compile Include="Utilities\EditorUtils.fs" />
+    <Compile Include="Utilities\AppUtils.fs" />
+    <Compile Include="Utilities\FileUpload.fs" />
+    <Compile Include="UIComponents\OptionComponents.fs" />
+    <Compile Include="UIComponents\EditorComponents.fs" />
+    <Compile Include="UIComponents\DownloadPageComponents.fs" />
+    <Compile Include="UIComponents\MainPageComponents.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

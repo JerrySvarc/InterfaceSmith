@@ -1,4 +1,4 @@
-module DataRecognition
+module DataProcessing.DataRecognition
 
 open Types
 open System

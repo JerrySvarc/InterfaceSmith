@@ -1,4 +1,4 @@
-module AppUtilities
+module Utilities.GeneralUtilities
 
 open Feliz
 open Types

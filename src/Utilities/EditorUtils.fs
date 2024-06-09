@@ -1,4 +1,4 @@
-module EditorUtils
+module Utilities.EditorUtils
 
 open Fable.React
 open Types

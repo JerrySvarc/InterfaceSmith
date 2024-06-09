@@ -1,4 +1,4 @@
-module DataLoading
+module DataProcessing.DataLoading
 
 open Types
 open System
