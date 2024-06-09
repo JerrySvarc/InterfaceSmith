@@ -2,6 +2,8 @@ module Utilities.GeneralUtilities
 
 open Feliz
 open Types
+
+
 open Fable.SimpleJson
 let uiBlock (content: ReactElement list) =
     Html.div [

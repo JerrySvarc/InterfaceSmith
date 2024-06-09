@@ -2,6 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
     <None Include="index.html" />
@@ -10,8 +11,8 @@
     <None Include="paket.references" />
     <Compile Include="DataProcessing\DataLoading.fs" />
     <Compile Include="DataProcessing\DataRecognition.fs" />
+    <Compile Include="Utilities\GeneralUtilities.fs" />
     <Compile Include="Utilities\EditorUtils.fs" />
-    <Compile Include="Utilities\AppUtils.fs" />
     <Compile Include="Utilities\FileUpload.fs" />
     <Compile Include="UIComponents\OptionComponents.fs" />
     <Compile Include="UIComponents\EditorComponents.fs" />

@@ -4,9 +4,9 @@ open Fable.React
 open Types
 open Fable.SimpleJson
 open System
-open DataRecognition
+open DataProcessing.DataRecognition
 open Feliz
-open AppUtilities
+open Utilities.GeneralUtilities
 open Browser
 open Fable.Core.JsInterop
 
