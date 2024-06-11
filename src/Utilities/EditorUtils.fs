@@ -10,6 +10,8 @@ open Utilities.GeneralUtilities
 open Browser
 open Fable.Core.JsInterop
 
+
+
 //TODO: implement ability to switch codes inside a sequence
 
 
@@ -98,22 +100,25 @@ let stringToListType (str: string) =
     match loweredStr with
     | "unorderedlist" -> UnorderedList
     | "orderedlist" -> OrderedList
-    | "table" -> Table
     | _ -> failwith "Invalid list type"
 
 let listTypeToString listType =
     match listType with
     | UnorderedList -> "ul"
     | OrderedList -> "ol"
-    | Table -> "table"
+
 
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
     (json: Json)
-    (options: RenderingCode -> int list -> string -> ReactElement)
+    (name: string)
+    (optionsCollapsed: bool)
+    (options: (Msg -> unit) -> RenderingCode -> list<int> -> string -> bool -> ReactElement)
     (showOptions: bool)
-    =
+    (dispatch: Msg -> unit)
+
+    : ReactElement =
     match code with
     | HtmlElement(tag, attrs, innerValue) ->
         let attributes =
@@ -134,22 +139,14 @@ let rec renderingCodeToReactElement
             | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
 
         match showOptions with
-        | true ->
-            Html.div [
-                prop.children [
-                    preview
-                    match showOptions with
-                    | true -> options code path "Element"
-                    | false -> Html.none
-                ]
-            ]
+        | true -> Html.div [ prop.children [ preview; options dispatch code path name optionsCollapsed ] ]
         | false -> preview
 
 
     | HtmlList(listType, headers, codes) ->
         match json with
         | JArray array ->
-            let listOptions = options code path "List"
+            let listOptions = options dispatch code path "List"
             let tag = listTypeToString listType
 
             let elements =
@@ -159,14 +156,29 @@ let rec renderingCodeToReactElement
 
                         let renderedItem =
                             if index = 0 then
-                                renderingCodeToReactElement code (path @ [ index ]) arrayItem options showOptions
-                            else
-                                renderingCodeToReactElement code (path @ [ index ]) arrayItem options false
+                                renderingCodeToReactElement
+                                    code
+                                    (path @ [ index ])
+                                    arrayItem
+                                    name
+                                    optionsCollapsed
+                                    options
+                                    showOptions
+                                    dispatch
 
-                        let itemTag =
-                            match listType with
-                            | Table -> "td"
-                            | _ -> "li"
+                            else
+                                renderingCodeToReactElement
+                                    code
+                                    (path @ [ index ])
+                                    arrayItem
+                                    name
+                                    optionsCollapsed
+                                    options
+                                    false
+                                    dispatch
+
+
+                        let itemTag = "li"
 
                         ReactBindings.React.createElement (
                             itemTag,
@@ -175,7 +187,16 @@ let rec renderingCodeToReactElement
                         ))
                     codes
 
-            ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
+            let preview =
+                ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
+
+            match showOptions with
+            | true ->
+                Html.div [
+                    prop.className " border-3 bg-white rounded-md m-1"
+                    prop.children [ preview; options dispatch code path name optionsCollapsed ]
+                ]
+            | false -> preview
 
         | _ -> failwith "not a list"
     | Sequence codes ->
@@ -187,11 +208,30 @@ let rec renderingCodeToReactElement
         let renderedElements =
             Array.mapi
                 (fun index code ->
-                    let (_, jsonSubObject) = List.item index jsonList
-                    renderingCodeToReactElement code (path @ [ index ]) jsonSubObject options showOptions)
+                    let (field, jsonSubObject) = List.item index jsonList
+
+                    renderingCodeToReactElement
+                        code
+                        (path @ [ index ])
+                        jsonSubObject
+                        field
+                        optionsCollapsed
+                        options
+                        showOptions
+                        dispatch)
                 codes
 
-        ReactBindings.React.createElement ("div", [], renderedElements)
+        let preview =
+            ReactBindings.React.createElement ("div", ("className", box "border"), renderedElements)
+
+        match showOptions with
+        | true ->
+            Html.div [
+                prop.className "border border-secondary-900 bg-white rounded-md m-1"
+                prop.children [ options dispatch code path name optionsCollapsed; preview ]
+            ]
+        | false -> preview
+
     | Hole named ->
         let name =
             match named with
@@ -199,7 +239,7 @@ let rec renderingCodeToReactElement
             | Named name -> name
 
         let fieldType = json |> recognizeJson
-        let optionPane = options fieldType path name
+        let optionPane: ReactElement = options dispatch fieldType path name optionsCollapsed
 
         match showOptions with
         | true -> optionPane

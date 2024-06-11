@@ -14,11 +14,17 @@ open UIComponents.DownloadPageComponents
 open Browser.Types
 open Fable.Core.JS
 
-let rec options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+let rec options
+    (dispatch: Msg -> unit)
+    (code: RenderingCode)
+    (path: int list)
+    (name: string)
+    (collapsed: bool)
+    : ReactElement =
     match code with
-    | HtmlElement _ -> ElementOption(name, code, path)
-    | HtmlList _ -> ListOption(name, code, path)
-    | Sequence(_) -> SequenceOption(name, code, path)
+    | HtmlElement _ -> ElementOption(dispatch, name, code, path, collapsed)
+    | HtmlList _ -> ListOption(dispatch, name, code, path, collapsed)
+    | Sequence(_) -> SequenceOption(dispatch, name, code, path, collapsed)
     | Hole _ -> Html.none
 
 [<ReactComponent>]
@@ -50,26 +56,31 @@ let DataUpload (dispatch) =
 
 
 [<ReactComponent>]
+let PreviewButton (dispatch) =
+    Html.button [
+        prop.className "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
+        prop.text "Preview"
+        prop.onClick (fun _ -> dispatch TogglePreview)
+    ]
+
+[<ReactComponent>]
+let ToggleOptionsButton (dispatch) =
+    Html.button [
+        prop.className "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
+        prop.text "Toggle options"
+        prop.onClick (fun _ -> dispatch ToggleOptions)
+    ]
+
+
+[<ReactComponent>]
 let PageHeader (page: Page, dispatch) =
     let (pageName, changeName) = React.useState (page.Name)
     let (editing, setEditing) = React.useState false
-    let inputRef = React.useRef (None)
-
-    let focusTextInput () =
-        match inputRef.current with
-        | None -> ()
-        | Some element ->
-            console.log "focus"
-            let inputElement = unbox<HTMLInputElement> element
-            inputElement.focus ()
 
     let saveAndUpdateName (name) =
         dispatch (ChangeName name)
-        setEditing (not editing)
-
-    let editName () =
-        setEditing (not editing)
-        focusTextInput ()
+        changeName name
+        setEditing false
 
     Html.div [
         prop.className "flex flex-row bg-white mt-3 justify-evenly items-center"
@@ -77,42 +88,45 @@ let PageHeader (page: Page, dispatch) =
             Html.div [
                 prop.className "flex items-center"
                 prop.children [
-                    match editing with
-                    | true ->
-                        Html.div [
-                            prop.className "flex items-center"
-                            prop.children [
-                                Html.input [
-                                    prop.ref inputRef
-
-                                    prop.className "rounded-md border-slate-500 m-1 p-2 border"
-                                    prop.value pageName
-                                    prop.onTextChange (fun e -> changeName e)
-                                ]
-                                Html.button [
-                                    prop.className
-                                        "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
+                    Html.div [
+                        prop.className "flex items-center"
+                        prop.children [
+                            Html.p [ prop.className "text-xl m-1 p-2"; prop.text "Page Name: " ]
+                            Html.input [
+                                prop.type' "text"
+                                match editing with
+                                | true -> prop.className "rounded-md border-slate-500 m-1 p-2 border"
+                                | false -> prop.className "rounded-md border-slate-500 m-1 p-2 border hidden"
+                                prop.value pageName
+                                prop.onTextChange (fun e -> changeName e)
+                            ]
+                            Html.p [
+                                prop.className (
+                                    match editing with
+                                    | true -> sprintf "text-xl m-1 p-2 hidden"
+                                    | _ -> sprintf "text-xl m-1 p-2 "
+                                )
+                                prop.text pageName
+                            ]
+                            Html.button [
+                                prop.className
+                                    "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
+                                match editing with
+                                | true ->
                                     prop.text "Save"
-                                    prop.onMouseDown (fun _ -> saveAndUpdateName pageName)
-                                ]
-                            ]
-                        ]
-                    | false ->
-                        Html.div [
-                            prop.className "flex items-center"
-                            prop.children [
-                                Html.p [ prop.className "text-xl m-1 p-2"; prop.text pageName ]
-                                Html.button [
-                                    prop.className
-                                        "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl hover:bg-secondary-600 "
+                                    prop.onClick (fun _ -> saveAndUpdateName pageName)
+                                | false ->
                                     prop.text "Edit"
-                                    prop.onMouseDown (fun _ -> editName ())
-                                ]
+                                    prop.onClick (fun _ -> setEditing true)
                             ]
                         ]
+                    ]
+
                 ]
             ]
             DataUpload(dispatch)
+            ToggleOptionsButton(dispatch)
+            PreviewButton(dispatch)
             DownloadButton()
         ]
     ]
@@ -128,15 +142,23 @@ let JsonPreview (json: Json) =
 
 
 [<ReactComponent>]
-let EditingWindow (model: Model, dispatch) =
+let EditingWindow (model: Model, dispatch: Msg -> unit) : ReactElement =
     Html.div [
-        prop.className "border-gray-400 p-4 m-2"
-        prop.children [
+        prop.className "flex flex-col p-4 m-2 min-h-screen overflow-auto"
+        prop.children (
             match model.CurrentPage.Data with
             | JNull -> Html.p [ prop.text "Upload data to start" ]
-            | _ -> renderingCodeToReactElement model.CurrentPage.Code [] model.CurrentPage.Data options true
-        //JsonPreview(model.CurrentPage.Data)
-        ]
+            | _ ->
+                renderingCodeToReactElement
+                    model.CurrentPage.Code
+                    []
+                    model.CurrentPage.Data
+                    "Data"
+                    model.OptionsCollapsed
+                    options
+                    model.IsPreview
+                    dispatch
+        )
     ]
 
 [<ReactComponent>]

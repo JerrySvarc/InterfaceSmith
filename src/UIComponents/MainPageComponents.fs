@@ -37,9 +37,10 @@ let Application (content, model, dispatch) =
         prop.children [
             Header(model.CurrentTab, dispatch)
             Html.div [
-                // Adjust pt-16 or higher based on the actual height of your header
                 prop.className "flex flex-1 overflow-auto pt-16"
-                prop.children [ Html.div [ prop.className "flex-1 bg-gray-200"; prop.children [ content ] ] ]
+                prop.children [
+                    Html.div [ prop.className "flex-1 bg-gray-200 overflow-auto"; prop.children [ content ] ]
+                ]
             ]
         ]
     ]

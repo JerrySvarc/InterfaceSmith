@@ -16,7 +16,7 @@ open UIComponents.EditorComponents
 let init () : Model * Cmd<Msg> =
     {
         CurrentPage = {
-            Name = "New component"
+            Name = "New page"
             Code = Hole(UnNamed)
             Id = Guid.NewGuid()
             Data = JNull
@@ -28,6 +28,7 @@ let init () : Model * Cmd<Msg> =
         CurrentTab = Main
         IsPreview = true
         CurrModifiedElement = (Hole(UnNamed), [])
+        OptionsCollapsed = true
     },
     Cmd.none
 
@@ -84,6 +85,12 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         {
             model with
                 IsPreview = not model.IsPreview
+        },
+        Cmd.none
+    | ToggleOptions ->
+        {
+            model with
+                OptionsCollapsed = not model.OptionsCollapsed
         },
         Cmd.none
     | SetCurrentModifiedElement(code, path) ->

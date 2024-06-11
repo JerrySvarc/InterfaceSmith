@@ -38,7 +38,7 @@ and InnerValue =
 type ListType =
     | UnorderedList
     | OrderedList
-    | Table
+
 
 type FieldHole =
     | Named of string
@@ -73,6 +73,7 @@ type Model = {
     CurrentTab: TabType
     IsPreview: bool
     CurrModifiedElement: RenderingCode * int list
+    OptionsCollapsed: bool
 }
 
 type Msg =
@@ -82,4 +83,5 @@ type Msg =
     | ReplaceCode of RenderingCode * int list
     | ChangeTab of TabType
     | TogglePreview
+    | ToggleOptions
     | SetCurrentModifiedElement of RenderingCode * int list
