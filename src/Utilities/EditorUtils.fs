@@ -10,6 +10,10 @@ open Utilities.GeneralUtilities
 open Browser
 open Fable.Core.JsInterop
 
+//TODO: implement ability to switch codes inside a sequence
+
+
+//TODO: implement ability to add codes into a sequence
 let rec addCode path newCode = 0
 
 let rec replace path replacementElement (currentCode: RenderingCode) =
@@ -60,7 +64,6 @@ let tagToString tag =
     | Header -> "header"
     | Footer -> "footer"
     | Nav -> "nav"
-    | Main -> "main"
     | Input -> "input"
 
 let stringToTag str =
@@ -85,7 +88,6 @@ let stringToTag str =
     | "header" -> Header
     | "footer" -> Footer
     | "nav" -> Nav
-    | "main" -> Main
     | "input" -> Input
     | _ -> failwith "Invalid tag"
 

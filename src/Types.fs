@@ -24,7 +24,6 @@ type Tag =
     | Header
     | Footer
     | Nav
-    | Main
     | Input
 
 type Attribute = string * InnerValue
@@ -40,7 +39,6 @@ type ListType =
     | UnorderedList
     | OrderedList
     | Table
-
 
 type FieldHole =
     | Named of string
@@ -58,3 +56,30 @@ type Page = {
     Data: Json
     Code: RenderingCode
 }
+
+//Application state
+
+type TabType =
+    | Main
+    | Editor
+
+
+type Model = {
+    CurrentPage: Page
+    FileUploadError: bool
+    EditingName: bool
+    EditingCode: bool
+    NameInput: string
+    CurrentTab: TabType
+    IsPreview: bool
+    CurrModifiedElement: RenderingCode * int list
+}
+
+type Msg =
+    | UploadData of string
+    | ChangeName of string
+    | SavePage of Page
+    | ReplaceCode of RenderingCode * int list
+    | ChangeTab of TabType
+    | TogglePreview
+    | SetCurrentModifiedElement of RenderingCode * int list

@@ -15,8 +15,8 @@
     <Compile Include="Utilities\EditorUtils.fs" />
     <Compile Include="Utilities\FileUpload.fs" />
     <Compile Include="UIComponents\OptionComponents.fs" />
-    <Compile Include="UIComponents\EditorComponents.fs" />
     <Compile Include="UIComponents\DownloadPageComponents.fs" />
+    <Compile Include="UIComponents\EditorComponents.fs" />
     <Compile Include="UIComponents\MainPageComponents.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="App.fs" />

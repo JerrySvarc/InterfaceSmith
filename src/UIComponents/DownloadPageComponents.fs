@@ -1,1 +1,17 @@
-module  UIComponents.DownloadPageComponents
+module UIComponents.DownloadPageComponents
+
+open Feliz
+open Fable.React
+
+[<ReactComponent>]
+let DownloadButton () =
+    Html.div [
+        prop.children [
+            Html.button [
+                prop.text "Download"
+                prop.className
+                    "bg-secondary-300 border-gray-00 mt-1 p-2 rounded-md text-xl flex items-center hover:bg-secondary-600 "
+            ]
+        ]
+
+    ]

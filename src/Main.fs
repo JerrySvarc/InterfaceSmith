@@ -8,37 +8,10 @@ open System
 open DataProcessing.DataLoading
 open DataProcessing.DataRecognition
 open Utilities.EditorUtils
-open Utilities.FileUpload
 open Utilities.GeneralUtilities
-open UIComponents.OptionComponents
+open UIComponents.MainPageComponents
+open UIComponents.EditorComponents
 
-
-type TabType =
-    | Main
-    | Editor
-    | Download
-
-type Model = {
-    CurrentPage: Page
-    FileUploadError: bool
-    EditingName: bool
-    EditingCode: bool
-    NameInput: string
-    CurrentTab: TabType
-    IsPreview: bool
-    CurrModifiedElement: RenderingCode * int list
-}
-
-type Msg =
-    | UploadData of string
-    | ChangeName of string
-    | SetInput of string
-    | ChangeNameEditMode of bool
-    | SavePage of Page
-    | ReplaceCode of RenderingCode * int list
-    | ChangeTab of TabType
-    | TogglePreview
-    | SetCurrentModifiedElement of RenderingCode * int list
 
 let init () : Model * Cmd<Msg> =
     {
@@ -92,14 +65,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
                 EditingName = false
         },
         Cmd.none
-    | SetInput input -> { model with NameInput = input }, Cmd.none
-    | ChangeNameEditMode value ->
-        {
-            model with
-                EditingName = value
-                NameInput = ""
-        },
-        Cmd.none
     | SavePage comp -> model, Cmd.none
     | ReplaceCode(code, path) ->
         let newcodes = replace path code model.CurrentPage.Code
@@ -128,25 +93,27 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         },
         Cmd.none
 
+
+
 let view (model: Model) (dispatch: Msg -> unit) =
-
-    //TODO: Create upload button
-    let uploadButtonView onLoad =
-        Html.div [ prop.onChange (handleFileEvent onLoad); prop.style [ style.display.none ] ]
-
-    let uploadButton = uploadButtonView (UploadData >> dispatch)
-
-
-    let rec options (code: RenderingCode) (path: int list) (name: string) : ReactElement =
-        match code with
-        | HtmlElement _ -> elementOptionsComponent name code path
-        | HtmlList _ -> listOptionsComponent name code path
-        | Sequence(_) -> sequenceOptionsComponent name code path
-        | Hole _ -> uiBlock ([ Html.text "No options available." ])
-
-    Html.div [
-        prop.className "flex"
-        prop.children [
-
+    let titlePage =
+        Html.div [
+            prop.className
+                "flex flex-col items-center justify-center h-screen bg-gradient-to-r from-green-400 to-blue-500 text-white"
+            prop.children [
+                Html.h1 [
+                    prop.className "text-6xl font-bold text-center mb-4"
+                    prop.text "Data-Driven UI editor"
+                ]
+                Html.button [
+                    prop.className
+                        "mt-8 px-4 py-2 text-black border-black bg-amber-400 rounded shadow font-bold text-xl"
+                    prop.text "Get Started"
+                    prop.onClick (fun _ -> dispatch (ChangeTab Types.Editor))
+                ]
+            ]
         ]
-    ]
+
+    match model.CurrentTab with
+    | Main -> Application(titlePage, model, dispatch)
+    | Editor -> Application(Editor(model, dispatch), model, dispatch)
