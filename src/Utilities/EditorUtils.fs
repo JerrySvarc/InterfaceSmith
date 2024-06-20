@@ -113,8 +113,7 @@ let rec renderingCodeToReactElement
     (path: int list)
     (json: Json)
     (name: string)
-    (optionsCollapsed: bool)
-    (options: (Msg -> unit) -> RenderingCode -> list<int> -> string -> bool -> ReactElement)
+    (options: (Msg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
     (showOptions: bool)
     (dispatch: Msg -> unit)
 
@@ -139,7 +138,7 @@ let rec renderingCodeToReactElement
             | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
 
         match showOptions with
-        | true -> Html.div [ prop.children [ preview; options dispatch code path name optionsCollapsed ] ]
+        | true -> Html.div [ prop.children [ preview; options dispatch code path name ] ]
         | false -> preview
 
 
@@ -161,7 +160,6 @@ let rec renderingCodeToReactElement
                                     (path @ [ index ])
                                     arrayItem
                                     name
-                                    optionsCollapsed
                                     options
                                     showOptions
                                     dispatch
@@ -172,7 +170,6 @@ let rec renderingCodeToReactElement
                                     (path @ [ index ])
                                     arrayItem
                                     name
-                                    optionsCollapsed
                                     options
                                     false
                                     dispatch
@@ -194,7 +191,7 @@ let rec renderingCodeToReactElement
             | true ->
                 Html.div [
                     prop.className " border-3 bg-white rounded-md m-1"
-                    prop.children [ preview; options dispatch code path name optionsCollapsed ]
+                    prop.children [ preview; options dispatch code path name ]
                 ]
             | false -> preview
 
@@ -215,7 +212,6 @@ let rec renderingCodeToReactElement
                         (path @ [ index ])
                         jsonSubObject
                         field
-                        optionsCollapsed
                         options
                         showOptions
                         dispatch)
@@ -228,7 +224,7 @@ let rec renderingCodeToReactElement
         | true ->
             Html.div [
                 prop.className "border border-secondary-900 bg-white rounded-md m-1"
-                prop.children [ options dispatch code path name optionsCollapsed; preview ]
+                prop.children [ options dispatch code path name; preview ]
             ]
         | false -> preview
 
@@ -239,7 +235,7 @@ let rec renderingCodeToReactElement
             | Named name -> name
 
         let fieldType = json |> recognizeJson
-        let optionPane: ReactElement = options dispatch fieldType path name optionsCollapsed
+        let optionPane: ReactElement = options dispatch fieldType path name
 
         match showOptions with
         | true -> optionPane

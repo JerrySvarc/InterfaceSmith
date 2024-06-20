@@ -14,17 +14,11 @@ open UIComponents.DownloadPageComponents
 open Browser.Types
 open Fable.Core.JS
 
-let rec options
-    (dispatch: Msg -> unit)
-    (code: RenderingCode)
-    (path: int list)
-    (name: string)
-    (collapsed: bool)
-    : ReactElement =
+let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
-    | HtmlElement _ -> ElementOption(dispatch, name, code, path, collapsed)
-    | HtmlList _ -> ListOption(dispatch, name, code, path, collapsed)
-    | Sequence(_) -> SequenceOption(dispatch, name, code, path, collapsed)
+    | HtmlElement _ -> ElementOption(dispatch, name, code, path)
+    | HtmlList _ -> ListOption(dispatch, name, code, path)
+    | Sequence(_) -> SequenceOption(dispatch, name, code, path)
     | Hole _ -> Html.none
 
 [<ReactComponent>]
@@ -125,7 +119,6 @@ let PageHeader (page: Page, dispatch) =
                 ]
             ]
             DataUpload(dispatch)
-            ToggleOptionsButton(dispatch)
             PreviewButton(dispatch)
             DownloadButton()
         ]
@@ -154,7 +147,6 @@ let EditingWindow (model: Model, dispatch: Msg -> unit) : ReactElement =
                     []
                     model.CurrentPage.Data
                     "Data"
-                    model.OptionsCollapsed
                     options
                     model.IsPreview
                     dispatch

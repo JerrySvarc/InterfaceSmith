@@ -140,8 +140,8 @@ let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: Render
 
 
 [<ReactComponent>]
-let ElementOption (dispatch, name: string, code, path, collapsed: bool) =
-    let (collapsed, setCollapsed) = React.useState collapsed
+let ElementOption (dispatch, name: string, code, path) =
+    let (collapsed, setCollapsed) = React.useState true
 
     let attr =
         match code with
@@ -229,7 +229,7 @@ let ElementOption (dispatch, name: string, code, path, collapsed: bool) =
 
 //TODO: implement list option
 [<ReactComponent>]
-let ListOption (dispatch, name, code, path, collapsed: bool) =
+let ListOption (dispatch, name: string, code, path) =
     match code with
     | HtmlList(listType, headers, elementCode) ->
         let listTypeOptions =
@@ -239,6 +239,7 @@ let ListOption (dispatch, name, code, path, collapsed: bool) =
         Html.div [
             prop.className "p-4 border border-gray-300 bg-white rounded-lg shadow-sm"
             prop.children [
+                Html.h1 [ prop.className "text-xl"; prop.text name ]
                 Html.select [
                     prop.className
                         "block w-full p-2 mt-1 border border-gray-300 bg-white rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" // Enhanced select styling
@@ -262,12 +263,13 @@ let ListOption (dispatch, name, code, path, collapsed: bool) =
     | _ -> failwith "Invalid code type."
 //TODO: implement sequence option
 [<ReactComponent>]
-let SequenceOption (dispatch, name, code, path, collapsed: bool) =
+let SequenceOption (dispatch, name: string, code, path) =
     match code with
     | Sequence(elements) ->
         Html.div [
             prop.className "bg-gray-100 p-4 rounded-lg shadow"
             prop.children [
+                Html.h1 [ prop.className "text-xl"; prop.text name ]
                 Html.button [
                     prop.className "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-1"
                     prop.onClick (fun _ -> dispatch (ReplaceCode(code, path)))

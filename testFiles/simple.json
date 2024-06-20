@@ -1,9 +1,9 @@
 {
-    "data" : {
+    "data": {
         "name": "Data",
         "type": "Android",
         "value": "Invaluable",
-        "attributes" : {
+        "attributes": {
             "intelligence": "massive",
             "computation": "Trillions of computations per second.",
             "storage": {
