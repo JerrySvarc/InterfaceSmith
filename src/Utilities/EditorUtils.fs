@@ -12,6 +12,7 @@ open Fable.Core.JsInterop
 
 
 
+
 //TODO: implement ability to switch codes inside a sequence
 
 
@@ -122,7 +123,9 @@ let rec renderingCodeToReactElement
     | HtmlElement(tag, attrs, innerValue) ->
         let attributes =
             attrs
-            |> List.map (fun (key, value) -> (key, box value))
+            |> List.map (fun (key, value) ->
+                console.log key
+                (key, box value))
             |> List.toSeq
             |> Seq.append [ ("className", box "preview") ]
             |> createObj
@@ -131,9 +134,14 @@ let rec renderingCodeToReactElement
             match innerValue with
             | Data ->
                 let selectedFields = json
-                let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
 
-                ReactBindings.React.createElement (tagToString tag, attributes, [ str jsonStr ])
+                try
+                    let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
+                    ReactBindings.React.createElement (tagToString tag, attributes, [ str jsonStr ])
+                with ex ->
+
+                    ReactBindings.React.createElement ("div", [], [ str $"Unexpected error: {ex.Message}" ])
+
             | Empty -> ReactBindings.React.createElement (tagToString tag, [], [])
             | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
 
@@ -185,7 +193,10 @@ let rec renderingCodeToReactElement
                     codes
 
             let preview =
-                ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
+                try
+                    ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
+                with ex ->
+                    ReactBindings.React.createElement ("div", [], [ str $"Unexpected error: {ex.Message}" ])
 
             match showOptions with
             | true ->
@@ -218,7 +229,7 @@ let rec renderingCodeToReactElement
                 codes
 
         let preview =
-            ReactBindings.React.createElement ("div", ("className", box "border"), renderedElements)
+            ReactBindings.React.createElement ("div", ("className", box "prewiew"), renderedElements)
 
         match showOptions with
         | true ->

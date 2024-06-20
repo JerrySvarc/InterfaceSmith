@@ -142,14 +142,17 @@ let EditingWindow (model: Model, dispatch: Msg -> unit) : ReactElement =
             match model.CurrentPage.Data with
             | JNull -> Html.p [ prop.text "Upload data to start" ]
             | _ ->
-                renderingCodeToReactElement
-                    model.CurrentPage.Code
-                    []
-                    model.CurrentPage.Data
-                    "Data"
-                    options
-                    model.IsPreview
-                    dispatch
+                try
+                    renderingCodeToReactElement
+                        model.CurrentPage.Code
+                        []
+                        model.CurrentPage.Data
+                        "Data"
+                        options
+                        model.IsPreview
+                        dispatch
+                with ex ->
+                    Html.div [ prop.text (sprintf "Unexpected error: %s" ex.Message) ]
         )
     ]
 

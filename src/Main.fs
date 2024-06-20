@@ -105,20 +105,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 let view (model: Model) (dispatch: Msg -> unit) =
     let titlePage =
         Html.div [
-            prop.className
-                "flex flex-col items-center justify-center h-screen bg-gradient-to-r from-green-400 to-blue-500 text-white"
-            prop.children [
-                Html.h1 [
-                    prop.className "text-6xl font-bold text-center mb-4"
-                    prop.text "Data-Driven UI editor"
-                ]
-                Html.button [
-                    prop.className
-                        "mt-8 px-4 py-2 text-black border-black bg-amber-400 rounded shadow font-bold text-xl"
-                    prop.text "Get Started"
-                    prop.onClick (fun _ -> dispatch (ChangeTab Types.Editor))
-                ]
-            ]
+
         ]
 
     match model.CurrentTab with

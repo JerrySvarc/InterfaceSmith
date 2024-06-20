@@ -12,10 +12,9 @@ open System
 open Microsoft.FSharp.Reflection
 
 
+
 [<ReactComponent>]
 let TagMenu (dispatch, code: RenderingCode, path) =
-    let (selectedOption, setSelectedOption) = React.useState ""
-
     let tagOptions =
         FSharpType.GetUnionCases(typeof<Tag>)
         |> Array.map (fun caseInfo -> caseInfo.Name)
@@ -88,7 +87,7 @@ let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: Render
     match code with
     | HtmlElement(tag, attrs, value) ->
         match attrVal with
-        | Constant value ->
+        | Constant constant ->
             Html.table [
                 prop.children [
                     Html.tr [
@@ -97,7 +96,7 @@ let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: Render
                             Html.td [ prop.className "border px-4 py-2"; prop.text attrName ]
                             Html.td [
                                 prop.className "border px-4 py-2"
-                                prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
+                            //prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
                             ]
                         ]
                     ]
@@ -110,14 +109,28 @@ let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: Render
                                 prop.children [
                                     Html.input [
                                         prop.className "p-1 bg-white"
-                                        prop.value value
-                                        prop.onInput (fun e ->
+                                        prop.value constant
+                                    (*prop.onInput (fun e ->
                                             setAttributeValue (
-                                                HtmlElement(tag, attrs, Constant(value)),
+                                                HtmlElement(tag, attrs, Constant(constant)),
                                                 e.target?value |> string
-                                            ))
+                                            ))*)
                                     ]
                                 ]
+                            ]
+                        ]
+                    ]
+                    Html.tr [
+                        prop.children [
+                            Html.button [
+                                prop.className " text-black font-bold py-2 px-4 rounded m-1"
+                                prop.text "Add attribute"
+                            (*prop.onClick (fun _ ->
+                                    let newAttr = ("", Constant "")
+                                    let newAttrs = newAttr :: attrs
+                                    dispatch (ReplaceCode(HtmlElement(tag, newAttrs, value), path)))*)
+
+
                             ]
                         ]
                     ]
@@ -128,10 +141,9 @@ let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: Render
                 prop.className "p-1 bg-gray-100 my-1 w-full"
                 prop.children [
                     Html.td [ prop.className "border px-4 py-2"; prop.text attrName ]
-
                     Html.td [
                         prop.className "border px-4 py-2"
-                        prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
+                    //prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
                     ]
                 ]
             ]
@@ -187,16 +199,14 @@ let ElementOption (dispatch, name: string, code, path) =
                                                     Html.td [ prop.className "border px-4 py-2"; prop.text "Tag" ]
                                                     Html.td [
                                                         prop.className "border px-4 py-2"
-                                                        prop.children [ TagMenu(dispatch, code, path) ]
+                                                    //prop.children [ TagMenu(dispatch, code, path) ]
                                                     ]
                                                 ]
                                             ]
                                         ]
-                                        @ (List.map
-                                            (fun (name, value) ->
-                                                Fable.Core.JS.console.log (value.ToString())
-                                                AttributeMenu(dispatch, name, value, code, path))
-                                            attr)
+                                        (*@ (List.map
+                                            (fun (name, value) -> AttributeMenu(dispatch, name, value, code, path))
+                                            attr)*)
                                         @ [
                                             Html.tr [
                                                 prop.className "hover:bg-gray-50"
@@ -207,7 +217,7 @@ let ElementOption (dispatch, name: string, code, path) =
                                                     ]
                                                     Html.td [
                                                         prop.className "border px-4 py-2"
-                                                        prop.children [ InnerValueMenu(dispatch, innerVal, code, path) ]
+                                                    //prop.children [ InnerValueMenu(dispatch, innerVal, code, path) ]
                                                     ]
                                                 ]
                                             ]
@@ -242,7 +252,7 @@ let ListOption (dispatch, name: string, code, path) =
                 Html.h1 [ prop.className "text-xl"; prop.text name ]
                 Html.select [
                     prop.className
-                        "block w-full p-2 mt-1 border border-gray-300 bg-white rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" // Enhanced select styling
+                        "block w-full p-2 mt-1 border border-gray-300 bg-white rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
                     prop.onMouseDown (fun e -> e.stopPropagation ())
                     prop.onClick (fun e -> e.stopPropagation ())
                     prop.value (listTypeToString listType)
