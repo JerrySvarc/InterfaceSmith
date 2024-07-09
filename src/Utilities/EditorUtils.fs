@@ -1,12 +1,9 @@
 module Utilities.EditorUtils
 
 open Fable.React
-open Feliz.Bulma.ElementBuilders
-open Types
 open Types.RenderingTypes
 open Types.EditorDomain
 open Fable.SimpleJson
-open System
 open DataProcessing.DataRecognition
 open Feliz
 open Browser

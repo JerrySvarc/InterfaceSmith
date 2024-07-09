@@ -1,21 +1,13 @@
 module UIComponents.EditorComponents
 
 open Feliz
-open Elmish
 open Fable.React
 open Types.EditorDomain
 open Types.RenderingTypes
-open Fable.SimpleJson
-open Fable.Core.JsInterop
-open Utilities.EditorUtils
-open UIComponents.OptionComponents
 open Utilities.FileUpload
 
-open UIComponents.DownloadPageComponents
-open Browser.Types
-open Fable.Core.JS
-open Fable.Core
 
+(*
 let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
     | HtmlElement _ -> ElementOption(dispatch, name, code, path)
@@ -139,3 +131,4 @@ let Editor (model: Model, dispatch) =
         prop.className "mt-1"
         prop.children [ ]
     ]
+*)

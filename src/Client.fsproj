@@ -14,6 +14,7 @@
     <Compile Include="DataProcessing\DataRecognition.fs" />
     <Compile Include="Utilities\EditorUtils.fs" />
     <Compile Include="Utilities\FileUpload.fs" />
+    <Compile Include="Utilities\Icons.fs" />
     <Compile Include="UIComponents\OptionComponents.fs" />
     <Compile Include="UIComponents\DownloadPageComponents.fs" />
     <Compile Include="UIComponents\EditorComponents.fs" />
@@ -26,6 +27,7 @@
     <PackageReference Include="Fable.JsonProvider" Version="1.1.1" />
     <PackageReference Include="Fable.React" Version="9.3.0" />
     <PackageReference Include="Feliz.Bulma" Version="3.0.0" />
+    <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

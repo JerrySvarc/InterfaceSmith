@@ -15,22 +15,16 @@ type Page = {
 
 //Application state
 
-type TabType =
-    | Main
-    | Editor
-
-
 type Model = {
-    CurrentPage: Guid
-    Pages : Map<Guid, Page>
+    IsSidebarOpen: bool
+    ActivePageId: Guid option
+    Pages: Map<Guid, Page>
+    TabOrder: Guid list
 }
 
 type Msg =
-    | UploadData of string
-    | ChangeName of string
-    | SavePage of Page
-    | ReplaceCode of RenderingCode * int list
-    | ChangeTab of TabType
-    | TogglePreview
-    | ToggleOptions
-    | SetCurrentModifiedElement of RenderingCode * int list
+    | ToggleSidebar
+    | SetActivePage of Guid
+    | ClosePage of Guid
+    | CreateNewPage
+    | ReorderTabs of Guid list

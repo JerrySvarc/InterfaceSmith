@@ -7,12 +7,8 @@ open Types.RenderingTypes
 open Fable.SimpleJson
 open System
 open DataProcessing.DataLoading
-open DataProcessing.DataRecognition
-open Utilities.EditorUtils
 open UIComponents.MainPageComponents
-open UIComponents.EditorComponents
-open RenderingCode
-
+open Feliz.UseElmish
 
 let newPage =  {
     Name = "New page"
@@ -23,38 +19,64 @@ let newPage =  {
 }
 let init () : Model * Cmd<Msg> =
     {
-        CurrentPage = newPage.Id
         Pages = Map[newPage.Id, newPage]
+        IsSidebarOpen = true
+        ActivePageId = Some newPage.Id
+        TabOrder = [newPage.Id]
     },
     Cmd.none
 
-let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
+let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
     match msg with
-    | UploadData data ->
-        let loadedDataOption = loadJson data
+    | ToggleSidebar ->
+        { model with IsSidebarOpen = not model.IsSidebarOpen }, Cmd.none
+    | SetActivePage id ->
+        { model with ActivePageId = Some id }, Cmd.none
+    | ClosePage id ->
+        let newPages = model.Pages |> Map.remove id
+        let newTabOrder = model.TabOrder |> List.filter ((<>) id)
+        let newActiveId =
+            if model.ActivePageId = Some id then
+                newTabOrder |> List.tryHead
+            else model.ActivePageId
+        { model with Pages = newPages; TabOrder = newTabOrder; ActivePageId = newActiveId }, Cmd.none
+    | CreateNewPage ->
+        let newId = Guid.NewGuid()
+        let newPage = { Name = "New page"
+                        Id = Guid.NewGuid()
+                        Data = JNull
+                        Code = Hole(UnNamed)
+                        FileUploadError = false }
+        { model with
+            Pages = model.Pages.Add(newId, newPage)
+            TabOrder = model.TabOrder @ [newId]
+            ActivePageId = Some newId }, Cmd.none
+    | ReorderTabs newOrder ->
+        { model with TabOrder = newOrder }, Cmd.none
 
-        match loadedDataOption with
-        | Some(data) ->
-            match data with
-            | JObject obj ->
-               model,Cmd.none
-            | _ ->  model,Cmd.none
-        | None ->  model,Cmd.none
-    | ChangeName newName ->
-        model,Cmd.none
-    | SavePage comp -> model, Cmd.none
-    | ReplaceCode(code, path) ->
-        model,Cmd.none
-    | ChangeTab tab ->  model,Cmd.none
-    | TogglePreview ->
-         model,Cmd.none
-    | ToggleOptions ->
-        model,Cmd.none
-    | SetCurrentModifiedElement(code, path) ->
-        model,Cmd.none
 
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
-
-   Html.div []
+    let LowCodeEditor =
+        Html.div [
+            prop.className "flex h-screen bg-gray-100 text-gray-800"
+            prop.children [
+                Sidebar model dispatch
+                Html.div [
+                    prop.className "flex-1 flex flex-col overflow-hidden"
+                    prop.children [
+                        Tabs model dispatch
+                        match model.ActivePageId with
+                        | Some id when model.Pages.ContainsKey id ->
+                            PageEditor (model.Pages.[id])
+                        | _ ->
+                            Html.div [
+                                prop.className "flex-1 flex items-center justify-center"
+                                prop.children [ Html.text "No page selected" ]
+                            ]
+                    ]
+                ]
+            ]
+        ]
+    LowCodeEditor

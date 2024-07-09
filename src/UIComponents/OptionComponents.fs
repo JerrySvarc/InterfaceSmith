@@ -9,7 +9,7 @@ open Fable.Core.JsInterop
 open Utilities.EditorUtils
 open Microsoft.FSharp.Reflection
 
-
+(*
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
         prop.className "p-1 bg-white border-2 border-gray-200 rounded"
@@ -210,3 +210,4 @@ let SequenceOption (dispatch, name: string, code, path) =
             ]
         ]
     | _ -> ErrorDisplay "Invalid code type for SequenceOption"
+*)
