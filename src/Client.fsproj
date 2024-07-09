@@ -6,18 +6,19 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="index.html" />
-    <Compile Include="Types.fs" />
-    <Compile Include="CodeGeneration.fs" />
     <None Include="paket.references" />
+    <Compile Include="Types\RenderingTypes.fs" />
+    <Compile Include="Types\RenderingCode.fs" />
+    <Compile Include="Types\EditorModel.fs" />
     <Compile Include="DataProcessing\DataLoading.fs" />
     <Compile Include="DataProcessing\DataRecognition.fs" />
-    <Compile Include="Utilities\GeneralUtilities.fs" />
     <Compile Include="Utilities\EditorUtils.fs" />
     <Compile Include="Utilities\FileUpload.fs" />
     <Compile Include="UIComponents\OptionComponents.fs" />
     <Compile Include="UIComponents\DownloadPageComponents.fs" />
     <Compile Include="UIComponents\EditorComponents.fs" />
     <Compile Include="UIComponents\MainPageComponents.fs" />
+    <Compile Include="CodeGeneration\CodeGeneration.fs" />
     <Compile Include="Main.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>

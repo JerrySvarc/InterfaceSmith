@@ -3,22 +3,24 @@ module UIComponents.EditorComponents
 open Feliz
 open Elmish
 open Fable.React
-open Types
+open Types.EditorDomain
+open Types.RenderingTypes
 open Fable.SimpleJson
 open Fable.Core.JsInterop
 open Utilities.EditorUtils
 open UIComponents.OptionComponents
 open Utilities.FileUpload
-open Utilities.GeneralUtilities
+
 open UIComponents.DownloadPageComponents
 open Browser.Types
 open Fable.Core.JS
+open Fable.Core
 
 let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
     | HtmlElement _ -> ElementOption(dispatch, name, code, path)
     | HtmlList _ -> ListOption(dispatch, name, code, path)
-    | Sequence(_) -> SequenceOption(dispatch, name, code, path)
+    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
     | Hole _ -> Html.none
 
 [<ReactComponent>]
@@ -120,45 +122,20 @@ let PageHeader (page: Page, dispatch) =
             ]
             DataUpload(dispatch)
             PreviewButton(dispatch)
-            DownloadButton()
         ]
     ]
-
-
-[<ReactComponent>]
-let JsonPreview (json: Json) =
-    Html.div [
-        prop.className "bg-gray-200 border-gray-400 p-4 m-1"
-        prop.children [ prettyPrint (json) ]
-    ]
-
 
 
 [<ReactComponent>]
 let EditingWindow (model: Model, dispatch: Msg -> unit) : ReactElement =
     Html.div [
         prop.className "flex flex-col p-4 m-2 min-h-screen overflow-auto"
-        prop.children (
-            match model.CurrentPage.Data with
-            | JNull -> Html.p [ prop.text "Upload data to start" ]
-            | _ ->
-                try
-                    renderingCodeToReactElement
-                        model.CurrentPage.Code
-                        []
-                        model.CurrentPage.Data
-                        "Data"
-                        options
-                        model.IsPreview
-                        dispatch
-                with ex ->
-                    Html.div [ prop.text (sprintf "Unexpected error: %s" ex.Message) ]
-        )
+
     ]
 
 [<ReactComponent>]
 let Editor (model: Model, dispatch) =
     Html.div [
         prop.className "mt-1"
-        prop.children [ PageHeader(model.CurrentPage, dispatch); EditingWindow(model, dispatch) ]
+        prop.children [ ]
     ]

@@ -24,24 +24,8 @@ Target.create "Bundle" (fun _ ->
     ]
     |> runParallel)
 
-Target.create "Azure" (fun _ ->
-    let web = webApp {
-        name "SAFE-App"
-        operating_system OS.Linux
-        runtime_stack (DotNet "8.0")
-        zip_deploy "deploy"
-    }
-
-    let deployment = arm {
-        location Location.WestEurope
-        add_resource web
-    }
-
-    deployment |> Deploy.execute "SAFE-App" Deploy.NoParameters |> ignore)
-
 Target.create "Run" (fun _ ->
     [
-
         "client", dotnet [ "fable"; "watch"; "-o"; "output"; "-s"; "--run"; "npx"; "vite" ] sourcePath
     ]
     |> runParallel)
@@ -57,7 +41,7 @@ Target.create "Format" (fun _ -> run dotnet [ "fantomas"; "." ] ".")
 open Fake.Core.TargetOperators
 
 let dependencies = [
-    "Clean" ==> "InstallClient" ==> "Bundle" ==> "Azure"
+    "Clean" ==> "InstallClient" ==> "Bundle"
 
     "Clean" ==> "InstallClient" ==> "Run"
 

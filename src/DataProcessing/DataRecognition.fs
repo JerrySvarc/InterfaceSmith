@@ -1,6 +1,6 @@
 module DataProcessing.DataRecognition
 
-open Types
+open Types.RenderingTypes
 open System
 open Fable.SimpleJson
 open Microsoft.FSharp.Collections
@@ -9,13 +9,13 @@ let recognizeJson (json: Json) =
     match json with
     | JArray array ->
         match array.IsEmpty with
-        | true -> HtmlList(UnorderedList, None, [])
+        | true -> HtmlList(UnorderedList, [], [])
         | false ->
             let codes = List.map (fun item -> Hole(Named "List item")) array
-            HtmlList(UnorderedList, None, codes)
+            HtmlList(UnorderedList,  codes, [])
     | JObject obj ->
-        let jsonArray = obj |> Map.toList
-        let codes = List.map (fun (key, value) -> Hole(Named key)) jsonArray
-        Sequence(codes |> Array.ofList)
+        let keys = obj.Keys |> List.ofSeq
+        let codes = obj |> Map.map (fun key value -> Hole(Named key))
+        HtmlObject(ObjType.Empty, keys, codes, [])
     | JNull -> Hole UnNamed
-    | _ -> HtmlElement(Div, [], Data)
+    | _ -> HtmlElement(Div, [], Data, [])

@@ -2,33 +2,29 @@ module Main
 
 open Elmish
 open Feliz
-open Types
+open Types.EditorDomain
+open Types.RenderingTypes
 open Fable.SimpleJson
 open System
 open DataProcessing.DataLoading
 open DataProcessing.DataRecognition
 open Utilities.EditorUtils
-open Utilities.GeneralUtilities
 open UIComponents.MainPageComponents
 open UIComponents.EditorComponents
+open RenderingCode
 
 
+let newPage =  {
+    Name = "New page"
+    Id = Guid.NewGuid()
+    Data = JNull
+    Code =  Hole(UnNamed)
+    FileUploadError = false
+}
 let init () : Model * Cmd<Msg> =
     {
-        CurrentPage = {
-            Name = "New page"
-            Code = Hole(UnNamed)
-            Id = Guid.NewGuid()
-            Data = JNull
-        }
-        FileUploadError = false
-        EditingName = false
-        NameInput = ""
-        EditingCode = false
-        CurrentTab = Main
-        IsPreview = true
-        CurrModifiedElement = (Hole(UnNamed), [])
-        OptionsCollapsed = true
+        CurrentPage = newPage.Id
+        Pages = Map[newPage.Id, newPage]
     },
     Cmd.none
 
@@ -41,73 +37,24 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         | Some(data) ->
             match data with
             | JObject obj ->
-                let newComponent = {
-                    model.CurrentPage with
-                        Code = recognizeJson data
-                        Data = data
-                }
-
-                {
-                    model with
-                        CurrentPage = newComponent
-                        FileUploadError = false
-                },
-                Cmd.none
-            | _ -> { model with FileUploadError = true }, Cmd.none
-        | None -> { model with FileUploadError = true }, Cmd.none
+               model,Cmd.none
+            | _ ->  model,Cmd.none
+        | None ->  model,Cmd.none
     | ChangeName newName ->
-        {
-            model with
-                CurrentPage = {
-                    model.CurrentPage with
-                        Name = newName
-                }
-                NameInput = ""
-                EditingName = false
-        },
-        Cmd.none
+        model,Cmd.none
     | SavePage comp -> model, Cmd.none
     | ReplaceCode(code, path) ->
-        let newcodes = replace path code model.CurrentPage.Code
-
-        let newComponent: Page = {
-            model.CurrentPage with
-                Code = newcodes
-        }
-
-        {
-            model with
-                CurrentPage = newComponent
-        },
-        Cmd.none
-    | ChangeTab tab -> { model with CurrentTab = tab }, Cmd.none
+        model,Cmd.none
+    | ChangeTab tab ->  model,Cmd.none
     | TogglePreview ->
-        {
-            model with
-                IsPreview = not model.IsPreview
-        },
-        Cmd.none
+         model,Cmd.none
     | ToggleOptions ->
-        {
-            model with
-                OptionsCollapsed = not model.OptionsCollapsed
-        },
-        Cmd.none
+        model,Cmd.none
     | SetCurrentModifiedElement(code, path) ->
-        {
-            model with
-                CurrModifiedElement = (code, path)
-        },
-        Cmd.none
+        model,Cmd.none
 
 
 
 let view (model: Model) (dispatch: Msg -> unit) =
-    let titlePage =
-        Html.div [
 
-        ]
-
-    match model.CurrentTab with
-    | Main -> Application(titlePage, model, dispatch)
-    | Editor -> Application(Editor(model, dispatch), model, dispatch)
+   Html.div []

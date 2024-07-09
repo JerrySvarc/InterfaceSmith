@@ -17,7 +17,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Build", "Build.fsproj", "{C
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Client", "src\Client.fsproj", "{0B6226C5-A777-45AC-985D-A92D8BF100AF}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Client.Tests", "tests\Client.Tests.fsproj", "{9D6F7DC8-2229-4DB6-84DF-D47A2618F87D}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "tests\Tests.fsproj", "{9D6F7DC8-2229-4DB6-84DF-D47A2618F87D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

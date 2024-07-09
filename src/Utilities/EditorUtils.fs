@@ -1,48 +1,16 @@
 module Utilities.EditorUtils
 
 open Fable.React
+open Feliz.Bulma.ElementBuilders
 open Types
+open Types.RenderingTypes
+open Types.EditorDomain
 open Fable.SimpleJson
 open System
 open DataProcessing.DataRecognition
 open Feliz
-open Utilities.GeneralUtilities
 open Browser
 open Fable.Core.JsInterop
-
-
-
-
-//TODO: implement ability to switch codes inside a sequence
-
-
-//TODO: implement ability to add codes into a sequence
-let rec addCode path newCode = 0
-
-let rec replace path replacementElement (currentCode: RenderingCode) =
-    match path with
-    | [] -> replacementElement
-    | head :: tail ->
-        match currentCode with
-        | HtmlList(lt, n, items) ->
-            let newItems =
-                match items with
-                | [] -> items
-                | _ -> items |> List.mapi (fun i item -> replace tail replacementElement item)
-
-            console.log (newItems.ToString())
-            HtmlList(lt, n, newItems)
-        | Sequence(items) ->
-            let newItems =
-                items
-                |> Array.mapi (fun i item ->
-                    if i = head then
-                        replace tail replacementElement item
-                    else
-                        item)
-
-            Sequence(newItems)
-        | _ -> currentCode
 
 
 let tagToString tag =
@@ -68,6 +36,10 @@ let tagToString tag =
     | Footer -> "footer"
     | Nav -> "nav"
     | Input -> "input"
+    | Ol -> "ol"
+    | Li -> "li"
+    | Ul -> "ul"
+
 
 let stringToTag str =
     match str with
@@ -92,6 +64,10 @@ let stringToTag str =
     | "footer" -> Footer
     | "nav" -> Nav
     | "input" -> Input
+    | "ol"-> Ol
+    | "li"-> Li
+    | "ul"-> Ul
+
     | _ -> failwith "Invalid tag"
 
 
@@ -109,6 +85,7 @@ let listTypeToString listType =
     | OrderedList -> "ol"
 
 
+//Custom rendering function for displaying preview with interwoven menus for the elements
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
@@ -117,137 +94,121 @@ let rec renderingCodeToReactElement
     (options: (Msg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
     (showOptions: bool)
     (dispatch: Msg -> unit)
-
     : ReactElement =
-    match code with
-    | HtmlElement(tag, attrs, innerValue) ->
-        let attributes =
-            attrs
-            |> List.map (fun (key, value) ->
-                console.log key
-                (key, box value))
-            |> List.toSeq
-            |> Seq.append [ ("className", box "preview") ]
-            |> createObj
 
-        let preview =
-            match innerValue with
-            | Data ->
-                let selectedFields = json
-
-                try
-                    let jsonStr = selectedFields |> Json.convertFromJsonAs<String>
-                    ReactBindings.React.createElement (tagToString tag, attributes, [ str jsonStr ])
-                with ex ->
-
-                    ReactBindings.React.createElement ("div", [], [ str $"Unexpected error: {ex.Message}" ])
-
-            | Empty -> ReactBindings.React.createElement (tagToString tag, [], [])
-            | Constant value -> ReactBindings.React.createElement (tagToString tag, attributes, [ str value ])
-
-        match showOptions with
-        | true -> Html.div [ prop.children [ preview; options dispatch code path name ] ]
-        | false -> preview
-
-
-    | HtmlList(listType, headers, codes) ->
-        match json with
-        | JArray array ->
-            let listOptions = options dispatch code path "List"
-            let tag = listTypeToString listType
-
-            let elements =
-                List.mapi
-                    (fun index code ->
-                        let arrayItem = List.item index array
-
-                        let renderedItem =
-                            if index = 0 then
-                                renderingCodeToReactElement
-                                    code
-                                    (path @ [ index ])
-                                    arrayItem
-                                    name
-                                    options
-                                    showOptions
-                                    dispatch
-
-                            else
-                                renderingCodeToReactElement
-                                    code
-                                    (path @ [ index ])
-                                    arrayItem
-                                    name
-                                    options
-                                    false
-                                    dispatch
-
-
-                        let itemTag = "li"
-
-                        ReactBindings.React.createElement (
-                            itemTag,
-                            [ ("className", box "preview") ] |> createObj,
-                            [ renderedItem ]
-                        ))
-                    codes
-
-            let preview =
-                try
-                    ReactBindings.React.createElement (tag, [ ("className", box "preview") ] |> createObj, elements)
-                with ex ->
-                    ReactBindings.React.createElement ("div", [], [ str $"Unexpected error: {ex.Message}" ])
-
-            match showOptions with
-            | true ->
-                Html.div [
-                    prop.className " border-3 bg-white rounded-md m-1"
-                    prop.children [ preview; options dispatch code path name ]
-                ]
-            | false -> preview
-
-        | _ -> failwith "not a list"
-    | Sequence codes ->
-        let jsonList =
-            match json with
-            | JObject object -> object |> Map.toList
-            | _ -> failwith "Not a sequence"
-
-        let renderedElements =
-            Array.mapi
-                (fun index code ->
-                    let (field, jsonSubObject) = List.item index jsonList
-
-                    renderingCodeToReactElement
-                        code
-                        (path @ [ index ])
-                        jsonSubObject
-                        field
-                        options
-                        showOptions
-                        dispatch)
-                codes
-
-        let preview =
-            ReactBindings.React.createElement ("div", ("className", box "prewiew"), renderedElements)
-
-        match showOptions with
-        | true ->
+    let renderWithOptions (preview: ReactElement) =
+        if showOptions then
             Html.div [
                 prop.className "border border-secondary-900 bg-white rounded-md m-1"
-                prop.children [ options dispatch code path name; preview ]
+                prop.children [ preview; options dispatch code path name ]
             ]
-        | false -> preview
+        else
+            preview
 
-    | Hole named ->
-        let name =
+    let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =
+        try
+            if tag.ToLower() = "input" then
+                ReactBindings.React.createElement (tag, attributes, [])
+            else
+                ReactBindings.React.createElement (tag, attributes, children)
+        with ex ->
+            Html.div [ prop.className "error-message"; prop.text $"Unexpected error: {ex.Message}" ]
+
+    let renderHtmlElement (tag: Tag) (attrs: Attributes) (innerValue: InnerValue) =
+        let attributes =
+            attrs
+            |> List.map (fun (key, value) -> (key, box value))
+            |> List.append [ ("className", box "preview") ]
+            |> createObj
+
+        let children =
+            match innerValue with
+            | Data ->
+                try
+                    let jsonStr = json |> Json.convertFromJsonAs<string>
+                    [ Html.text jsonStr ]
+                with ex -> [ Html.text $"Data parsing error: {ex.Message}" ]
+            | InnerValue.Empty -> []
+            | Constant value -> [ Html.text value ]
+
+        createPreview (tagToString tag) attributes children |> renderWithOptions
+
+    let renderHtmlList (listType: ListType) (codes: RenderingCode list) =
+        match json with
+        | JArray array ->
+            let elements =
+                codes
+                |> List.mapi (fun index code ->
+                    let arrayItem = List.item index array
+                    let showOptionsForItem = index = 0 && showOptions
+
+                    let renderedItem =
+                        renderingCodeToReactElement
+                            code
+                            (path @ [ index ])
+                            arrayItem
+                            name
+                            options
+                            showOptionsForItem
+                            dispatch
+
+                    Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
+
+            let listTag = listTypeToString listType
+
+            createPreview listTag (createObj [ "className" ==> "preview" ]) elements
+            |> renderWithOptions
+        | _ -> Html.div [ prop.text "Invalid JSON for HtmlList: not an array" ]
+
+    let renderHtmlObject  (keys : string list) (codes: Map<string, RenderingCode> ) =
+        match json with
+        | JObject object ->
+            let renderedElements =
+                keys
+                |> List.mapi (fun index key ->
+                    let element = codes.TryFind key
+                    let jsonValue = object.TryFind key
+                    match element, jsonValue with
+                    | Some code, Some value ->
+                        renderingCodeToReactElement
+                            code
+                            (path @ [ index ])
+                            value
+                            key
+                            options
+                            showOptions
+                            dispatch
+                    //TODO: styling
+                    | None, Some(_) -> Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.")]
+                    | Some(_), None -> Html.div [ prop.text ("JSON object value with the name " + key + " not found.") ]
+                    | None, None -> Html.div [ prop.text ("JSON object value and RenderingCode element  with the name " + key + " not found.") ]
+                    )
+            Html.div [ prop.className "preview"; prop.children renderedElements ]
+            |> renderWithOptions
+        | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
+
+
+
+    let renderHole (named: FieldHole) =
+        let holeName =
             match named with
             | UnNamed -> "Unnamed"
-            | Named name -> name
+            | Named n -> n
 
-        let fieldType = json |> recognizeJson
-        let optionPane: ReactElement = options dispatch fieldType path name
+        let fieldType = recognizeJson json
+        options dispatch fieldType path holeName
 
-        match showOptions with
-        | true -> optionPane
-        | false -> Html.none
+    let renderCustomWrapper (customWrapper : CustomWrapper) = failwith "Not implemented yet"
+
+    let renderCustomElement (customElement : CustomElement) = failwith "Not implemented yet"
+
+
+    match code with
+    | HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
+    | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
+    | HtmlObject (objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
+    | Hole named -> renderHole named
+    | CustomWrapper(customWrapper) -> failwith "Not implemented yet"
+
+    | CustomElement(customElement) -> failwith "Not implemented yet"
+

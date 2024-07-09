@@ -1,16 +1,38 @@
 module UIComponents.OptionComponents
 
 open Fable.React
-open Types
+open Types.RenderingTypes
+open Types.EditorDomain
 open Feliz
 open Browser.Types
 open Fable.Core.JsInterop
-open System
-open Utilities.GeneralUtilities
 open Utilities.EditorUtils
-open System
 open Microsoft.FSharp.Reflection
 
+
+let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
+    Html.select [
+        prop.className "p-1 bg-white border-2 border-gray-200 rounded"
+        prop.onMouseDown (fun e -> e.stopPropagation ())
+        prop.value value
+        prop.onChange (fun (e: Browser.Types.Event) -> e.target?value |> string |> onChange)
+        prop.children (
+            Html.option [ prop.value ""; prop.text "Select an option" ]
+            :: (options |> List.map (fun opt -> Html.option [ prop.value opt; prop.text opt ]))
+        )
+    ]
+
+let TableRow (label: string) (content: ReactElement) =
+    Html.tr [
+        prop.className "hover:bg-gray-50"
+        prop.children [
+            Html.td [ prop.className "border px-4 py-2"; prop.text label ]
+            Html.td [ prop.className "border px-4 py-2"; prop.children [ content ] ]
+        ]
+    ]
+
+let ErrorDisplay (message: string) =
+    Html.div [ prop.className "text-red-500 p-2 bg-red-100 rounded"; prop.text message ]
 
 
 [<ReactComponent>]
@@ -18,34 +40,17 @@ let TagMenu (dispatch, code: RenderingCode, path) =
     let tagOptions =
         FSharpType.GetUnionCases(typeof<Tag>)
         |> Array.map (fun caseInfo -> caseInfo.Name)
+        |> Array.toList
 
     match code with
-    | HtmlElement(tag, attrs, value) ->
-        Html.div [
-            prop.className "p-1 bg-gray-100 my-1 w-full"
-            prop.children [
-                Html.select [
-                    prop.className "p-1 bg-white"
-                    prop.onMouseDown (fun e -> e.stopPropagation ())
-                    prop.value (tag.ToString())
-                    prop.onChange (fun (e: Browser.Types.Event) ->
-                        let selectedTag = e.target?value |> string
-                        let newTag = selectedTag.ToLower() |> stringToTag
-                        dispatch (ReplaceCode(HtmlElement(newTag, attrs, value), path)))
-                    prop.children (
-                        [ Html.option [ prop.value ""; prop.text "Select tag" ] ]
-                        @ (tagOptions
-                           |> Array.toList
-                           |> List.map (fun tag -> Html.option [ prop.value tag; prop.text tag ]))
-                    )
-                ]
-            ]
-        ]
-    | _ -> failwith "Not a valid code type."
-
+    | HtmlElement(tag, attrs, value,handlers) ->
+        SelectMenu tagOptions (tag.ToString()) (fun selectedTag ->
+            let newTag = selectedTag.ToLower() |> stringToTag
+            dispatch (ReplaceCode(HtmlElement(newTag, attrs, value,handlers), path)))
+    | _ -> ErrorDisplay "Invalid code type for TagMenu"
 
 [<ReactComponent>]
-let InnerValueMenu (dispatch, innerValue, code: RenderingCode, path) =
+let InnerValueMenu (dispatch, innerValue: InnerValue, code: RenderingCode, path) =
     let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
 
     let innerValueToString (innerValue: InnerValue) =
@@ -55,227 +60,139 @@ let InnerValueMenu (dispatch, innerValue, code: RenderingCode, path) =
         | Empty -> "Empty"
 
     match code with
-    | HtmlElement(tag, attrs, value) ->
-        Html.select [
-            prop.className "p-1 border-2 border-gray-200 bg-white rounded"
-            prop.onMouseDown (fun e -> e.stopPropagation ())
-            prop.value (innerValue |> innerValueToString)
-            prop.onChange (fun (e: Browser.Types.Event) ->
-                let selectedValue = e.target?value |> string
-
+    | HtmlElement(tag, attrs, innerValue, handlers) ->
+        SelectMenu innerValueOptions (innerValue |> innerValueToString) (fun selectedValue ->
+            let newValue =
                 match selectedValue with
-                | "Data" -> dispatch (ReplaceCode(HtmlElement(tag, attrs, InnerValue.Data), path))
-                | "Constant" -> dispatch (ReplaceCode(HtmlElement(tag, attrs, InnerValue.Constant ""), path))
-                | "Empty" -> dispatch (ReplaceCode(HtmlElement(tag, attrs, InnerValue.Empty), path))
-                | _ -> ())
-            prop.children (
-                [ Html.option [ prop.value ""; prop.text "Select inner value" ] ]
-                @ (innerValueOptions
-                   |> List.map (fun value -> Html.option [ prop.value value; prop.text value ]))
-            )
-        ]
-    | _ -> failwith "Not a valid code type."
+                | "Data" -> InnerValue.Data
+                | "Constant" -> InnerValue.Constant ""
+                | "Empty" -> InnerValue.Empty
+                | _ -> innerValue
+
+            dispatch (ReplaceCode(HtmlElement(tag, attrs, innerValue, handlers), path)))
+    | _ -> ErrorDisplay "Invalid code type for InnerValueMenu"
 
 [<ReactComponent>]
 let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: RenderingCode, path) =
     let (attributeValue, setAttributeValue) = React.useState attrVal
 
-    let setAttributeValue (newCode, value: string) =
-        dispatch (ReplaceCode(newCode, path))
-        setAttributeValue (Constant value)
+    let updateAttribute (newValue: string) =
+        match code with
+        | HtmlElement(tag, attrs, innerValue, handlers) ->
+            let updatedAttrs =
+                attrs
+                |> List.map (fun (name, _) ->
+                    if name = attrName then
+                        (name, Constant newValue)
+                    else
+                        (name, attributeValue))
+
+            dispatch (ReplaceCode(HtmlElement(tag, attrs, innerValue, handlers), path))
+            setAttributeValue (Constant newValue)
+        | _ -> ()
 
     match code with
-    | HtmlElement(tag, attrs, value) ->
-        match attrVal with
-        | Constant constant ->
-            Html.table [
-                prop.children [
-                    Html.tr [
-                        prop.className "p-1 bg-gray-100 my-1 w-full"
-                        prop.children [
-                            Html.td [ prop.className "border px-4 py-2"; prop.text attrName ]
-                            Html.td [
-                                prop.className "border px-4 py-2"
-                            //prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
-                            ]
-                        ]
-                    ]
-
-                    Html.tr [
-                        prop.children [
-                            Html.td [ prop.className "border px-4 py-2"; prop.text (attrName + " value") ]
-                            Html.td [
-                                prop.className "p-1 bg-white"
-                                prop.children [
-                                    Html.input [
-                                        prop.className "p-1 bg-white"
-                                        prop.value constant
-                                    (*prop.onInput (fun e ->
-                                            setAttributeValue (
-                                                HtmlElement(tag, attrs, Constant(constant)),
-                                                e.target?value |> string
-                                            ))*)
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                    Html.tr [
-                        prop.children [
-                            Html.button [
-                                prop.className " text-black font-bold py-2 px-4 rounded m-1"
-                                prop.text "Add attribute"
-                            (*prop.onClick (fun _ ->
-                                    let newAttr = ("", Constant "")
-                                    let newAttrs = newAttr :: attrs
-                                    dispatch (ReplaceCode(HtmlElement(tag, newAttrs, value), path)))*)
-
-
-                            ]
-                        ]
-                    ]
-                ]
+    | HtmlElement(tag, attrs, innerValue, handlers) ->
+        Html.table [
+            prop.children [
+                TableRow attrName (InnerValueMenu(dispatch, attributeValue, code, path))
+                match attributeValue with
+                | Constant value ->
+                    TableRow
+                        (attrName + " value")
+                        (Html.input [
+                            prop.className "p-1 bg-white"
+                            prop.value value
+                            prop.onInput (fun e -> updateAttribute (e.target?value |> string))
+                        ])
+                | _ -> ()
             ]
-        | _ ->
-            Html.tr [
-                prop.className "p-1 bg-gray-100 my-1 w-full"
-                prop.children [
-                    Html.td [ prop.className "border px-4 py-2"; prop.text attrName ]
-                    Html.td [
-                        prop.className "border px-4 py-2"
-                    //prop.children [ InnerValueMenu(dispatch, attributeValue, code, path) ]
-                    ]
-                ]
-            ]
-
-    | _ -> failwith "Not a valid code type."
-
+        ]
+    | _ -> ErrorDisplay "Invalid code type for AttributeMenu"
 
 [<ReactComponent>]
 let ElementOption (dispatch, name: string, code, path) =
     let (collapsed, setCollapsed) = React.useState true
 
-    let attr =
-        match code with
-        | HtmlElement(_, attrs, _) -> attrs
-        | _ -> []
+    let toggleCollapse () = setCollapsed (not collapsed)
 
-    let innerVal =
+    let renderContent () =
         match code with
-        | HtmlElement(_, _, innerValue) -> innerValue
-        | _ -> Empty
-
-    Html.div [
-        prop.className "flex flex-row p-1 m-1 border-1 items-center border-gray-300 bg-white rounded w-fit h-fit"
-        prop.children [
-            match collapsed with
-            | true -> Html.h1 [ prop.className "p-4 bg-white rounded"; prop.text name ]
-            | false ->
-                Html.div [
-                    prop.className "p-4 bg-white rounded items-center justify-start"
-                    prop.children [
-                        Html.h1 [ prop.className "pb-2 text-xl"; prop.text ("Field " + name) ]
-                        Html.table [
-                            prop.className "table-auto w-full shadow-lg bg-white"
-                            prop.children [
-                                Html.thead [
-                                    prop.className "text-left"
-                                    prop.children [
-                                        Html.tr [
-                                            prop.className "bg-gray-100"
-                                            prop.children [
-                                                Html.th [ prop.className "px-4 py-2"; prop.text "Attribute" ]
-                                                Html.th [ prop.className "px-4 py-2"; prop.text "Value" ]
-                                            ]
+        | HtmlElement(tag, attrs, innerValue, handlers) ->
+            Html.div [
+                prop.className "p-4 bg-white rounded items-center justify-start"
+                prop.children [
+                    Html.h1 [ prop.className "pb-2 text-xl"; prop.text ("Field " + name) ]
+                    Html.table [
+                        prop.className "table-auto w-full shadow-lg bg-white"
+                        prop.children [
+                            Html.thead [
+                                prop.className "text-left"
+                                prop.children [
+                                    Html.tr [
+                                        prop.className "bg-gray-100"
+                                        prop.children [
+                                            Html.th [ prop.className "px-4 py-2"; prop.text "Attribute" ]
+                                            Html.th [ prop.className "px-4 py-2"; prop.text "Value" ]
                                         ]
                                     ]
                                 ]
-                                Html.tbody [
-                                    prop.children (
-                                        [
-                                            Html.tr [
-                                                prop.className "hover:bg-gray-50"
-                                                prop.children [
-                                                    Html.td [ prop.className "border px-4 py-2"; prop.text "Tag" ]
-                                                    Html.td [
-                                                        prop.className "border px-4 py-2"
-                                                    //prop.children [ TagMenu(dispatch, code, path) ]
-                                                    ]
-                                                ]
-                                            ]
-                                        ]
-                                        (*@ (List.map
-                                            (fun (name, value) -> AttributeMenu(dispatch, name, value, code, path))
-                                            attr)*)
-                                        @ [
-                                            Html.tr [
-                                                prop.className "hover:bg-gray-50"
-                                                prop.children [
-                                                    Html.td [
-                                                        prop.className "border px-4 py-2"
-                                                        prop.text "Inner value"
-                                                    ]
-                                                    Html.td [
-                                                        prop.className "border px-4 py-2"
-                                                    //prop.children [ InnerValueMenu(dispatch, innerVal, code, path) ]
-                                                    ]
-                                                ]
-                                            ]
-                                        ]
-                                    )
-                                ]
+                            ]
+                            Html.tbody [
+                                prop.children (
+                                    [ TableRow "Tag" (TagMenu(dispatch, code, path)) ]
+                                    @ (attrs
+                                       |> List.map (fun (name, value) ->
+                                           AttributeMenu(dispatch, name, value, code, path)))
+                                    @ [ TableRow "Inner value" (InnerValueMenu(dispatch, innerValue, code, path)) ]
+                                )
                             ]
                         ]
                     ]
                 ]
+            ]
+        | _ -> ErrorDisplay "Invalid code type for ElementOption"
+
+    Html.div [
+        prop.className "flex flex-row p-1 m-1 border-1 items-center border-gray-300 bg-white rounded w-fit h-fit"
+        prop.children [
+            if collapsed then
+                Html.h1 [ prop.className "p-4 bg-white rounded"; prop.text name ]
+            else
+                renderContent ()
             Html.button [
                 prop.className
                     "p-1 m-1 border h-fit border-gray-200 bg-secondary-300 hover:bg-secondary-600 text-black rounded-md"
                 prop.text (if collapsed then "Expand" else "Collapse")
-                prop.onClick (fun _ -> setCollapsed (not collapsed))
+                prop.onClick (fun _ -> toggleCollapse ())
             ]
         ]
     ]
 
-//TODO: implement list option
 [<ReactComponent>]
 let ListOption (dispatch, name: string, code, path) =
     match code with
-    | HtmlList(listType, headers, elementCode) ->
+    | HtmlList(listType, elementCode, handlers) ->
         let listTypeOptions =
             FSharpType.GetUnionCases(typeof<ListType>)
             |> Array.map (fun caseInfo -> caseInfo.Name)
+            |> Array.toList
 
         Html.div [
             prop.className "p-4 border border-gray-300 bg-white rounded-lg shadow-sm"
             prop.children [
                 Html.h1 [ prop.className "text-xl"; prop.text name ]
-                Html.select [
-                    prop.className
-                        "block w-full p-2 mt-1 border border-gray-300 bg-white rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
-                    prop.onMouseDown (fun e -> e.stopPropagation ())
-                    prop.onClick (fun e -> e.stopPropagation ())
-                    prop.value (listTypeToString listType)
-                    prop.onChange (fun (e: Browser.Types.Event) ->
-                        let selectedListType = e.target?value |> string
-                        let newListType = selectedListType |> stringToListType
-                        dispatch (ReplaceCode(HtmlList(newListType, headers, elementCode), path)))
-                    prop.children (
-                        [ Html.option [ prop.value ""; prop.text "Select list type" ] ]
-                        @ (listTypeOptions
-                           |> Array.toList
-                           |> List.map (fun listType -> Html.option [ prop.value listType; prop.text listType ]))
-                    )
-                ]
+                SelectMenu listTypeOptions (listTypeToString listType) (fun selectedListType ->
+                    let newListType = selectedListType |> stringToListType
+                    dispatch (ReplaceCode(HtmlList(newListType, elementCode, handlers), path)))
             ]
         ]
+    | _ -> ErrorDisplay "Invalid code type for ListOption"
 
-    | _ -> failwith "Invalid code type."
-//TODO: implement sequence option
 [<ReactComponent>]
 let SequenceOption (dispatch, name: string, code, path) =
     match code with
-    | Sequence(elements) ->
+    | HtmlObject(objType, keys, elements, handlers) ->
         Html.div [
             prop.className "bg-gray-100 p-4 rounded-lg shadow"
             prop.children [
@@ -292,5 +209,4 @@ let SequenceOption (dispatch, name: string, code, path) =
                 ]
             ]
         ]
-
-    | _ -> Html.div [ prop.className "text-red-500"; prop.text "Invalid code type." ]
+    | _ -> ErrorDisplay "Invalid code type for SequenceOption"
