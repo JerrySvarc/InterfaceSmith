@@ -15,16 +15,22 @@ type Page = {
 
 //Application state
 
-type Model = {
-    IsSidebarOpen: bool
-    ActivePageId: Guid option
-    Pages: Map<Guid, Page>
-    TabOrder: Guid list
-}
+
+type Tab = { Id: Guid; PageId: Guid }
+
+type Model =
+    { Pages: Map<Guid, Page>
+      OpenTabs: Tab list
+      ActiveTabId: Guid option
+      IsSidebarOpen : bool }
 
 type Msg =
+    | OpenTab of Guid
+    | CloseTab of Guid
+    | SetActiveTab of Guid
+    | ReorderTabs of Tab list
+    | CreatePage
+    | UpdatePage of Page
+    | DeletePage of Guid
     | ToggleSidebar
-    | SetActivePage of Guid
-    | ClosePage of Guid
-    | CreateNewPage
-    | ReorderTabs of Guid list
+    | OpenOrSelectTab of Guid

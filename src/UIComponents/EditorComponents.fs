@@ -3,18 +3,31 @@ module UIComponents.EditorComponents
 open Feliz
 open Fable.React
 open Types.EditorDomain
-open Types.RenderingTypes
 open Utilities.FileUpload
+open Feliz.UseElmish
+open Utilities.Icons
+open Fable.Core.JsInterop
+open Elmish
 
+// PageEditor component
+type PageEditorModel =
+    { IsJavaScriptMode: bool
+      JsCode: string }
+
+type PageEditorMsg =
+    | ToggleMode
+    | UpdateJsCode of string
+
+let pageEditorInit(): PageEditorModel * Cmd<PageEditorMsg> =
+    { IsJavaScriptMode = false
+      JsCode = "// Write your custom JavaScript here" }, Cmd.none
+
+let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel): PageEditorModel * Cmd<PageEditorMsg> =
+    match msg with
+    | ToggleMode -> { model with IsJavaScriptMode = not model.IsJavaScriptMode }, Cmd.none
+    | UpdateJsCode code -> { model with JsCode = code }, Cmd.none
 
 (*
-let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
-    match code with
-    | HtmlElement _ -> ElementOption(dispatch, name, code, path)
-    | HtmlList _ -> ListOption(dispatch, name, code, path)
-    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
-    | Hole _ -> Html.none
-
 [<ReactComponent>]
 let DataUpload (dispatch) =
     let uploadButtonView onLoad =
@@ -40,95 +53,96 @@ let DataUpload (dispatch) =
 
     Html.div [ prop.children [ uploadButton ] ]
 
-
-
-
-[<ReactComponent>]
-let PreviewButton (dispatch) =
-    Html.button [
-        prop.className "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
-        prop.text "Preview"
-        prop.onClick (fun _ -> dispatch TogglePreview)
-    ]
+*)
 
 [<ReactComponent>]
-let ToggleOptionsButton (dispatch) =
-    Html.button [
-        prop.className "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
-        prop.text "Toggle options"
-        prop.onClick (fun _ -> dispatch ToggleOptions)
-    ]
-
-
-[<ReactComponent>]
-let PageHeader (page: Page, dispatch) =
-    let (pageName, changeName) = React.useState (page.Name)
-    let (editing, setEditing) = React.useState false
-
-    let saveAndUpdateName (name) =
-        dispatch (ChangeName name)
-        changeName name
-        setEditing false
+let PageEditor (page : Page) mainDispatch =
+    let model, dispatch = React.useElmish(pageEditorInit, pageEditorUpdate, [| box page|])
 
     Html.div [
-        prop.className "flex flex-row bg-white mt-3 justify-evenly items-center"
+        prop.className "flex-1 flex overflow-hidden"
         prop.children [
+            // Left panel
             Html.div [
-                prop.className "flex items-center"
+                prop.className "w-1/2 flex flex-col border-r"
                 prop.children [
+                    // JSON data window
                     Html.div [
-                        prop.className "flex items-center"
+                        prop.className "h-1/2 p-4 overflow-auto border-b"
                         prop.children [
-                            Html.p [ prop.className "text-xl m-1 p-2"; prop.text "Page Name: " ]
-                            Html.input [
-                                prop.type' "text"
-                                match editing with
-                                | true -> prop.className "rounded-md border-slate-500 m-1 p-2 border"
-                                | false -> prop.className "rounded-md border-slate-500 m-1 p-2 border hidden"
-                                prop.value pageName
-                                prop.onTextChange (fun e -> changeName e)
+                            Html.h3 [ prop.className "font-bold mb-2"; prop.text "JSON Data" ]
+                            Html.p "JSON data will be displayed here"
+                        ]
+                    ]
+                    // Element modification / JavaScript window
+                    Html.div [
+                        prop.className "h-1/2 flex flex-col"
+                        prop.children [
+                            Html.div [
+                                prop.className "flex justify-between items-center p-2 bg-gray-200"
+                                prop.children [
+                                    Html.h3 [
+                                        prop.className "font-bold"
+                                        prop.text (
+                                            if model.IsJavaScriptMode then
+                                                "Custom JavaScript"
+                                            else
+                                                "Element Modification"
+                                        )
+                                    ]
+                                    Html.button [
+                                        prop.className "p-1 rounded hover:bg-gray-300"
+                                        prop.onClick (fun _ -> dispatch ToggleMode)
+                                        prop.children [
+                                            if model.IsJavaScriptMode then
+                                                ReactBindings.React.createElement(settingsIcon, createObj [
+                                                "size" ==> 20
+                                                "color" ==> "#4A5568"
+                                            ], [])
+                                            else
+                                                ReactBindings.React.createElement(codeIcon, createObj [
+                                                "size" ==> 20
+                                                "color" ==> "#4A5568"
+                                            ], [])
+                                        ]
+                                    ]
+                                ]
                             ]
-                            Html.p [
-                                prop.className (
-                                    match editing with
-                                    | true -> sprintf "text-xl m-1 p-2 hidden"
-                                    | _ -> sprintf "text-xl m-1 p-2 "
-                                )
-                                prop.text pageName
-                            ]
-                            Html.button [
-                                prop.className
-                                    "bg-secondary-300 border-gray-400 m-1 p-2 rounded-md text-xl  hover:bg-secondary-600"
-                                match editing with
-                                | true ->
-                                    prop.text "Save"
-                                    prop.onClick (fun _ -> saveAndUpdateName pageName)
-                                | false ->
-                                    prop.text "Edit"
-                                    prop.onClick (fun _ -> setEditing true)
+                            Html.div [
+                                prop.className "flex-1 overflow-auto p-4"
+                                prop.children [
+                                    if model.IsJavaScriptMode then
+                                        Html.textarea [
+                                            prop.className "w-full h-full resize-none border rounded p-2"
+                                            prop.value model.JsCode
+                                            prop.onChange (fun e -> dispatch (UpdateJsCode e))
+                                            prop.placeholder "Write your custom JavaScript here"
+                                        ]
+                                    else
+                                        Html.div [ prop.children [ Html.p "Element modification options go here" ] ]
+                                ]
                             ]
                         ]
                     ]
-
                 ]
             ]
-            DataUpload(dispatch)
-            PreviewButton(dispatch)
+
+            // Right panel - Preview sandbox
+            Html.div [
+                prop.className "w-1/2 p-4 overflow-auto"
+                prop.children [
+                    Html.h3 [ prop.className "font-bold mb-2"; prop.text "Preview" ]
+                    Html.p "Preview of the application will be shown here"
+                ]
+            ]
         ]
     ]
+(*
+let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+    match code with
+    | HtmlElement _ -> ElementOption(dispatch, name, code, path)
+    | HtmlList _ -> ListOption(dispatch, name, code, path)
+    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
+    | Hole _ -> Html.none
 
-
-[<ReactComponent>]
-let EditingWindow (model: Model, dispatch: Msg -> unit) : ReactElement =
-    Html.div [
-        prop.className "flex flex-col p-4 m-2 min-h-screen overflow-auto"
-
-    ]
-
-[<ReactComponent>]
-let Editor (model: Model, dispatch) =
-    Html.div [
-        prop.className "mt-1"
-        prop.children [ ]
-    ]
 *)
