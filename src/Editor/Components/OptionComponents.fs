@@ -1,12 +1,11 @@
-module UIComponents.OptionComponents
+module Editor.UIComponents.OptionComponents
 
 open Fable.React
-open Types.RenderingTypes
-open Types.EditorDomain
+open CoreLogic.Types.RenderingTypes
+open Editor.Types.EditorModel
 open Feliz
 open Browser.Types
 open Fable.Core.JsInterop
-open Utilities.EditorUtils
 open Microsoft.FSharp.Reflection
 
 (*

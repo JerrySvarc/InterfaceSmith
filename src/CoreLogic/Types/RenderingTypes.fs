@@ -1,4 +1,4 @@
-module Types.RenderingTypes
+module CoreLogic.Types.RenderingTypes
 
 type Tag =
     | P
@@ -48,30 +48,33 @@ type FieldHole =
 type RenderingCode =
     | HtmlElement of tag: Tag * attrs: Attributes * innerValue: InnerValue * eventHandlers: (string * Javascript) list
     | HtmlList of listType: ListType * itemCode: RenderingCode list * eventHandlers: (string * Javascript) list
-    | HtmlObject of objectType: ObjType *  keyOrdering : (string list) * codes : Map<string,RenderingCode> * eventHandlers: (string * Javascript) list
+    | HtmlObject of
+        objectType: ObjType *
+        keyOrdering: (string list) *
+        codes: Map<string, RenderingCode> *
+        eventHandlers: (string * Javascript) list
     | CustomWrapper of CustomWrapper
     | CustomElement of CustomElement
     | Hole of FieldHole
 
 // Represents a JavaScript code
 // JSFunction: Represents a JavaScript function used for event handling of custom RenderingCode events, accepts only the parameter "this"
-and Javascript =
-    | JSFunction of name : string * code : string
+and Javascript = JSFunction of name: string * code: string
 
 // Custom wrapper around an existing RenderingCode element with children CustomElements
 // Primary motivation is the ability to add an existing RenderingCode as an inner value of a new custom element
 and CustomWrapper = {
     Tag: Tag
     Attributes: Attributes
-    WrappedCode : RenderingCode
+    WrappedCode: RenderingCode
     Children: RenderingCode list
     EventHandlers: (string * Javascript) list
 }
 
 // Represents a custom element not created based on a referential value from the JSON AST
-and CustomElement= {
+and CustomElement = {
     Tag: Tag
     Attributes: Attributes
-    CustomInnerValue : string
+    CustomInnerValue: string
     EventHandlers: (string * Javascript) list
 }

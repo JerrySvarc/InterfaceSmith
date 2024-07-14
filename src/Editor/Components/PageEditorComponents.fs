@@ -1,30 +1,32 @@
-module UIComponents.EditorComponents
+module Editor.UIComponents.PageEditorComponents
 
 open Feliz
 open Fable.React
-open Types.EditorDomain
-open Utilities.FileUpload
+open Editor.Types.EditorModel
 open Feliz.UseElmish
-open Utilities.Icons
+open Editor.Utilities.Icons
 open Fable.Core.JsInterop
 open Elmish
+open Editor.Types.PageModel
+open Editor.Utilities.FileUpload
+open Editor.Operations.CustomRendering
 
-// PageEditor component
-type PageEditorModel =
-    { IsJavaScriptMode: bool
-      JsCode: string }
+// PageEditor elmish-style functionality
+let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
+    {
+        IsJavaScriptMode = false
+        JsCode = "// Write your custom JavaScript here"
+    },
+    Cmd.none
 
-type PageEditorMsg =
-    | ToggleMode
-    | UpdateJsCode of string
-
-let pageEditorInit(): PageEditorModel * Cmd<PageEditorMsg> =
-    { IsJavaScriptMode = false
-      JsCode = "// Write your custom JavaScript here" }, Cmd.none
-
-let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel): PageEditorModel * Cmd<PageEditorMsg> =
+let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
-    | ToggleMode -> { model with IsJavaScriptMode = not model.IsJavaScriptMode }, Cmd.none
+    | ToggleMode ->
+        {
+            model with
+                IsJavaScriptMode = not model.IsJavaScriptMode
+        },
+        Cmd.none
     | UpdateJsCode code -> { model with JsCode = code }, Cmd.none
 
 (*
@@ -56,8 +58,9 @@ let DataUpload (dispatch) =
 *)
 
 [<ReactComponent>]
-let PageEditor (page : Page) mainDispatch =
-    let model, dispatch = React.useElmish(pageEditorInit, pageEditorUpdate, [| box page|])
+let PageEditor (page: Page) mainDispatch =
+    let model, dispatch =
+        React.useElmish (pageEditorInit, pageEditorUpdate, [| box page |])
 
     Html.div [
         prop.className "flex-1 flex overflow-hidden"
@@ -95,15 +98,17 @@ let PageEditor (page : Page) mainDispatch =
                                         prop.onClick (fun _ -> dispatch ToggleMode)
                                         prop.children [
                                             if model.IsJavaScriptMode then
-                                                ReactBindings.React.createElement(settingsIcon, createObj [
-                                                "size" ==> 20
-                                                "color" ==> "#4A5568"
-                                            ], [])
+                                                ReactBindings.React.createElement (
+                                                    settingsIcon,
+                                                    createObj [ "size" ==> 20; "color" ==> "#4A5568" ],
+                                                    []
+                                                )
                                             else
-                                                ReactBindings.React.createElement(codeIcon, createObj [
-                                                "size" ==> 20
-                                                "color" ==> "#4A5568"
-                                            ], [])
+                                                ReactBindings.React.createElement (
+                                                    codeIcon,
+                                                    createObj [ "size" ==> 20; "color" ==> "#4A5568" ],
+                                                    []
+                                                )
                                         ]
                                     ]
                                 ]
@@ -137,6 +142,7 @@ let PageEditor (page : Page) mainDispatch =
             ]
         ]
     ]
+
 (*
 let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with

@@ -20,7 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Build", "Build.fsproj", "{C0244434-EC34-4D74-93A9-0E00DEC0C4D1}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Client", "src\Client.fsproj", "{0B6226C5-A777-45AC-985D-A92D8BF100AF}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Application", "src\Application.fsproj", "{0B6226C5-A777-45AC-985D-A92D8BF100AF}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Tests", "tests\Tests.fsproj", "{9D6F7DC8-2229-4DB6-84DF-D47A2618F87D}"
 EndProject

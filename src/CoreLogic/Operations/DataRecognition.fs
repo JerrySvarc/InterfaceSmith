@@ -1,7 +1,6 @@
-module DataProcessing.DataRecognition
+module CoreLogic.Operations.DataRecognition
 
-open Types.RenderingTypes
-open System
+open CoreLogic.Types.RenderingTypes
 open Fable.SimpleJson
 open Microsoft.FSharp.Collections
 
@@ -12,7 +11,7 @@ let recognizeJson (json: Json) =
         | true -> HtmlList(UnorderedList, [], [])
         | false ->
             let codes = List.map (fun item -> Hole(Named "List item")) array
-            HtmlList(UnorderedList,  codes, [])
+            HtmlList(UnorderedList, codes, [])
     | JObject obj ->
         let keys = obj.Keys |> List.ofSeq
         let codes = obj |> Map.map (fun key value -> Hole(Named key))

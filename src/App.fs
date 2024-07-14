@@ -1,6 +1,7 @@
 module App
 
 open Fable.Core.JsInterop
+open Editor.Types
 
 importSideEffects "./index.css"
 

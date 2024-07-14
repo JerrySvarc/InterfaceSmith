@@ -1,4 +1,4 @@
-module DataProcessing.DataLoading
+module Editor.Utilities.DataLoading
 
 open System
 open Fable.SimpleJson
@@ -8,6 +8,5 @@ let loadJson json =
     json
     |> SimpleJson.tryParse
     |> function
-        | Some(JObject dict) ->
-             Some((JObject) dict)
+        | Some(JObject dict) -> Some((JObject) dict)
         | _ -> None

@@ -1,7 +1,7 @@
 // Followed the guide described in the SAFE stack docs.
 // https://safe-stack.github.io/docs/recipes/client-server/upload-file-from-client/
 
-module Utilities.FileUpload
+module Editor.Utilities.FileUpload
 
 open Fable.React
 open Fable.React.Props

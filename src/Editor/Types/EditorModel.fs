@@ -1,8 +1,8 @@
-module Types.EditorDomain
+module Editor.Types.EditorModel
 
 open Fable.SimpleJson
 open System
-open RenderingTypes
+open CoreLogic.Types.RenderingTypes
 
 
 type Page = {
@@ -18,11 +18,12 @@ type Page = {
 
 type Tab = { Id: Guid; PageId: Guid }
 
-type Model =
-    { Pages: Map<Guid, Page>
-      OpenTabs: Tab list
-      ActiveTabId: Guid option
-      IsSidebarOpen : bool }
+type Model = {
+    Pages: Map<Guid, Page>
+    OpenTabs: Tab list
+    ActiveTabId: Guid option
+    IsSidebarOpen: bool
+}
 
 type Msg =
     | OpenTab of Guid

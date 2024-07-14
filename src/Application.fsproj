@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Client</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="index.html" />
+    <None Include="paket.references" />
+    <Compile Include="CoreLogic\Types\RenderingTypes.fs" />
+      <Folder Include="CoreLogic\Utilities\" />
+    <Compile Include="CoreLogic\Operations\RenderingCode.fs" />
+    <Compile Include="CoreLogic\Operations\DataRecognition.fs" />
+    <Compile Include="CoreLogic\Operations\CodeGeneration.fs" />
+    <Compile Include="Editor\Types\EditorModel.fs" />
+    <Compile Include="Editor\Types\PageModel.fs" />
+    <Compile Include="Editor\Utilities\Icons.fs" />
+    <Compile Include="Editor\Utilities\FileUpload.fs" />
+    <Compile Include="Editor\Utilities\DataLoading.fs" />
+    <Compile Include="Editor\Operations\CustomRendering.fs" />
+    <Compile Include="Editor\Components\OptionComponents.fs" />
+    <Compile Include="Editor\Components\PageEditorComponents.fs" />
+      
+    <Compile Include="Editor\Components\EditorComponents.fs" />
+    <Compile Include="Main.fs" />
+    <Compile Include="App.fs" />    
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.React" Version="9.3.0" />
+    <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
+  </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>

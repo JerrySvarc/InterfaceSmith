@@ -1,86 +1,13 @@
-module Utilities.EditorUtils
+module Editor.Operations.CustomRendering
 
-open Fable.React
-open Types.RenderingTypes
-open Types.EditorDomain
+open CoreLogic.Operations.RenderingCode
+open CoreLogic.Types.RenderingTypes
+open CoreLogic.Operations.DataRecognition
 open Fable.SimpleJson
-open DataProcessing.DataRecognition
+open Editor.Types.EditorModel
 open Feliz
-open Browser
+open Fable.React
 open Fable.Core.JsInterop
-
-
-let tagToString tag =
-    match tag with
-    | P -> "p"
-    | H1 -> "h1"
-    | H2 -> "h2"
-    | H3 -> "h3"
-    | H4 -> "h4"
-    | H5 -> "h5"
-    | H6 -> "h6"
-    | Strong -> "strong"
-    | Em -> "em"
-    | A -> "a"
-    | Pre -> "pre"
-    | Code -> "code"
-    | Blockquote -> "blockquote"
-    | Div -> "div"
-    | Span -> "span"
-    | Article -> "article"
-    | Section -> "section"
-    | Header -> "header"
-    | Footer -> "footer"
-    | Nav -> "nav"
-    | Input -> "input"
-    | Ol -> "ol"
-    | Li -> "li"
-    | Ul -> "ul"
-
-
-let stringToTag str =
-    match str with
-    | "p" -> P
-    | "h1" -> H1
-    | "h2" -> H2
-    | "h3" -> H3
-    | "h4" -> H4
-    | "h5" -> H5
-    | "h6" -> H6
-    | "strong" -> Strong
-    | "em" -> Em
-    | "a" -> A
-    | "pre" -> Pre
-    | "code" -> Code
-    | "blockquote" -> Blockquote
-    | "div" -> Div
-    | "span" -> Tag.Span
-    | "article" -> Article
-    | "section" -> Section
-    | "header" -> Header
-    | "footer" -> Footer
-    | "nav" -> Nav
-    | "input" -> Input
-    | "ol"-> Ol
-    | "li"-> Li
-    | "ul"-> Ul
-
-    | _ -> failwith "Invalid tag"
-
-
-let stringToListType (str: string) =
-    let loweredStr = str.ToLower()
-
-    match loweredStr with
-    | "unorderedlist" -> UnorderedList
-    | "orderedlist" -> OrderedList
-    | _ -> failwith "Invalid list type"
-
-let listTypeToString listType =
-    match listType with
-    | UnorderedList -> "ul"
-    | OrderedList -> "ol"
-
 
 //Custom rendering function for displaying preview with interwoven menus for the elements
 let rec renderingCodeToReactElement
@@ -157,7 +84,7 @@ let rec renderingCodeToReactElement
             |> renderWithOptions
         | _ -> Html.div [ prop.text "Invalid JSON for HtmlList: not an array" ]
 
-    let renderHtmlObject  (keys : string list) (codes: Map<string, RenderingCode> ) =
+    let renderHtmlObject (keys: string list) (codes: Map<string, RenderingCode>) =
         match json with
         | JObject object ->
             let renderedElements =
@@ -165,21 +92,24 @@ let rec renderingCodeToReactElement
                 |> List.mapi (fun index key ->
                     let element = codes.TryFind key
                     let jsonValue = object.TryFind key
+
                     match element, jsonValue with
                     | Some code, Some value ->
-                        renderingCodeToReactElement
-                            code
-                            (path @ [ index ])
-                            value
-                            key
-                            options
-                            showOptions
-                            dispatch
+                        renderingCodeToReactElement code (path @ [ index ]) value key options showOptions dispatch
                     //TODO: styling
-                    | None, Some(_) -> Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.")]
-                    | Some(_), None -> Html.div [ prop.text ("JSON object value with the name " + key + " not found.") ]
-                    | None, None -> Html.div [ prop.text ("JSON object value and RenderingCode element  with the name " + key + " not found.") ]
-                    )
+                    | None, Some(_) ->
+                        Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.") ]
+                    | Some(_), None ->
+                        Html.div [ prop.text ("JSON object value with the name " + key + " not found.") ]
+                    | None, None ->
+                        Html.div [
+                            prop.text (
+                                "JSON object value and RenderingCode element  with the name "
+                                + key
+                                + " not found."
+                            )
+                        ])
+
             Html.div [ prop.className "preview"; prop.children renderedElements ]
             |> renderWithOptions
         | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
@@ -195,17 +125,15 @@ let rec renderingCodeToReactElement
         let fieldType = recognizeJson json
         options dispatch fieldType path holeName
 
-    let renderCustomWrapper (customWrapper : CustomWrapper) = failwith "Not implemented yet"
+    let renderCustomWrapper (customWrapper: CustomWrapper) = failwith "Not implemented yet"
 
-    let renderCustomElement (customElement : CustomElement) = failwith "Not implemented yet"
+    let renderCustomElement (customElement: CustomElement) = failwith "Not implemented yet"
 
 
     match code with
     | HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
     | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
-    | HtmlObject (objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
+    | HtmlObject(objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
     | Hole named -> renderHole named
     | CustomWrapper(customWrapper) -> failwith "Not implemented yet"
-
     | CustomElement(customElement) -> failwith "Not implemented yet"
-
