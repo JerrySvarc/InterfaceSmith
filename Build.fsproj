@@ -12,5 +12,8 @@
   <ItemGroup>
     <PackageReference Include="Fake" Version="5.16.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="src\Application.fsproj" />
+  </ItemGroup>
   <Import Project=".paket\Paket.Restore.targets" />
 </Project>

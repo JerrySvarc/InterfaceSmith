@@ -13,13 +13,14 @@
     <Compile Include="CoreLogic\Operations\RenderingCode.fs" />
     <Compile Include="CoreLogic\Operations\DataRecognition.fs" />
     <Compile Include="CoreLogic\Operations\CodeGeneration.fs" />
-    <Compile Include="Editor\Types\EditorModel.fs" />
-    <Compile Include="Editor\Types\PageModel.fs" />
+    <Compile Include="Editor\Types\EditorDomain.fs" />
+    <Compile Include="Editor\Types\PageEditorDomain.fs" />
     <Compile Include="Editor\Utilities\Icons.fs" />
     <Compile Include="Editor\Utilities\FileUpload.fs" />
-    <Compile Include="Editor\Utilities\DataLoading.fs" />
-    <Compile Include="Editor\Operations\CustomRendering.fs" />
+    <Compile Include="Editor\Utilities\JsonParsing.fs" />
+    <Compile Include="Editor\Utilities\JavaScriptEditor.fs" />
     <Compile Include="Editor\Components\OptionComponents.fs" />
+    <Compile Include="Editor\Components\CustomRendering.fs" />
     <Compile Include="Editor\Components\PageEditorComponents.fs" />
       
     <Compile Include="Editor\Components\EditorComponents.fs" />

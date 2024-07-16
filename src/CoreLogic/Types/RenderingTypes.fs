@@ -25,6 +25,7 @@ type Tag =
     | Li
     | Ol
     | Ul
+    | Button
 
 type Attribute = string * InnerValue
 

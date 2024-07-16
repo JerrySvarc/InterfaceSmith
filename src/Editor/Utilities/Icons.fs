@@ -14,3 +14,5 @@ let arrowLeftLine: obj =
 
 let arrowRightLine: obj =
     importDefault "lucide-react/dist/esm/icons/arrow-right-from-line"
+
+let uploadIcon: obj = importDefault "lucide-react/dist/esm/icons/upload"

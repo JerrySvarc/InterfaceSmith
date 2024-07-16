@@ -1,13 +1,15 @@
-module Editor.Operations.CustomRendering
+module Editor.Components.CustomRendering
 
-open CoreLogic.Operations.RenderingCode
+open System.Text
 open CoreLogic.Types.RenderingTypes
-open CoreLogic.Operations.DataRecognition
 open Fable.SimpleJson
-open Editor.Types.EditorModel
-open Feliz
+open CoreLogic.Operations.RenderingCode
 open Fable.React
+open Feliz
+open Browser
 open Fable.Core.JsInterop
+open Editor.Types.PageEditorDomain
+open CoreLogic.Operations.DataRecognition
 
 //Custom rendering function for displaying preview with interwoven menus for the elements
 let rec renderingCodeToReactElement
@@ -15,19 +17,14 @@ let rec renderingCodeToReactElement
     (path: int list)
     (json: Json)
     (name: string)
-    (options: (Msg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
-    (showOptions: bool)
-    (dispatch: Msg -> unit)
+    (options: (PageEditorMsg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
+    (dispatch: PageEditorMsg -> unit)
     : ReactElement =
 
     let renderWithOptions (preview: ReactElement) =
-        if showOptions then
-            Html.div [
-                prop.className "border border-secondary-900 bg-white rounded-md m-1"
-                prop.children [ preview; options dispatch code path name ]
-            ]
-        else
-            preview
+        Html.div [
+            prop.children [ preview; options dispatch code path name ]
+        ]
 
     let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =
         try
@@ -41,7 +38,12 @@ let rec renderingCodeToReactElement
     let renderHtmlElement (tag: Tag) (attrs: Attributes) (innerValue: InnerValue) =
         let attributes =
             attrs
-            |> List.map (fun (key, value) -> (key, box value))
+            |> List.map (fun (key, value) ->
+                match value with
+                | Data -> key, box (json |> Json.convertFromJsonAs<string>)
+                | Constant s -> (key, box s)
+                | InnerValue.Empty -> (key, box value)
+                )
             |> List.append [ ("className", box "preview") ]
             |> createObj
 
@@ -64,7 +66,6 @@ let rec renderingCodeToReactElement
                 codes
                 |> List.mapi (fun index code ->
                     let arrayItem = List.item index array
-                    let showOptionsForItem = index = 0 && showOptions
 
                     let renderedItem =
                         renderingCodeToReactElement
@@ -73,7 +74,6 @@ let rec renderingCodeToReactElement
                             arrayItem
                             name
                             options
-                            showOptionsForItem
                             dispatch
 
                     Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
@@ -95,7 +95,7 @@ let rec renderingCodeToReactElement
 
                     match element, jsonValue with
                     | Some code, Some value ->
-                        renderingCodeToReactElement code (path @ [ index ]) value key options showOptions dispatch
+                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch
                     //TODO: styling
                     | None, Some(_) ->
                         Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.") ]
@@ -125,15 +125,53 @@ let rec renderingCodeToReactElement
         let fieldType = recognizeJson json
         options dispatch fieldType path holeName
 
-    let renderCustomWrapper (customWrapper: CustomWrapper) = failwith "Not implemented yet"
+    let renderCustomWrapper (customWrapper: CustomWrapper) =
+        let attributes =
+            customWrapper.Attributes
+            |> List.map (fun (key, value) -> (key, box value))
+            |> List.append [ ("className", box "preview custom-wrapper") ]
+            |> createObj
 
-    let renderCustomElement (customElement: CustomElement) = failwith "Not implemented yet"
+        let wrappedContent =
+            renderingCodeToReactElement
+                customWrapper.WrappedCode
+                (path)
+                json
+                name
+                options
+                dispatch
 
+        let children =
+            wrappedContent ::
+            (customWrapper.Children
+             |> List.mapi (fun index child ->
+                 renderingCodeToReactElement
+                     child
+                     (path @ [-1; index])
+                     json
+                     name
+                     options
+                     dispatch))
+
+        createPreview (tagToString customWrapper.Tag) attributes children
+        |> renderWithOptions
+
+    let renderCustomElement (customElement: CustomElement) =
+        let attributes =
+            customElement.Attributes
+            |> List.map (fun (key, value) -> (key, box value))
+            |> List.append [ ("className", box "preview custom-element") ]
+            |> createObj
+
+        let children = [ Html.text customElement.CustomInnerValue ]
+
+        createPreview (tagToString customElement.Tag) attributes children
+        |> renderWithOptions
 
     match code with
     | HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
     | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
     | HtmlObject(objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
     | Hole named -> renderHole named
-    | CustomWrapper(customWrapper) -> failwith "Not implemented yet"
-    | CustomElement(customElement) -> failwith "Not implemented yet"
+      | CustomWrapper customWrapper -> renderCustomWrapper customWrapper
+    | CustomElement customElement -> renderCustomElement customElement

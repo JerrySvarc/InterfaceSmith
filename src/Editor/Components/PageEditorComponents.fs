@@ -1,48 +1,81 @@
 module Editor.UIComponents.PageEditorComponents
 
-open Feliz
+open Editor.Types.EditorDomain
+open Editor.Types.PageEditorDomain
 open Fable.React
-open Editor.Types.EditorModel
+open Feliz
+open CoreLogic.Types.RenderingTypes
 open Feliz.UseElmish
-open Editor.Utilities.Icons
-open Fable.Core.JsInterop
 open Elmish
-open Editor.Types.PageModel
+open Fable.Core.JsInterop
+open Fable.SimpleJson
 open Editor.Utilities.FileUpload
-open Editor.Operations.CustomRendering
+open Editor.Utilities.Icons
+open Editor.Utilities.JsonParsing
+open Editor.Components.CustomRendering
+open CoreLogic.Operations.DataRecognition
+open CoreLogic.Operations.RenderingCode
+open Editor.Components.OptionComponents
+open CoreLogic.Operations.CodeGeneration
+open Feliz.prop
+open Editor.Utilities.JavaScriptEditor
 
 // PageEditor elmish-style functionality
-let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
-    {
-        IsJavaScriptMode = false
-        JsCode = "// Write your custom JavaScript here"
-    },
-    Cmd.none
+let pageEditorInit (page: Page) : PageEditorModel * Cmd<PageEditorMsg> =
+    let newModel = {
+        PageData = page
+        FileUploadError = false
+        ActiveRightTab = GeneratedCode
+    }
+    newModel, Cmd.none
 
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
-    | ToggleMode ->
-        {
-            model with
-                IsJavaScriptMode = not model.IsJavaScriptMode
-        },
-        Cmd.none
-    | UpdateJsCode code -> { model with JsCode = code }, Cmd.none
+    | UploadData jsonString ->
+        let loadedDataOption = loadJson jsonString
+        match loadedDataOption with
+        | Some(data) ->
+            match data with
+            | JObject obj ->
+                let updatedPage = {model.PageData with CurrentTree = recognizeJson data; ParsedJson = data}
+                {
+                    model with
+                        PageData = updatedPage
+                        FileUploadError = false
+                },
+                Cmd.ofMsg (SyncWithMain updatedPage)
+            | _ -> { model with FileUploadError = true }, Cmd.none
+        | None -> { model with FileUploadError = true }, Cmd.none
 
-(*
+    | ReplaceCode(code, path) ->
+        let newCodes = replace path code model.PageData.CurrentTree
+        let updatedPage = { model.PageData with CurrentTree = newCodes }
+        let newModel = { model with PageData = updatedPage }
+        newModel, Cmd.ofMsg (SyncWithMain updatedPage)
+
+    | SyncWithMain _ ->
+        model, Cmd.none
+    | SetActiveRightTab tab ->
+        { model with ActiveRightTab = tab }, Cmd.none
+
+
 [<ReactComponent>]
 let DataUpload (dispatch) =
     let uploadButtonView onLoad =
         Html.div [
-            prop.className "flex m-1 p-2 "
+            prop.className "inline-flex items-center"
             prop.children [
                 Html.label [
-                    prop.className "block"
+                    prop.className "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
                     prop.children [
+                        ReactBindings.React.createElement(uploadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ],[])
+                        Html.span [
+                            prop.className "font-medium"
+                            prop.text "Upload"
+                        ]
                         Html.input [
                             prop.type' "file"
-                            prop.className
-                                "block w-full text-sm text-black file:m-2 file:p-3  file:rounded-md file:border file:text-sm file:font-semibold file:bg-secondary-300 file:text-black hover:file:bg-secondary-600"
+                            prop.className "hidden"
                             prop.onChange (handleFileEvent onLoad)
                         ]
                     ]
@@ -52,103 +85,172 @@ let DataUpload (dispatch) =
 
     let uploadButton = uploadButtonView (UploadData >> dispatch)
 
-
-    Html.div [ prop.children [ uploadButton ] ]
-
-*)
-
-[<ReactComponent>]
-let PageEditor (page: Page) mainDispatch =
-    let model, dispatch =
-        React.useElmish (pageEditorInit, pageEditorUpdate, [| box page |])
-
     Html.div [
-        prop.className "flex-1 flex overflow-hidden"
-        prop.children [
-            // Left panel
-            Html.div [
-                prop.className "w-1/2 flex flex-col border-r"
-                prop.children [
-                    // JSON data window
-                    Html.div [
-                        prop.className "h-1/2 p-4 overflow-auto border-b"
-                        prop.children [
-                            Html.h3 [ prop.className "font-bold mb-2"; prop.text "JSON Data" ]
-                            Html.p "JSON data will be displayed here"
-                        ]
-                    ]
-                    // Element modification / JavaScript window
-                    Html.div [
-                        prop.className "h-1/2 flex flex-col"
-                        prop.children [
-                            Html.div [
-                                prop.className "flex justify-between items-center p-2 bg-gray-200"
-                                prop.children [
-                                    Html.h3 [
-                                        prop.className "font-bold"
-                                        prop.text (
-                                            if model.IsJavaScriptMode then
-                                                "Custom JavaScript"
-                                            else
-                                                "Element Modification"
-                                        )
-                                    ]
-                                    Html.button [
-                                        prop.className "p-1 rounded hover:bg-gray-300"
-                                        prop.onClick (fun _ -> dispatch ToggleMode)
-                                        prop.children [
-                                            if model.IsJavaScriptMode then
-                                                ReactBindings.React.createElement (
-                                                    settingsIcon,
-                                                    createObj [ "size" ==> 20; "color" ==> "#4A5568" ],
-                                                    []
-                                                )
-                                            else
-                                                ReactBindings.React.createElement (
-                                                    codeIcon,
-                                                    createObj [ "size" ==> 20; "color" ==> "#4A5568" ],
-                                                    []
-                                                )
-                                        ]
-                                    ]
-                                ]
-                            ]
-                            Html.div [
-                                prop.className "flex-1 overflow-auto p-4"
-                                prop.children [
-                                    if model.IsJavaScriptMode then
-                                        Html.textarea [
-                                            prop.className "w-full h-full resize-none border rounded p-2"
-                                            prop.value model.JsCode
-                                            prop.onChange (fun e -> dispatch (UpdateJsCode e))
-                                            prop.placeholder "Write your custom JavaScript here"
-                                        ]
-                                    else
-                                        Html.div [ prop.children [ Html.p "Element modification options go here" ] ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-
-            // Right panel - Preview sandbox
-            Html.div [
-                prop.className "w-1/2 p-4 overflow-auto"
-                prop.children [
-                    Html.h3 [ prop.className "font-bold mb-2"; prop.text "Preview" ]
-                    Html.p "Preview of the application will be shown here"
-                ]
-            ]
-        ]
+        prop.className "m-2"
+        prop.children [ uploadButton ]
     ]
 
-(*
-let rec options (dispatch: Msg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
     | HtmlElement _ -> ElementOption(dispatch, name, code, path)
     | HtmlList _ -> ListOption(dispatch, name, code, path)
     | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
     | Hole _ -> Html.none
+    | CustomWrapper customWrapper -> failwith "todo"
+    | CustomElement customElement -> failwith "todo"
 
-*)
+
+
+[<ReactComponent>]
+let GeneratedCodeView (model: PageEditorModel) =
+    let html, js = generateCode model.PageData.CurrentTree model.PageData.ParsedJson
+    Html.div [
+        prop.className "space-y-4"
+        prop.children [
+            Html.div [
+                prop.className "bg-gray-100 p-4 rounded"
+                prop.children [
+                    Html.h3 [prop.className "font-bold"; prop.text "Generated HTML"]
+                    Html.pre [prop.text html]
+                ]
+            ]
+            Html.div [
+                prop.className "bg-gray-100 p-4 rounded"
+                prop.children [
+                    Html.h3 [prop.className "font-bold"; prop.text "Generated JavaScript"]
+                    Html.pre [prop.text js]
+                ]
+            ]
+        ]
+    ]
+
+[<ReactComponent>]
+let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
+    let options = createObj [
+        "mode" ==> "javascript"
+        "theme" ==> "dark"
+        "lineNumbers" ==> true
+        "autoCloseBrackets" ==> true
+        "matchBrackets" ==> true
+        "showCursorWhenSelecting" ==> true
+        "tabSize" ==> 2
+    ]
+
+    let onChange = fun (_editor: obj) (_data: obj) (value: string) ->
+        dispatch (UpdateJavaScriptCode value)
+
+    Html.div [
+        prop.className "h-full border-solid border-2 border-black overflow-hidden"
+        prop.children [
+            Html.h3 [prop.className "font-bold mb-2"; prop.text "JavaScript Editor"]
+            Html.div [prop.className "font-bold mb-2"; prop.text"Select function to edit"]
+            ReactBindings.React.createElement(
+                CodeMirror,
+                createObj [
+                    "value" ==> (generateJavaScript model.PageData.CurrentTree)
+                    "options" ==> options
+                    "onBeforeChange" ==> onChange
+                    "height" ==> "400px"
+                ],[]
+            )
+        ]
+    ]
+
+
+[<ReactComponent>]
+let SandboxPreviewView (model: PageEditorModel) =
+    // Implement sandbox preview here
+    Html.div [
+        prop.text "Sandbox Preview (To be implemented)"
+    ]
+
+[<ReactComponent>]
+let RightPaneTabButton (label: string) (isActive: bool) (onClick: unit -> unit) =
+    Html.button [
+        prop.className [
+            "px-4 py-2 font-medium rounded-t-lg"
+            if isActive then "bg-white text-blue-600" else "bg-gray-200 text-gray-600 hover:bg-gray-300"
+        ]
+        prop.text label
+        prop.onClick (fun _ -> onClick())
+    ]
+
+
+[<ReactComponent>]
+let PageEditor (page: Page) (dispatch: Msg -> unit) =
+
+    let model, pageEditorDispatch = React.useElmish(
+        (fun () -> pageEditorInit page),
+        (fun msg model ->
+            let newModel, cmd = pageEditorUpdate msg model
+            match msg with
+            | SyncWithMain page ->
+                newModel, Cmd.ofEffect (fun _ -> dispatch (UpdatePage page))
+
+            | _ -> newModel, cmd
+        ),
+        [| box page |]
+    )
+
+    let leftWindow =
+         Html.div [
+                prop.className "w-1/2 p-4 overflow-auto"
+                prop.children [
+                    Html.div [
+                        prop.className "h-1/2 flex flex-col"
+                        prop.children [
+                            Html.h3 [ prop.className "font-bold mb-2"; prop.text "Preview" ]
+                            Html.div [
+                                prop.className "flex center-right mb-2"
+                                prop.children [
+                                    DataUpload pageEditorDispatch
+                                ]
+                            ]
+                            renderingCodeToReactElement
+                                model.PageData.CurrentTree
+                                []
+                                model.PageData.ParsedJson
+                                "Data"
+                                options
+                                pageEditorDispatch
+                        ]
+                    ]
+                ]
+            ]
+
+    let rightWindow =
+        Html.div [
+            prop.className "w-1/2 flex flex-col"
+            prop.children [
+                Html.div [
+                    prop.className "flex border-b"
+                    prop.children [
+                        RightPaneTabButton "Generated Code" (model.ActiveRightTab = GeneratedCode) (fun () -> pageEditorDispatch (SetActiveRightTab GeneratedCode))
+                        RightPaneTabButton "JavaScript Editor" (model.ActiveRightTab = JavaScriptEditor) (fun () -> pageEditorDispatch (SetActiveRightTab JavaScriptEditor))
+                        RightPaneTabButton "Sandbox Preview" (model.ActiveRightTab = SandboxPreview) (fun () -> pageEditorDispatch (SetActiveRightTab SandboxPreview))
+                    ]
+                ]
+                Html.div [
+                    prop.className "flex-1 p-4 bg-white overflow-auto"
+                    prop.children [
+                        match model.ActiveRightTab with
+                        | GeneratedCode -> GeneratedCodeView model
+                        | JavaScriptEditor -> JavaScriptEditorView model pageEditorDispatch
+                        | SandboxPreview -> SandboxPreviewView model
+                    ]
+                ]
+            ]
+        ]
+
+
+    Html.div [
+        prop.className "flex-1 flex overflow-hidden"
+        prop.children [
+            leftWindow
+            rightWindow
+
+        ]
+    ]
+
+
+

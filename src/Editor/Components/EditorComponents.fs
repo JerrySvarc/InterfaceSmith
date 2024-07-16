@@ -4,16 +4,72 @@ open System
 open Browser.Types
 open Feliz
 open Fable.React
-open Editor.Types.EditorModel
+open Editor.Types.EditorDomain
 open Editor.Utilities.Icons
 open Fable.Core.JsInterop
+
+[<ReactComponent>]
+let SideBarContent (model: Model) (dispatch: Msg -> unit) =
+    Html.div [
+        prop.className "p-4 mt-12 "
+        prop.children [
+            if model.IsSidebarOpen then
+                Html.h2 [ prop.className "font-bold mb-4"; prop.text "Pages" ]
+
+                Html.div [
+                    prop.className "space-y-2"
+                    prop.children (
+                        (model.Pages
+                         |> Map.toList
+                         |> List.mapi (fun index (pageId, page) ->
+                             Html.div [
+                                 // Combine pageId and index for a unique key
+                                 prop.key (sprintf "%s-%d" (string pageId) index)
+                                 prop.className (
+                                     sprintf
+                                         "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded %s"
+                                         (if model.ActiveTabId = Some pageId then
+                                              "bg-gray-700"
+                                          else
+                                              "")
+                                 )
+                                 prop.onClick (fun _ -> dispatch (OpenOrSelectTab pageId))
+                                 prop.children [
+                                     ReactBindings.React.createElement (
+                                         fileIcon,
+                                         createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
+                                         []
+                                     )
+                                     Html.span [ prop.className "ml-2"; prop.text page.Name ]
+                                 ]
+                             ]))
+                        @ [ // Append the "New Page" button to the list
+                            Html.button [
+                                prop.key "create-new-page-button"
+                                prop.className
+                                    "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                                prop.onClick (fun _ -> dispatch CreatePage)
+                                prop.children [
+                                    ReactBindings.React.createElement (
+                                        plusIcon,
+                                        createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
+                                        []
+                                    )
+                                    Html.span [ prop.className "ml-2"; prop.text "New Page" ]
+                                ]
+                            ]
+                        ]
+                    )
+                ]
+        ]
+    ]
 
 [<ReactComponent>]
 let Sidebar (model: Model) (dispatch: Msg -> unit) =
     Html.div [
         prop.className (
             sprintf
-                "relative bg-gray-800 text-white transition-all duration-300 %s"
+                "relative bg-gray-800 text-white transition-all duration-300 %s overflow-auto"
                 (if model.IsSidebarOpen then "w-64" else "w-16")
         )
         prop.children [
@@ -43,61 +99,7 @@ let Sidebar (model: Model) (dispatch: Msg -> unit) =
                         )
                 ]
             ]
-
-            // Sidebar content
-            Html.div [
-                prop.className "p-4 mt-12"
-                prop.children [
-                    if model.IsSidebarOpen then
-                        Html.h2 [ prop.className "font-bold mb-4"; prop.text "Pages" ]
-
-                    if model.IsSidebarOpen then
-                        Html.div [
-                            prop.className "space-y-2"
-                            prop.children (
-                                (model.Pages
-                                 |> Map.toList
-                                 |> List.mapi (fun index (pageId, page) -> // Use mapi to get the index
-                                     Html.div [
-                                         prop.key (sprintf "%s-%d" (string pageId) index) // Combine pageId and index for a unique key
-                                         prop.className (
-                                             sprintf
-                                                 "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded %s"
-                                                 (if model.ActiveTabId = Some pageId then
-                                                      "bg-gray-700"
-                                                  else
-                                                      "")
-                                         )
-                                         prop.onClick (fun _ -> dispatch (OpenOrSelectTab pageId))
-                                         prop.children [
-                                             ReactBindings.React.createElement (
-                                                 fileIcon,
-                                                 createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
-                                                 []
-                                             )
-                                             Html.span [ prop.className "ml-2"; prop.text page.Name ]
-                                         ]
-                                     ]))
-                                @ [ // Append the "New Page" button to the list
-                                    Html.button [
-                                        prop.key "create-new-page-button"
-                                        prop.className
-                                            "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
-                                        prop.onClick (fun _ -> dispatch CreatePage)
-                                        prop.children [
-                                            ReactBindings.React.createElement (
-                                                plusIcon,
-                                                createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
-                                                []
-                                            )
-                                            Html.span [ prop.className "ml-2"; prop.text "New Page" ]
-                                        ]
-                                    ]
-                                ]
-                            )
-                        ]
-                ]
-            ]
+            SideBarContent model dispatch
         ]
     ]
 
@@ -151,7 +153,7 @@ let Tabs (model: Model) (dispatch: Msg -> unit) =
                                     sprintf
                                         "px-4 py-2 flex items-center cursor-move %s"
                                         (if model.ActiveTabId = Some tab.Id then
-                                             "bg-gray-200"
+                                             "bg-gray-300"
                                          else
                                              "")
                                 )
@@ -177,9 +179,8 @@ let Tabs (model: Model) (dispatch: Msg -> unit) =
                                     ]
                                 ]
                             ]
-                        | None -> () // Handle case where page doesn't exist for tab
+                        | None -> ()
                 ]
             ]
-        //maybe run sandbox button here
         ]
     ]

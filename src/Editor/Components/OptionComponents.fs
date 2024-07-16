@@ -1,14 +1,16 @@
-module Editor.UIComponents.OptionComponents
+module Editor.Components.OptionComponents
 
+open Editor.Types
 open Fable.React
 open CoreLogic.Types.RenderingTypes
-open Editor.Types.EditorModel
+open Editor.Types.PageEditorDomain
+open CoreLogic.Operations.RenderingCode
 open Feliz
 open Browser.Types
 open Fable.Core.JsInterop
 open Microsoft.FSharp.Reflection
 
-(*
+
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
         prop.className "p-1 bg-white border-2 border-gray-200 rounded"
@@ -72,42 +74,96 @@ let InnerValueMenu (dispatch, innerValue: InnerValue, code: RenderingCode, path)
     | _ -> ErrorDisplay "Invalid code type for InnerValueMenu"
 
 [<ReactComponent>]
-let AttributeMenu (dispatch, attrName: string, attrVal: InnerValue, code: RenderingCode, path) =
-    let (attributeValue, setAttributeValue) = React.useState attrVal
+let AttributeMenu (dispatch: PageEditorMsg -> unit, code: RenderingCode, path: int list) =
+    let (newAttrName, setNewAttrName) = React.useState ""
+    let (newAttrValue, setNewAttrValue) = React.useState ""
 
-    let updateAttribute (newValue: string) =
+    let updateAttribute (name: string) (newValue: string) =
         match code with
         | HtmlElement(tag, attrs, innerValue, handlers) ->
             let updatedAttrs =
                 attrs
-                |> List.map (fun (name, _) ->
-                    if name = attrName then
-                        (name, Constant newValue)
+                |> List.map (fun (attrName, attrValue) ->
+                    if attrName = name then
+                        (attrName, Constant newValue)
                     else
-                        (name, attributeValue))
-
-            dispatch (ReplaceCode(HtmlElement(tag, attrs, innerValue, handlers), path))
-            setAttributeValue (Constant newValue)
+                        (attrName, attrValue))
+            dispatch (ReplaceCode(HtmlElement(tag, updatedAttrs, innerValue, handlers), path))
         | _ -> ()
+
+    let addNewAttribute () =
+        if not (newAttrName.Length < 1) then
+            match code with
+            | HtmlElement(tag, attrs, innerValue, handlers) ->
+                let updatedAttrs = attrs @ [(newAttrName, Constant newAttrValue)]
+                dispatch (ReplaceCode(HtmlElement(tag, updatedAttrs, innerValue, handlers), path))
+                setNewAttrName ""
+                setNewAttrValue ""
+            | _ -> ()
 
     match code with
     | HtmlElement(tag, attrs, innerValue, handlers) ->
-        Html.table [
+        Html.div [
+            prop.className "space-y-2 w-64"
             prop.children [
-                TableRow attrName (InnerValueMenu(dispatch, attributeValue, code, path))
-                match attributeValue with
-                | Constant value ->
-                    TableRow
-                        (attrName + " value")
-                        (Html.input [
-                            prop.className "p-1 bg-white"
-                            prop.value value
-                            prop.onInput (fun e -> updateAttribute (e.target?value |> string))
-                        ])
-                | _ -> ()
+                Html.div [
+                    prop.className "font-medium text-sm mb-2"
+                    prop.text "Attributes"
+                ]
+                for (name, value) in attrs do
+                    Html.div [
+                        prop.key name
+                        prop.className "flex items-center space-x-2 mb-1"
+                        prop.children [
+                            Html.input [
+                                prop.className "p-1 bg-white border rounded text-sm w-1/3"
+                                prop.value name
+                                prop.readOnly true
+                            ]
+                            Html.input [
+                                prop.className "p-1 bg-white border rounded text-sm w-1/3"
+                                prop.value (
+                                    match value with
+                                    | Constant v -> v
+                                    | _ -> ""
+                                )
+                                prop.onChange (fun v -> updateAttribute name v)
+                            ]
+                            Html.button [
+                                prop.className "bg-red-500 text-white text-xs p-1 rounded"
+                                prop.onClick (fun _ ->
+                                    let updatedAttrs = attrs |> List.filter (fun (n, _) -> n <> name)
+                                    dispatch (ReplaceCode(HtmlElement(tag, updatedAttrs, innerValue, handlers), path))
+                                )
+                                prop.text "Remove"
+                            ]
+                        ]
+                    ]
+                Html.div [
+                    prop.className "flex items-center space-x-2 mt-2"
+                    prop.children [
+                        Html.input [
+                            prop.className "p-1 bg-white border rounded text-sm w-1/3"
+                            prop.placeholder "New attribute name"
+                            prop.value newAttrName
+                            prop.onChange setNewAttrName
+                        ]
+                        Html.input [
+                            prop.className "p-1 bg-white border rounded text-sm w-1/3"
+                            prop.placeholder "New attribute value"
+                            prop.value newAttrValue
+                            prop.onChange setNewAttrValue
+                        ]
+                        Html.button [
+                            prop.className "bg-green-500 text-white text-xs p-1 rounded"
+                            prop.onClick (fun _ -> addNewAttribute())
+                            prop.text "Add"
+                        ]
+                    ]
+                ]
             ]
         ]
-    | _ -> ErrorDisplay "Invalid code type for AttributeMenu"
+    | _ -> Html.none  // Return Html.none instead of ErrorDisplay for non-HtmlElement types
 
 [<ReactComponent>]
 let ElementOption (dispatch, name: string, code, path) =
@@ -115,58 +171,56 @@ let ElementOption (dispatch, name: string, code, path) =
 
     let toggleCollapse () = setCollapsed (not collapsed)
 
-    let renderContent () =
-        match code with
-        | HtmlElement(tag, attrs, innerValue, handlers) ->
-            Html.div [
-                prop.className "p-4 bg-white rounded items-center justify-start"
-                prop.children [
-                    Html.h1 [ prop.className "pb-2 text-xl"; prop.text ("Field " + name) ]
-                    Html.table [
-                        prop.className "table-auto w-full shadow-lg bg-white"
-                        prop.children [
-                            Html.thead [
-                                prop.className "text-left"
-                                prop.children [
-                                    Html.tr [
-                                        prop.className "bg-gray-100"
-                                        prop.children [
-                                            Html.th [ prop.className "px-4 py-2"; prop.text "Attribute" ]
-                                            Html.th [ prop.className "px-4 py-2"; prop.text "Value" ]
-                                        ]
-                                    ]
-                                ]
-                            ]
-                            Html.tbody [
-                                prop.children (
-                                    [ TableRow "Tag" (TagMenu(dispatch, code, path)) ]
-                                    @ (attrs
-                                       |> List.map (fun (name, value) ->
-                                           AttributeMenu(dispatch, name, value, code, path)))
-                                    @ [ TableRow "Inner value" (InnerValueMenu(dispatch, innerValue, code, path)) ]
-                                )
-                            ]
+    match code with
+    | HtmlElement(tag, attrs, innerValue, handlers) ->
+        Html.div [
+            prop.className "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden w-64"
+            prop.children [
+                Html.div [
+                    prop.className "flex items-center justify-between p-2 bg-gray-50 cursor-pointer"
+                    prop.onClick (fun _ -> toggleCollapse())
+                    prop.children [
+                        Html.span [
+                            prop.className "font-medium text-sm text-gray-700"
+                            prop.text name
+                        ]
+                        Html.span [
+                            prop.className "text-gray-500"
+                            prop.text (if collapsed then "▼" else "▲")
                         ]
                     ]
                 ]
-            ]
-        | _ -> ErrorDisplay "Invalid code type for ElementOption"
-
-    Html.div [
-        prop.className "flex flex-row p-1 m-1 border-1 items-center border-gray-300 bg-white rounded w-fit h-fit"
-        prop.children [
-            if collapsed then
-                Html.h1 [ prop.className "p-4 bg-white rounded"; prop.text name ]
-            else
-                renderContent ()
-            Html.button [
-                prop.className
-                    "p-1 m-1 border h-fit border-gray-200 bg-secondary-300 hover:bg-secondary-600 text-black rounded-md"
-                prop.text (if collapsed then "Expand" else "Collapse")
-                prop.onClick (fun _ -> toggleCollapse ())
+                if not collapsed then
+                    Html.div [
+                        prop.className "p-2 space-y-2"
+                        prop.children [
+                            Html.div [
+                                prop.className "flex items-center space-x-2"
+                                prop.children [
+                                    Html.span [ prop.className "text-sm text-gray-600"; prop.text "Tag:" ]
+                                    TagMenu(dispatch, code, path)
+                                ]
+                            ]
+                            Html.div [
+                                prop.className "flex items-center space-x-2"
+                                prop.children [
+                                    Html.span [ prop.className "text-sm text-gray-600"; prop.text "Inner Value:" ]
+                                    InnerValueMenu(dispatch, innerValue, code, path)
+                                ]
+                            ]
+                            Html.div [
+                                prop.className "space-y-1"
+                                prop.children [
+                                    Html.span [ prop.className "text-sm text-gray-600"; prop.text "Attributes:" ]
+                                    AttributeMenu(dispatch, code, path)
+                                ]
+                            ]
+                        ]
+                    ]
             ]
         ]
-    ]
+    | _ -> Html.none
+
 
 [<ReactComponent>]
 let ListOption (dispatch, name: string, code, path) =
@@ -209,4 +263,4 @@ let SequenceOption (dispatch, name: string, code, path) =
             ]
         ]
     | _ -> ErrorDisplay "Invalid code type for SequenceOption"
-*)
+

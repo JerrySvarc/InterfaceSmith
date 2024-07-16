@@ -1,4 +1,4 @@
-module Editor.Utilities.DataLoading
+module Editor.Utilities.JsonParsing
 
 open System
 open Fable.SimpleJson

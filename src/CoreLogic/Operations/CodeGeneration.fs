@@ -3,7 +3,7 @@ module CoreLogic.Operations.CodeGeneration
 open System.Text
 open CoreLogic.Types.RenderingTypes
 open CoreLogic.Operations.RenderingCode
-
+open Fable.SimpleJson
 
 let generateAttributeString (attrs: Attributes) =
     attrs
@@ -14,65 +14,67 @@ let generateAttributeString (attrs: Attributes) =
         | Empty -> key)
     |> String.concat " "
 
-// Helper function to generate event handler string
 let generateEventHandlerString (eventHandlers: (string * Javascript) list) =
     eventHandlers
-    |> List.map (fun (event, JSFunction(name, code)) -> $"%s{event}=\"%s{name}(this)\"")
+    |> List.map (fun (event, JSFunction(name, _)) -> $"%s{event}=\"{name}(this)\"")
     |> String.concat " "
 
-// Recursive function to generate HTML
-let rec generateHtml (code: RenderingCode) : string =
+let rec generateHtml (code: RenderingCode) (json: Json) : string =
     let sb = StringBuilder()
 
-    match code with
-    | HtmlElement(tag, attrs, innerValue, eventHandlers) ->
+    match code, json with
+    | HtmlElement(tag, attrs, innerValue, eventHandlers), _ ->
         let tagStr = tagToString tag
         let attrStr = generateAttributeString attrs
         let eventStr = generateEventHandlerString eventHandlers
         sb.Append($"<{tagStr} {attrStr} {eventStr}>") |> ignore
 
         match innerValue with
-        | Data -> sb.Append("{{data}}") |> ignore
+        | Data ->
+            match json with
+            | JString str -> sb.Append(str) |> ignore
+            | _ -> sb.Append(Json.serialize json) |> ignore
         | Constant str -> sb.Append(str) |> ignore
         | Empty -> ()
 
         sb.Append($"</{tagStr}>") |> ignore
 
-    | HtmlList(listType, items, eventHandlers) ->
+    | HtmlList(listType, items, eventHandlers), JArray jsonArray ->
         let listTag = listTypeToString listType
         let eventStr = generateEventHandlerString eventHandlers
         sb.AppendLine($"<{listTag} {eventStr}>") |> ignore
 
-        for item in items do
-            sb.AppendLine($"  <li>{generateHtml item}</li>") |> ignore
+        for item, jsonItem in List.zip items jsonArray do
+            sb.AppendLine($"  <li>{generateHtml item jsonItem}</li>") |> ignore
 
         sb.Append($"</{listTag}>") |> ignore
 
-    | HtmlObject(objType, keyOrdering, codes, eventHandlers) ->
+    | HtmlObject(objType, keyOrdering, codes, eventHandlers), JObject jsonObj ->
         sb.AppendLine("<div>") |> ignore
 
         for key in keyOrdering do
-            match Map.tryFind key codes with
-            | Some code ->
+            match Map.tryFind key codes, Map.tryFind key jsonObj with
+            | Some code, Some jsonValue ->
                 sb.AppendLine($"  <div data-key=\"{key}\">") |> ignore
-                sb.AppendLine($"    {generateHtml code}") |> ignore
+                sb.AppendLine($"    {generateHtml code jsonValue}") |> ignore
                 sb.AppendLine("  </div>") |> ignore
-            | None -> ()
+            | _ -> ()
 
         sb.Append("</div>") |> ignore
 
-    | CustomWrapper wrapper ->
+    | CustomWrapper wrapper, _ ->
         let tagStr = tagToString wrapper.Tag
         let attrStr = generateAttributeString wrapper.Attributes
         let eventStr = generateEventHandlerString wrapper.EventHandlers
         sb.AppendLine($"<{tagStr} {attrStr} {eventStr}>") |> ignore
-        sb.AppendLine(generateHtml wrapper.WrappedCode) |> ignore
+        sb.AppendLine(generateHtml wrapper.WrappedCode json) |> ignore
 
         for child in wrapper.Children do
-            //sb.AppendLine(generateHtml (CustomElement child)) |> ignore
-            sb.Append($"</{tagStr}>") |> ignore
+            sb.AppendLine(generateHtml child json) |> ignore
 
-    | CustomElement element ->
+        sb.Append($"</{tagStr}>") |> ignore
+
+    | CustomElement element, _ ->
         let tagStr = tagToString element.Tag
         let attrStr = generateAttributeString element.Attributes
         let eventStr = generateEventHandlerString element.EventHandlers
@@ -80,16 +82,17 @@ let rec generateHtml (code: RenderingCode) : string =
         sb.Append(element.CustomInnerValue) |> ignore
         sb.Append($"</{tagStr}>") |> ignore
 
-    | Hole fieldHole ->
+    | Hole fieldHole, _ ->
         match fieldHole with
         | Named name -> sb.Append($"{{{{ {name} }}}}") |> ignore
         | UnNamed -> sb.Append("{{ }}") |> ignore
 
+    | _, _ ->
+        // Fallback for mismatched structures
+        sb.Append(Json.serialize json) |> ignore
+
     sb.ToString()
 
-
-
-// Function to generate JavaScript
 let generateJavaScript (code: RenderingCode) : string =
     let sb = StringBuilder()
 
@@ -98,9 +101,10 @@ let generateJavaScript (code: RenderingCode) : string =
         | HtmlElement(_, _, _, handlers)
         | HtmlList(_, _, handlers)
         | HtmlObject(_, _, _, handlers) -> handlers
-        | CustomWrapper wrapper -> wrapper.EventHandlers //@
-        //(wrapper.WrappedCode |> collectEventHandlers) @
-        // (wrapper.Children |> List.collect (fun c -> c.EventHandlers))
+        | CustomWrapper wrapper ->
+            wrapper.EventHandlers @
+            (collectEventHandlers wrapper.WrappedCode) @
+            (wrapper.Children |> List.collect collectEventHandlers)
         | CustomElement element -> element.EventHandlers
         | Hole _ -> []
 
@@ -113,8 +117,7 @@ let generateJavaScript (code: RenderingCode) : string =
 
     sb.ToString()
 
-// Function to generate all code
-let generateCode (code: RenderingCode) =
-    let html = generateHtml code
+let generateCode (code: RenderingCode) (json: Json) =
+    let html = generateHtml code json
     let js = generateJavaScript code
     (html, js)
