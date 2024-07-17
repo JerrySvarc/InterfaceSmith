@@ -1,123 +1,111 @@
 module CoreLogic.Operations.CodeGeneration
 
-open System.Text
 open CoreLogic.Types.RenderingTypes
-open CoreLogic.Operations.RenderingCode
 open Fable.SimpleJson
-
-let generateAttributeString (attrs: Attributes) =
-    attrs
-    |> List.map (fun (key, value) ->
-        match value with
-        | Data -> $"%s{key}=\"{{{{data}}}}\""
-        | Constant str -> $"%s{key}=\"%s{str}\""
-        | Empty -> key)
-    |> String.concat " "
-
-let generateEventHandlerString (eventHandlers: (string * Javascript) list) =
-    eventHandlers
-    |> List.map (fun (event, JSFunction(name, _)) -> $"%s{event}=\"{name}(this)\"")
-    |> String.concat " "
-
-let rec generateHtml (code: RenderingCode) (json: Json) : string =
-    let sb = StringBuilder()
-
-    match code, json with
-    | HtmlElement(tag, attrs, innerValue, eventHandlers), _ ->
-        let tagStr = tagToString tag
-        let attrStr = generateAttributeString attrs
-        let eventStr = generateEventHandlerString eventHandlers
-        sb.Append($"<{tagStr} {attrStr} {eventStr}>") |> ignore
-
-        match innerValue with
-        | Data ->
-            match json with
-            | JString str -> sb.Append(str) |> ignore
-            | _ -> sb.Append(Json.serialize json) |> ignore
-        | Constant str -> sb.Append(str) |> ignore
-        | Empty -> ()
-
-        sb.Append($"</{tagStr}>") |> ignore
-
-    | HtmlList(listType, items, eventHandlers), JArray jsonArray ->
+open CoreLogic.Operations.RenderingCode
+let rec generateHtmlStructure (code: RenderingCode) (path: string) : string =
+    match code with
+    | HtmlElement (tag, attrs, innerValue, handlers) ->
+        let attrString =
+            attrs
+            |> List.map (fun (k, v) ->
+                match v with
+                | Data -> sprintf "%s=\"${%s}\"" k path
+                | Constant str -> sprintf "%s=\"%s\"" k str
+                | Empty -> k)
+            |> String.concat " "
+        let handlerString =
+            handlers
+            |> List.map (fun (event, JSFunction(name, _)) -> sprintf "%s=\"%s(event, data)\"" event name)
+            |> String.concat " "
+        let content =
+            match innerValue with
+            | Data -> sprintf "${%s}" path
+            | Constant str -> str
+            | Empty -> ""
+        sprintf "<%s %s %s>%s</%s>" (tagToString tag) attrString handlerString content (tagToString tag)
+    | HtmlList (listType, items, _) ->
         let listTag = listTypeToString listType
-        let eventStr = generateEventHandlerString eventHandlers
-        sb.AppendLine($"<{listTag} {eventStr}>") |> ignore
+        sprintf "<%s>${%s.map((item, index) => `%s`).join('')}</%s>"
+            listTag
+            path
+            (generateHtmlStructure (List.head items) "item")
+            listTag
+    | HtmlObject (_, keys, codes, _) ->
+        keys
+        |> List.map (fun key ->
+            match Map.tryFind key codes with
+            | Some code -> sprintf "<div data-key=\"%s\">%s</div>" key (generateHtmlStructure code (sprintf "%s.%s" path key))
+            | None -> "")
+        |> String.concat "\n"
+    | CustomWrapper wrapper ->
+        sprintf "<div class=\"custom-wrapper\">%s</div>"
+            (generateHtmlStructure wrapper.WrappedCode path)
+    | CustomElement element ->
+        sprintf "<div class=\"custom-element\">%s</div>" element.CustomInnerValue
+    | Hole _ ->
+        "<!-- Hole -->"
 
-        for item, jsonItem in List.zip items jsonArray do
-            sb.AppendLine($"  <li>{generateHtml item jsonItem}</li>") |> ignore
+let generateRenderFunction (code: RenderingCode) : string =
+        let printFormatToString =
+            sprintf """
+    function renderApp(data) {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+    %s
+      `;
+    }
+    """ (generateHtmlStructure code "data")
 
-        sb.Append($"</{listTag}>") |> ignore
+let generateJavaScript (code: RenderingCode) (customHandlers: Map<string, Javascript>) : string =
+    let customFunctions =
+        customHandlers
+        |> Map.toList
+        |> List.map (fun (name, JSFunction(_, body)) ->
+            sprintf """
+        function %s(event, data) {
+        %s
+          renderApp(data);
+        }""" name body)
+                |> String.concat "\n\n"
 
-    | HtmlObject(objType, keyOrdering, codes, eventHandlers), JObject jsonObj ->
-        sb.AppendLine("<div>") |> ignore
+    let renderFunction = generateRenderFunction code
 
-        for key in keyOrdering do
-            match Map.tryFind key codes, Map.tryFind key jsonObj with
-            | Some code, Some jsonValue ->
-                sb.AppendLine($"  <div data-key=\"{key}\">") |> ignore
-                sb.AppendLine($"    {generateHtml code jsonValue}") |> ignore
-                sb.AppendLine("  </div>") |> ignore
-            | _ -> ()
+    let initCode = """
+document.addEventListener('DOMContentLoaded', function() {
+  const data = JSON.parse(document.getElementById('appData').textContent);
+  renderApp(data);
+});
+"""
 
-        sb.Append("</div>") |> ignore
+    String.concat "\n\n" [customFunctions; renderFunction; initCode]
 
-    | CustomWrapper wrapper, _ ->
-        let tagStr = tagToString wrapper.Tag
-        let attrStr = generateAttributeString wrapper.Attributes
-        let eventStr = generateEventHandlerString wrapper.EventHandlers
-        sb.AppendLine($"<{tagStr} {attrStr} {eventStr}>") |> ignore
-        sb.AppendLine(generateHtml wrapper.WrappedCode json) |> ignore
+let generateFullHtml (code: RenderingCode) (json: Json) (customHandlers: Map<string, Javascript>) : string =
+    let jsonString = Json.serialize json
+    let js = generateJavaScript code customHandlers
 
-        for child in wrapper.Children do
-            sb.AppendLine(generateHtml child json) |> ignore
+    sprintf """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Data-Driven App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div id="app" class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md"></div>
+    <script id="appData" type="application/json">
+%s
+    </script>
+    <script>
+%s
+    </script>
+</body>
+</html>
+""" jsonString
 
-        sb.Append($"</{tagStr}>") |> ignore
-
-    | CustomElement element, _ ->
-        let tagStr = tagToString element.Tag
-        let attrStr = generateAttributeString element.Attributes
-        let eventStr = generateEventHandlerString element.EventHandlers
-        sb.Append($"<{tagStr} {attrStr} {eventStr}>") |> ignore
-        sb.Append(element.CustomInnerValue) |> ignore
-        sb.Append($"</{tagStr}>") |> ignore
-
-    | Hole fieldHole, _ ->
-        match fieldHole with
-        | Named name -> sb.Append($"{{{{ {name} }}}}") |> ignore
-        | UnNamed -> sb.Append("{{ }}") |> ignore
-
-    | _, _ ->
-        // Fallback for mismatched structures
-        sb.Append(Json.serialize json) |> ignore
-
-    sb.ToString()
-
-let generateJavaScript (code: RenderingCode) : string =
-    let sb = StringBuilder()
-
-    let rec collectEventHandlers (code: RenderingCode) : (string * Javascript) list =
-        match code with
-        | HtmlElement(_, _, _, handlers)
-        | HtmlList(_, _, handlers)
-        | HtmlObject(_, _, _, handlers) -> handlers
-        | CustomWrapper wrapper ->
-            wrapper.EventHandlers @
-            (collectEventHandlers wrapper.WrappedCode) @
-            (wrapper.Children |> List.collect collectEventHandlers)
-        | CustomElement element -> element.EventHandlers
-        | Hole _ -> []
-
-    let handlers = collectEventHandlers code
-
-    for (_, JSFunction(name, code)) in handlers do
-        sb.AppendLine($"function {name}(element) {{") |> ignore
-        sb.AppendLine(code) |> ignore
-        sb.AppendLine("}") |> ignore
-
-    sb.ToString()
-
-let generateCode (code: RenderingCode) (json: Json) =
-    let html = generateHtml code json
-    let js = generateJavaScript code
-    (html, js)
+let generateCode (code: RenderingCode) (json: Json) (customHandlers: Map<string, Javascript>) : string * string =
+    let fullHtml = generateFullHtml code json customHandlers
+    let js = generateJavaScript code customHandlers
+    (fullHtml, js)

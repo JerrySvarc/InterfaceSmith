@@ -100,25 +100,47 @@ let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: i
     | CustomElement customElement -> failwith "todo"
 
 
-
 [<ReactComponent>]
 let GeneratedCodeView (model: PageEditorModel) =
-    let html, js = generateCode model.PageData.CurrentTree model.PageData.ParsedJson
+    let fullHtml, js = generateCode model.PageData.CurrentTree model.PageData.ParsedJson model.PageData.CustomHandlers
+
     Html.div [
         prop.className "space-y-4"
         prop.children [
             Html.div [
                 prop.className "bg-gray-100 p-4 rounded"
                 prop.children [
+                    Html.h3 [prop.className "font-bold"; prop.text "Generated App Preview"]
+                    Html.iframe [
+                        prop.className "w-full h-96 border-2 border-gray-300 rounded"
+                        prop.sandbox [
+
+                        ]
+
+
+                    ]
+                ]
+            ]
+            Html.div [
+                prop.className "bg-gray-100 p-4 rounded"
+                prop.children [
                     Html.h3 [prop.className "font-bold"; prop.text "Generated HTML"]
-                    Html.pre [prop.text html]
+                    Html.textarea [
+                        prop.className "w-full h-48 p-2 font-mono text-sm"
+                        prop.value fullHtml
+                        prop.readOnly true
+                    ]
                 ]
             ]
             Html.div [
                 prop.className "bg-gray-100 p-4 rounded"
                 prop.children [
                     Html.h3 [prop.className "font-bold"; prop.text "Generated JavaScript"]
-                    Html.pre [prop.text js]
+                    Html.textarea [
+                        prop.className "w-full h-48 p-2 font-mono text-sm"
+                        prop.value js
+                        prop.readOnly true
+                    ]
                 ]
             ]
         ]
