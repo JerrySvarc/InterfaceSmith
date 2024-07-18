@@ -76,22 +76,21 @@ let EventHandlerMenu
     Html.div [
         prop.className "mb-4"
         prop.children [
-            Html.h3 [ prop.className "text-lg font-medium mb-2"; prop.text "Event Handlers" ]
+            Html.h3 [ prop.className "text-xs font-medium mb-2"; prop.text "Event Handlers" ]
             if not (System.String.IsNullOrEmpty errorMessage) then
                 Html.div [
                     prop.className "bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mb-2"
                     prop.text errorMessage
                 ]
             Html.div [
-                prop.className "flex space-x-2 mb-2"
+                prop.className "flex "
                 prop.children [
                     Html.select [
                         prop.className "flex-grow p-2 border border-gray-300 rounded-md"
                         prop.value selectedEvent
                         prop.onChange (fun (e: Browser.Types.Event) ->
                             setSelectedEvent (e.target?value |> string)
-                            setSelectedHandler "" // Reset handler selection when event changes
-                        )
+                            setSelectedHandler "")
                         prop.children (
                             Html.option [ prop.value ""; prop.text "Select an event" ]
                             :: (availableEvents
@@ -280,7 +279,7 @@ let AttributeItem (name: string, value: InnerValue, onUpdate: InnerValue -> unit
         prop.className "flex items-center space-x-2 mb-2"
         prop.children [
             Html.input [
-                prop.className "bg-gray-100 border rounded p-1 flex-grow"
+                prop.className "bg-gray-100 border rounded p-1 flex-grow overflow-auto w-16"
                 prop.value name
                 prop.readOnly true
             ]

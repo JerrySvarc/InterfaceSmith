@@ -27,11 +27,11 @@ let rec renderingCodeToReactElement
     let renderWithOptions (preview: ReactElement) =
         if showOptions then
             Html.div [
-                prop.className "flex items-start space-x-4 bg-white rounded-md m-1"
+                prop.className "flex space-x-4 bg-white rounded-md m-1"
                 prop.children [
                     Html.div [ prop.className "flex-grow"; prop.children [ preview ] ]
                     Html.div [
-                        prop.className "flex-shrink-0 w-64 p-2 border-l border-gray-200"
+                        prop.className " w-64 p-2 border-l border-gray-200"
                         prop.children [ options dispatch code path name page ]
                     ]
                 ]

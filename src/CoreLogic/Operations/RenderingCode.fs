@@ -93,6 +93,8 @@ let stringToObjType str =
     | _ -> failwith "Invalid object type"
 
 
+
+// Replaces a RenderingCode element at the given path with the replacement element
 let rec replace (path: int list) (replacementElement: RenderingCode) (currentCode: RenderingCode) =
     match path with
     | [] -> replacementElement
