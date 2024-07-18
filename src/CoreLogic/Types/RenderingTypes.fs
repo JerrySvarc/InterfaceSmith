@@ -26,6 +26,8 @@ type Tag =
     | Ol
     | Ul
     | Button
+    | Label
+
 
 type Attribute = string * InnerValue
 
@@ -45,6 +47,7 @@ type ObjType =
     | Span
     | Article
     | Section
+    | Form
 
 type FieldHole =
     | Named of string
@@ -67,8 +70,7 @@ and Javascript = JSFunction of name: string * code: string
 
 
 // Potential extension of the RenderingCode type
-// Somewhat breaks the approach we are trying to implement, as these elements would not be created based on concrete
-// data
+// Somewhat breaks the approach we are trying to implement, as these elements would not be created based on concrete data
 
 // Potential definition of a custom wrapper around an existing RenderingCode element with children CustomElements
 // Primary motivation is the ability to add an existing RenderingCode as an inner value of a new custom element

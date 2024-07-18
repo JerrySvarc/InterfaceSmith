@@ -122,11 +122,17 @@ let DataUpload (dispatch) =
     Html.div [ prop.className "m-2"; prop.children [ uploadButton ] ]
 
 
-let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+let rec options
+    (dispatch: PageEditorMsg -> unit)
+    (code: RenderingCode)
+    (path: int list)
+    (name: string)
+    (page: Page)
+    : ReactElement =
     match code with
-    | HtmlElement _ -> ElementOption(dispatch, name, code, path)
-    | HtmlList _ -> ListOption(dispatch, name, code, path)
-    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
+    | HtmlElement _ -> ElementOption(dispatch, name, code, path, page)
+    | HtmlList _ -> ListOption(dispatch, name, code, path, page)
+    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path, page)
     | Hole _ -> Html.none
 
 
@@ -297,6 +303,7 @@ let PageEditor (page: Page) (dispatch: Msg -> unit) =
                             options
                             pageEditorDispatch
                             true
+                            model.PageData
                     ]
                 ]
             ]

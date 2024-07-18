@@ -11,15 +11,17 @@ open Fable.Core.JsInterop
 open Editor.Types.PageEditorDomain
 open CoreLogic.Operations.DataRecognition
 open Editor.Utilities.Icons
+open Editor.Types.EditorDomain
 
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
     (json: Json)
     (name: string)
-    (options: (PageEditorMsg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
+    (options: (PageEditorMsg -> unit) -> RenderingCode -> list<int> -> string -> Page -> ReactElement)
     (dispatch: PageEditorMsg -> unit)
     (showOptions: bool)
+    (page: Page)
     : ReactElement =
 
     let renderWithOptions (preview: ReactElement) =
@@ -30,7 +32,7 @@ let rec renderingCodeToReactElement
                     Html.div [ prop.className "flex-grow"; prop.children [ preview ] ]
                     Html.div [
                         prop.className "flex-shrink-0 w-64 p-2 border-l border-gray-200"
-                        prop.children [ options dispatch code path name ]
+                        prop.children [ options dispatch code path name page ]
                     ]
                 ]
             ]
@@ -77,11 +79,27 @@ let rec renderingCodeToReactElement
                 |> List.mapi (fun index code ->
                     let arrayItem = List.item index array
 
-                    let renderedItem =
+                    let renderedItem: ReactElement =
                         if index = 0 then
-                            renderingCodeToReactElement code (path @ [ index ]) arrayItem name options dispatch true
+                            renderingCodeToReactElement
+                                code
+                                (path @ [ index ])
+                                arrayItem
+                                name
+                                options
+                                dispatch
+                                true
+                                page
                         else
-                            renderingCodeToReactElement code (path @ [ index ]) arrayItem name options dispatch false
+                            renderingCodeToReactElement
+                                code
+                                (path @ [ index ])
+                                arrayItem
+                                name
+                                options
+                                dispatch
+                                false
+                                page
 
                     Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
 
@@ -102,7 +120,7 @@ let rec renderingCodeToReactElement
 
                     match element, jsonValue with
                     | Some code, Some value ->
-                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch showOptions
+                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch showOptions page
                     | None, Some(_) ->
                         Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.") ]
                     | Some(_), None ->

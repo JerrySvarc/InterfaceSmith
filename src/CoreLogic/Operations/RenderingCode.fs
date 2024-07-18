@@ -29,6 +29,7 @@ let tagToString tag =
     | Li -> "li"
     | Ul -> "ul"
     | Button -> "button"
+    | Label -> "label"
 
 let stringToTag str =
     match str with
@@ -57,6 +58,7 @@ let stringToTag str =
     | "li" -> Li
     | "ul" -> Ul
     | "button" -> Button
+    | "label" -> Label
     | _ -> failwith "Invalid tag"
 
 
@@ -79,6 +81,7 @@ let objTypeToString objType =
     | Span -> "span"
     | Article -> "article"
     | Section -> "section"
+    | Form -> "form"
 
 let stringToObjType str =
     match str with
@@ -86,6 +89,7 @@ let stringToObjType str =
     | "span" -> Span
     | "article" -> Article
     | "section" -> Section
+    | "form" -> Form
     | _ -> failwith "Invalid object type"
 
 
