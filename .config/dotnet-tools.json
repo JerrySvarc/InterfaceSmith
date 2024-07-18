@@ -3,28 +3,32 @@
   "isRoot": true,
   "tools": {
     "paket": {
-      "version": "7.0.2",
+      "version": "8.0.0",
       "commands": [
         "paket"
-      ]
+      ],
+      "rollForward": false
     },
     "fable": {
-      "version": "3.7.5",
+      "version": "4.6.0",
       "commands": [
         "fable"
-      ]
-    },
-    "fantomas-tool": {
-      "version": "4.7.1",
-      "commands": [
-        "fantomas"
-      ]
+      ],
+      "rollForward": false
     },
     "femto": {
-      "version": "0.12.0",
+      "version": "0.19.0",
       "commands": [
         "femto"
-      ]
+      ],
+      "rollForward": false
+    },
+    "fantomas": {
+      "version": "6.3.4",
+      "commands": [
+        "fantomas"
+      ],
+      "rollForward": false
     }
   }
 }

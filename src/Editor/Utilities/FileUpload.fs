@@ -1,7 +1,7 @@
 // Followed the guide described in the SAFE stack docs.
 // https://safe-stack.github.io/docs/recipes/client-server/upload-file-from-client/
 
-module FileUpload
+module Editor.Utilities.FileUpload
 
 open Fable.React
 open Fable.React.Props
@@ -10,8 +10,7 @@ open Fable.Core.JsInterop
 open Browser.Types
 
 let isJsonFile (file: Browser.Types.File) =
-    file.GetType().Name.EndsWith("File")
-    && file.name.EndsWith(".json")
+    file.GetType().Name.EndsWith("File") && file.name.EndsWith(".json")
 
 let handleFileEvent onLoad (fileEvent: Browser.Types.Event) =
     let files: Browser.Types.FileList = !!fileEvent.target?files

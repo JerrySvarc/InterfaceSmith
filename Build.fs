@@ -7,33 +7,46 @@ open Helpers
 
 initializeContext ()
 
-let clientPath = Path.getFullName "src/"
+let sourcePath = Path.getFullName "src/"
 let deployPath = Path.getFullName "deploy"
-let clientTestsPath = Path.getFullName "tests/"
+
+let testsPath = Path.getFullName "tests/"
 
 Target.create "Clean" (fun _ ->
     Shell.cleanDir deployPath
-    run dotnet "fable clean --yes" clientPath // Delete *.fs.js files created by Fable
-)
+    run dotnet [ "fable"; "clean"; "--yes" ] sourcePath)
 
-Target.create "InstallClient" (fun _ -> run npm "install" ".")
+Target.create "InstallClient" (fun _ -> run npm [ "install" ] ".")
 
-Target.create "Bundle" (fun _ -> run dotnet "fable -o output -s --run npm run build" clientPath)
+Target.create "Bundle" (fun _ ->
+    [
+        "client", dotnet [ "fable"; "-o"; "output"; "-s"; "--run"; "npx"; "vite"; "build" ] sourcePath
+    ]
+    |> runParallel)
 
-Target.create "Run" (fun _ -> run dotnet "fable watch -o output -s --run npm run start" clientPath)
+Target.create "Run" (fun _ ->
+    [
+        "client", dotnet [ "fable"; "watch"; "-o"; "output"; "-s"; "--run"; "npx"; "vite" ] sourcePath
+    ]
+    |> runParallel)
 
-Target.create "RunTests" (fun _ -> run dotnet "fable watch -o output -s --run npm run test:live" clientTestsPath)
+Target.create "RunTests" (fun _ ->
+    [
+        "client", dotnet [ "fable"; "watch"; "-o"; "output"; "-s"; "--run"; "npx"; "vite" ] testsPath
+    ]
+    |> runParallel)
 
-Target.create "Format" (fun _ -> run dotnet "fantomas . -r" "src")
+Target.create "Format" (fun _ -> run dotnet [ "fantomas"; "." ] ".")
 
 open Fake.Core.TargetOperators
 
-let dependencies =
-    [ "Clean" ==> "InstallClient" ==> "Bundle"
+let dependencies = [
+    "Clean" ==> "InstallClient" ==> "Bundle"
 
-      "Clean" ==> "InstallClient" ==> "Run"
+    "Clean" ==> "InstallClient" ==> "Run"
 
-      "InstallClient" ==> "RunTests" ]
+    "InstallClient" ==> "RunTests"
+]
 
 [<EntryPoint>]
 let main args = runOrDefault args
