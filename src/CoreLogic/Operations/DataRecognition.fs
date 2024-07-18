@@ -15,6 +15,6 @@ let recognizeJson (json: Json) =
     | JObject obj ->
         let keys = obj.Keys |> List.ofSeq
         let codes = obj |> Map.map (fun key value -> Hole(Named key))
-        HtmlObject(ObjType.Empty, keys, codes, [])
+        HtmlObject(Div, keys, codes, [])
     | JNull -> Hole UnNamed
-    | _ -> HtmlElement(Div, [], Data, [])
+    | _ -> HtmlElement(Tag.Div, [], Data, [])

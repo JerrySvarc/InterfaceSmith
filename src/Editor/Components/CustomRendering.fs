@@ -10,8 +10,8 @@ open Browser
 open Fable.Core.JsInterop
 open Editor.Types.PageEditorDomain
 open CoreLogic.Operations.DataRecognition
+open Editor.Utilities.Icons
 
-//Custom rendering function for displaying preview with interwoven menus for the elements
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
@@ -19,12 +19,23 @@ let rec renderingCodeToReactElement
     (name: string)
     (options: (PageEditorMsg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
     (dispatch: PageEditorMsg -> unit)
+    (showOptions: bool)
     : ReactElement =
 
     let renderWithOptions (preview: ReactElement) =
-        Html.div [
-            prop.children [ preview; options dispatch code path name ]
-        ]
+        if showOptions then
+            Html.div [
+                prop.className "flex items-start space-x-4 bg-white rounded-md m-1"
+                prop.children [
+                    Html.div [ prop.className "flex-grow"; prop.children [ preview ] ]
+                    Html.div [
+                        prop.className "flex-shrink-0 w-64 p-2 border-l border-gray-200"
+                        prop.children [ options dispatch code path name ]
+                    ]
+                ]
+            ]
+        else
+            preview
 
     let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =
         try
@@ -42,8 +53,7 @@ let rec renderingCodeToReactElement
                 match value with
                 | Data -> key, box (json |> Json.convertFromJsonAs<string>)
                 | Constant s -> (key, box s)
-                | InnerValue.Empty -> (key, box value)
-                )
+                | InnerValue.Empty -> (key, box value))
             |> List.append [ ("className", box "preview") ]
             |> createObj
 
@@ -68,13 +78,10 @@ let rec renderingCodeToReactElement
                     let arrayItem = List.item index array
 
                     let renderedItem =
-                        renderingCodeToReactElement
-                            code
-                            (path @ [ index ])
-                            arrayItem
-                            name
-                            options
-                            dispatch
+                        if index = 0 then
+                            renderingCodeToReactElement code (path @ [ index ]) arrayItem name options dispatch true
+                        else
+                            renderingCodeToReactElement code (path @ [ index ]) arrayItem name options dispatch false
 
                     Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
 
@@ -95,8 +102,7 @@ let rec renderingCodeToReactElement
 
                     match element, jsonValue with
                     | Some code, Some value ->
-                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch
-                    //TODO: styling
+                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch showOptions
                     | None, Some(_) ->
                         Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.") ]
                     | Some(_), None ->
@@ -104,7 +110,7 @@ let rec renderingCodeToReactElement
                     | None, None ->
                         Html.div [
                             prop.text (
-                                "JSON object value and RenderingCode element  with the name "
+                                "JSON object value and RenderingCode element with the name "
                                 + key
                                 + " not found."
                             )
@@ -114,64 +120,36 @@ let rec renderingCodeToReactElement
             |> renderWithOptions
         | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
 
-
-
-    let renderHole (named: FieldHole) =
+    let renderHole (hole: FieldHole) =
         let holeName =
-            match named with
+            match hole with
             | UnNamed -> "Unnamed"
             | Named n -> n
 
-        let fieldType = recognizeJson json
-        options dispatch fieldType path holeName
+        let newElement = recognizeJson json
 
-    let renderCustomWrapper (customWrapper: CustomWrapper) =
-        let attributes =
-            customWrapper.Attributes
-            |> List.map (fun (key, value) -> (key, box value))
-            |> List.append [ ("className", box "preview custom-wrapper") ]
-            |> createObj
-
-        let wrappedContent =
-            renderingCodeToReactElement
-                customWrapper.WrappedCode
-                (path)
-                json
-                name
-                options
-                dispatch
-
-        let children =
-            wrappedContent ::
-            (customWrapper.Children
-             |> List.mapi (fun index child ->
-                 renderingCodeToReactElement
-                     child
-                     (path @ [-1; index])
-                     json
-                     name
-                     options
-                     dispatch))
-
-        createPreview (tagToString customWrapper.Tag) attributes children
-        |> renderWithOptions
-
-    let renderCustomElement (customElement: CustomElement) =
-        let attributes =
-            customElement.Attributes
-            |> List.map (fun (key, value) -> (key, box value))
-            |> List.append [ ("className", box "preview custom-element") ]
-            |> createObj
-
-        let children = [ Html.text customElement.CustomInnerValue ]
-
-        createPreview (tagToString customElement.Tag) attributes children
-        |> renderWithOptions
+        Html.div [
+            prop.className "flex items-center justify-between p-2 bg-gray-100 rounded"
+            prop.children [
+                Html.span [ prop.className "text-sm text-gray-600"; prop.text ("Hole: " + holeName) ]
+                Html.button [
+                    prop.className
+                        "px-2 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center space-x-1"
+                    prop.onClick (fun _ -> dispatch (ReplaceCode(newElement, path)))
+                    prop.children [
+                        ReactBindings.React.createElement (
+                            replaceIcon,
+                            createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
+                            []
+                        )
+                        Html.span [ prop.text "Replace" ]
+                    ]
+                ]
+            ]
+        ]
 
     match code with
     | HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
     | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
     | HtmlObject(objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
     | Hole named -> renderHole named
-      | CustomWrapper customWrapper -> renderCustomWrapper customWrapper
-    | CustomElement customElement -> renderCustomElement customElement

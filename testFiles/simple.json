@@ -1,15 +1,13 @@
 {
-    "data": {
-        "name": "Data",
-        "type": "Android",
-        "value": "Invaluable",
-        "attributes": {
-            "intelligence": "massive",
-            "computation": "Trillions of computations per second.",
-            "storage": {
-                "type": "SSD",
-                "capacity": "Infinite"
-            }
+    "name": "Data",
+    "type": "Android",
+    "value": "Invaluable",
+    "attributes": {
+        "intelligence": "massive",
+        "computation": "Trillions of computations per second.",
+        "storage": {
+            "type": "SSD",
+            "capacity": "Infinite"
         }
     }
 }

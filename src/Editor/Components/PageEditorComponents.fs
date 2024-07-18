@@ -17,27 +17,42 @@ open CoreLogic.Operations.DataRecognition
 open CoreLogic.Operations.RenderingCode
 open Editor.Components.OptionComponents
 open CoreLogic.Operations.CodeGeneration
-open Feliz.prop
 open Editor.Utilities.JavaScriptEditor
+open Browser.Types
 
 // PageEditor elmish-style functionality
+// This is the main component for the page editor
+// It contains the left and right panes and the logic for updating the page data
+// It also contains the logic for updating the main page data
+// when the user makes changes to the page data
+
 let pageEditorInit (page: Page) : PageEditorModel * Cmd<PageEditorMsg> =
     let newModel = {
         PageData = page
         FileUploadError = false
-        ActiveRightTab = GeneratedCode
+        ActiveRightTab = JavaScriptEditor
     }
-    newModel, Cmd.none
 
+    newModel, Cmd.none
+// This function is used to update the page editor model
+// It is called when the user interacts with the page editor
+// It updates the page editor model and sends a message to the main page via Cmd.ofMsg
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
     | UploadData jsonString ->
         let loadedDataOption = loadJson jsonString
+
         match loadedDataOption with
         | Some(data) ->
             match data with
             | JObject obj ->
-                let updatedPage = {model.PageData with CurrentTree = recognizeJson data; ParsedJson = data}
+                let updatedPage = {
+                    model.PageData with
+                        CurrentTree = recognizeJson data
+                        ParsedJson = data
+                        JsonString = jsonString
+                }
+
                 {
                     model with
                         PageData = updatedPage
@@ -49,16 +64,33 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 
     | ReplaceCode(code, path) ->
         let newCodes = replace path code model.PageData.CurrentTree
-        let updatedPage = { model.PageData with CurrentTree = newCodes }
+
+        let updatedPage = {
+            model.PageData with
+                CurrentTree = newCodes
+        }
+
         let newModel = { model with PageData = updatedPage }
         newModel, Cmd.ofMsg (SyncWithMain updatedPage)
 
-    | SyncWithMain _ ->
-        model, Cmd.none
-    | SetActiveRightTab tab ->
-        { model with ActiveRightTab = tab }, Cmd.none
+    | SyncWithMain _ -> model, Cmd.none
+    | SetActiveRightTab tab -> { model with ActiveRightTab = tab }, Cmd.none
+    | AddHandler(name, code) ->
+        let updatedHandlers = model.PageData.CustomHandlers.Add(name, code)
+
+        let updatedPage = {
+            model.PageData with
+                CustomHandlers = updatedHandlers
+        }
+
+        { model with PageData = updatedPage }, Cmd.ofMsg (SyncWithMain updatedPage)
+    | RemoveHandler name -> failwith "todo"
+    | TogglePreview -> failwith "Not Implemented"
 
 
+
+// These are the main components that make up the page editor
+// They are used to render the page editor and handle user interactions
 [<ReactComponent>]
 let DataUpload (dispatch) =
     let uploadButtonView onLoad =
@@ -66,13 +98,15 @@ let DataUpload (dispatch) =
             prop.className "inline-flex items-center"
             prop.children [
                 Html.label [
-                    prop.className "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                    prop.className
+                        "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
                     prop.children [
-                        ReactBindings.React.createElement(uploadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ],[])
-                        Html.span [
-                            prop.className "font-medium"
-                            prop.text "Upload"
-                        ]
+                        ReactBindings.React.createElement (
+                            uploadIcon,
+                            createObj [ "size" ==> 16; "className" ==> "mr-2" ],
+                            []
+                        )
+                        Html.span [ prop.className "font-medium"; prop.text "Upload" ]
                         Html.input [
                             prop.type' "file"
                             prop.className "hidden"
@@ -85,10 +119,8 @@ let DataUpload (dispatch) =
 
     let uploadButton = uploadButtonView (UploadData >> dispatch)
 
-    Html.div [
-        prop.className "m-2"
-        prop.children [ uploadButton ]
-    ]
+    Html.div [ prop.className "m-2"; prop.children [ uploadButton ] ]
+
 
 let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
@@ -96,94 +128,123 @@ let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: i
     | HtmlList _ -> ListOption(dispatch, name, code, path)
     | HtmlObject(_) -> SequenceOption(dispatch, name, code, path)
     | Hole _ -> Html.none
-    | CustomWrapper customWrapper -> failwith "todo"
-    | CustomElement customElement -> failwith "todo"
 
 
+// Custom handler editor component used to add custom JavaScript event handlers
 [<ReactComponent>]
-let GeneratedCodeView (model: PageEditorModel) =
-    let fullHtml, js = generateCode model.PageData.CurrentTree model.PageData.ParsedJson model.PageData.CustomHandlers
+let CustomHandlerEditor (handlers: Map<string, Javascript>) (dispatch: PageEditorMsg -> unit) =
+    let (selectedHandler, setSelectedHandler) = React.useState ("")
+    let (handlerName, setHandlerName) = React.useState ("")
+    let (handlerCode, setHandlerCode) = React.useState ("")
+
+    let handleSave () =
+        if handlerName <> "" && handlerCode <> "" then
+            dispatch (AddHandler(handlerName, JSFunction(handlerName, handlerCode)))
+            setHandlerName ("")
+            setHandlerCode ("")
 
     Html.div [
-        prop.className "space-y-4"
+        prop.className "flex flex-col h-full"
         prop.children [
             Html.div [
-                prop.className "bg-gray-100 p-4 rounded"
+                prop.className "mb-4"
                 prop.children [
-                    Html.h3 [prop.className "font-bold"; prop.text "Generated App Preview"]
-                    Html.iframe [
-                        prop.className "w-full h-96 border-2 border-gray-300 rounded"
-                        prop.sandbox [
+                    Html.select [
+                        prop.className "w-full p-2 border rounded"
+                        prop.onChange (fun (e: Event) ->
+                            let value = e.target?value
+                            setSelectedHandler value
 
+                            match handlers.TryFind value with
+                            | Some(JSFunction(_, code)) ->
+                                setHandlerName value
+                                setHandlerCode code
+                            | None -> ())
+                        prop.children [
+                            Html.option [ prop.value ""; prop.text "Select a handler" ]
+                            for KeyValue(name, _) in handlers do
+                                Html.option [ prop.value name; prop.text name ]
                         ]
-
-
                     ]
                 ]
             ]
-            Html.div [
-                prop.className "bg-gray-100 p-4 rounded"
-                prop.children [
-                    Html.h3 [prop.className "font-bold"; prop.text "Generated HTML"]
-                    Html.textarea [
-                        prop.className "w-full h-48 p-2 font-mono text-sm"
-                        prop.value fullHtml
-                        prop.readOnly true
-                    ]
-                ]
+            Html.input [
+                prop.className "p-2 mb-4 border rounded"
+                prop.placeholder "Handler name"
+                prop.value handlerName
+                prop.onChange setHandlerName
             ]
             Html.div [
-                prop.className "bg-gray-100 p-4 rounded"
+                prop.className "flex-grow mb-4"
                 prop.children [
-                    Html.h3 [prop.className "font-bold"; prop.text "Generated JavaScript"]
-                    Html.textarea [
-                        prop.className "w-full h-48 p-2 font-mono text-sm"
-                        prop.value js
-                        prop.readOnly true
-                    ]
+                    ReactBindings.React.createElement (
+                        CodeMirror,
+                        createObj [
+                            "value" ==> handlerCode
+                            "onChange" ==> setHandlerCode
+                            "extensions" ==> [| javascript?javascript () |]
+                            "theme" ==> "dark"
+                        ],
+                        []
+                    )
                 ]
+            ]
+            Html.button [
+                prop.className "p-2 bg-blue-500 text-white rounded"
+                prop.onClick (fun _ -> handleSave ())
+                prop.text "Save Handler"
             ]
         ]
     ]
 
+
 [<ReactComponent>]
 let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
-    let options = createObj [
-        "mode" ==> "javascript"
-        "theme" ==> "dark"
-        "lineNumbers" ==> true
-        "autoCloseBrackets" ==> true
-        "matchBrackets" ==> true
-        "showCursorWhenSelecting" ==> true
-        "tabSize" ==> 2
-    ]
+    let fullHtml, js =
+        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
 
-    let onChange = fun (_editor: obj) (_data: obj) (value: string) ->
-        dispatch (UpdateJavaScriptCode value)
+    let extensions = [| javascript?javascript (); html?html (); css?css () |]
+
+    //let onChange = fun value -> dispatch (UpdateHtmlCode value)
 
     Html.div [
-        prop.className "h-full border-solid border-2 border-black overflow-hidden"
+        prop.className "flex flex-col h-full border-solid border-2 border-black overflow-auto"
         prop.children [
-            Html.h3 [prop.className "font-bold mb-2"; prop.text "JavaScript Editor"]
-            Html.div [prop.className "font-bold mb-2"; prop.text"Select function to edit"]
-            ReactBindings.React.createElement(
-                CodeMirror,
-                createObj [
-                    "value" ==> (generateJavaScript model.PageData.CurrentTree)
-                    "options" ==> options
-                    "onBeforeChange" ==> onChange
-                    "height" ==> "400px"
-                ],[]
-            )
+            Html.h3 [ prop.className "font-bold mb-2 px-2"; prop.text "Code preview" ]
+            Html.div [
+                prop.className "flex-grow overflow-auto"
+                prop.children [
+                    ReactBindings.React.createElement (
+                        CodeMirror,
+                        createObj [
+                            "value" ==> fullHtml
+                            "extensions" ==> extensions
+                            //"onChange" ==> onChange
+                            "theme" ==> "dark"
+                            "readOnly" ==> "true"
+                        ],
+                        []
+                    )
+                ]
+            ]
         ]
     ]
 
 
 [<ReactComponent>]
 let SandboxPreviewView (model: PageEditorModel) =
-    // Implement sandbox preview here
-    Html.div [
-        prop.text "Sandbox Preview (To be implemented)"
+    let fullHtml, js =
+        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
+
+    Html.iframe [
+        prop.src "about:blank"
+        prop.custom ("sandbox", "allow-scripts allow-forms allow-modals")
+        prop.custom ("srcDoc", fullHtml)
+        prop.style [
+            style.width (length.percent 100)
+            style.height (length.px 500)
+            style.border (1, borderStyle.solid, color.gray)
+        ]
     ]
 
 [<ReactComponent>]
@@ -191,74 +252,78 @@ let RightPaneTabButton (label: string) (isActive: bool) (onClick: unit -> unit) 
     Html.button [
         prop.className [
             "px-4 py-2 font-medium rounded-t-lg"
-            if isActive then "bg-white text-blue-600" else "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            if isActive then
+                "bg-white text-blue-600"
+            else
+                "bg-gray-200 text-gray-600 hover:bg-gray-300"
         ]
         prop.text label
-        prop.onClick (fun _ -> onClick())
+        prop.onClick (fun _ -> onClick ())
     ]
 
 
 [<ReactComponent>]
 let PageEditor (page: Page) (dispatch: Msg -> unit) =
 
-    let model, pageEditorDispatch = React.useElmish(
-        (fun () -> pageEditorInit page),
-        (fun msg model ->
-            let newModel, cmd = pageEditorUpdate msg model
-            match msg with
-            | SyncWithMain page ->
-                newModel, Cmd.ofEffect (fun _ -> dispatch (UpdatePage page))
+    let model, pageEditorDispatch =
+        React.useElmish (
+            (fun () -> pageEditorInit page),
+            (fun msg model ->
+                let newModel, cmd = pageEditorUpdate msg model
 
-            | _ -> newModel, cmd
-        ),
-        [| box page |]
-    )
+                match msg with
+                | SyncWithMain page -> newModel, Cmd.ofEffect (fun _ -> dispatch (UpdatePage page))
+                | _ -> newModel, cmd),
+            [| box page |]
+        )
 
     let leftWindow =
-         Html.div [
-                prop.className "w-1/2 p-4 overflow-auto"
-                prop.children [
-                    Html.div [
-                        prop.className "h-1/2 flex flex-col"
-                        prop.children [
-                            Html.h3 [ prop.className "font-bold mb-2"; prop.text "Preview" ]
-                            Html.div [
-                                prop.className "flex center-right mb-2"
-                                prop.children [
-                                    DataUpload pageEditorDispatch
-                                ]
-                            ]
-                            renderingCodeToReactElement
-                                model.PageData.CurrentTree
-                                []
-                                model.PageData.ParsedJson
-                                "Data"
-                                options
-                                pageEditorDispatch
+        Html.div [
+            prop.className "w-1/2 p-4 overflow-auto border border-black"
+            prop.children [
+                Html.div [
+                    prop.className "h-1/2 flex flex-col"
+                    prop.children [
+                        Html.h3 [ prop.className "font-bold mb-2 bg-white"; prop.text "Preview" ]
+                        Html.div [
+                            prop.className "flex center-right mb-2 bg-white"
+                            prop.children [ DataUpload pageEditorDispatch ]
                         ]
+                        renderingCodeToReactElement
+                            model.PageData.CurrentTree
+                            []
+                            model.PageData.ParsedJson
+                            "Data"
+                            options
+                            pageEditorDispatch
+                            true
                     ]
                 ]
             ]
+        ]
 
     let rightWindow =
         Html.div [
-            prop.className "w-1/2 flex flex-col"
+            prop.className "w-1/2 flex flex-col "
             prop.children [
                 Html.div [
                     prop.className "flex border-b"
                     prop.children [
-                        RightPaneTabButton "Generated Code" (model.ActiveRightTab = GeneratedCode) (fun () -> pageEditorDispatch (SetActiveRightTab GeneratedCode))
-                        RightPaneTabButton "JavaScript Editor" (model.ActiveRightTab = JavaScriptEditor) (fun () -> pageEditorDispatch (SetActiveRightTab JavaScriptEditor))
-                        RightPaneTabButton "Sandbox Preview" (model.ActiveRightTab = SandboxPreview) (fun () -> pageEditorDispatch (SetActiveRightTab SandboxPreview))
+                        RightPaneTabButton "JavaScript Editor" (model.ActiveRightTab = JavaScriptEditor) (fun () ->
+                            pageEditorDispatch (SetActiveRightTab JavaScriptEditor))
+                        RightPaneTabButton "Sandbox Preview" (model.ActiveRightTab = SandboxPreview) (fun () ->
+                            pageEditorDispatch (SetActiveRightTab SandboxPreview))
+                        RightPaneTabButton "Custom Handlers" (model.ActiveRightTab = CustomHandlerEditorTab) (fun () ->
+                            pageEditorDispatch (SetActiveRightTab CustomHandlerEditorTab))
                     ]
                 ]
                 Html.div [
-                    prop.className "flex-1 p-4 bg-white overflow-auto"
+                    prop.className "flex-1 p-4  overflow-auto"
                     prop.children [
                         match model.ActiveRightTab with
-                        | GeneratedCode -> GeneratedCodeView model
                         | JavaScriptEditor -> JavaScriptEditorView model pageEditorDispatch
                         | SandboxPreview -> SandboxPreviewView model
+                        | CustomHandlerEditorTab -> CustomHandlerEditor model.PageData.CustomHandlers pageEditorDispatch
                     ]
                 ]
             ]
@@ -266,13 +331,10 @@ let PageEditor (page: Page) (dispatch: Msg -> unit) =
 
 
     Html.div [
-        prop.className "flex-1 flex overflow-hidden"
+        prop.className "flex-1 flex overflow-hidden bg-white"
         prop.children [
             leftWindow
             rightWindow
 
         ]
     ]
-
-
-

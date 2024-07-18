@@ -1,12 +1,9 @@
 module Editor.Utilities.JavaScriptEditor
 
-open Fable.Core
+open Fable.Core.JsInterop
 
-[<Import("default", from="@uiw/react-codemirror")>]
-let CodeMirror: obj = jsNative
 
-[<Import("javascript", from="@codemirror/lang-javascript")>]
-let javascript: obj = jsNative
-
-[<Import("javascript", from="@codemirror/theme/material.css")>]
-let theme: obj = jsNative
+let CodeMirror :obj = importDefault "@uiw/react-codemirror"
+let javascript : obj= importAll "@codemirror/lang-javascript"
+let html:obj = importAll "@codemirror/lang-html"
+let css :obj= importAll "@codemirror/lang-css"

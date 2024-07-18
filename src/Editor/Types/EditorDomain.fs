@@ -4,6 +4,7 @@ open Fable.SimpleJson
 open System
 open CoreLogic.Types.RenderingTypes
 
+//Represents a single created page
 type Page = {
     Name: string
     Id: Guid
@@ -12,16 +13,18 @@ type Page = {
     JsonString: string
     CustomHandlers: Map<string, Javascript>
 }
+
 type Tab = { Id: Guid; PageId: Guid }
 
-//Application state
+// Application state
 type Model = {
     Pages: Map<Guid, Page>
     OpenTabs: Tab list
     ActiveTabId: Guid option
     IsSidebarOpen: bool
 }
-//Application operations
+// Application operations
+// General operation such as tab management or opening new pages
 type Msg =
     | OpenTab of Guid
     | CloseTab of Guid
