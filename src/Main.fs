@@ -21,71 +21,27 @@ let newPage = {
 }
 
 let init () : Model * Cmd<Msg> =
-    let newTab = {
-        Id = Guid.NewGuid()
-        PageId = newPage.Id
-    }
 
     let newModel = {
         Pages = Map[newPage.Id, newPage]
         IsSidebarOpen = true
-        OpenTabs = [ newTab ]
-        ActiveTabId = Some(newTab.Id)
+        ActivePageId = Some(newPage.Id)
     }
 
     newModel, Cmd.none
 
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
-    | OpenTab pageId ->
-        let existingTab = model.OpenTabs |> List.tryFind (fun t -> t.PageId = pageId)
 
-        match existingTab with
-        | Some tab -> { model with ActiveTabId = Some tab.Id }, Cmd.none
-        | None ->
-            let newTab = { Id = Guid.NewGuid(); PageId = pageId }
-
-            {
-                model with
-                    OpenTabs = model.OpenTabs @ [ newTab ]
-                    ActiveTabId = Some newTab.Id
-            },
-            Cmd.none
-
-    | CloseTab tabId ->
-        let newTabs = model.OpenTabs |> List.filter (fun t -> t.Id <> tabId)
-
-        let newActiveTabId =
-            if model.ActiveTabId = Some tabId then
-                newTabs |> List.tryLast |> Option.map (fun t -> t.Id)
-            else
-                model.ActiveTabId
-
-        {
-            model with
-                OpenTabs = newTabs
-                ActiveTabId = newActiveTabId
-        },
-        Cmd.none
-
-    | SetActiveTab tabId -> { model with ActiveTabId = Some tabId }, Cmd.none
-
-    | ReorderTabs newOrder -> { model with OpenTabs = newOrder }, Cmd.none
 
     | CreatePage ->
         let newPageId = Guid.NewGuid()
         let newPage = { newPage with Id = newPageId }
 
-        let newTab = {
-            Id = Guid.NewGuid()
-            PageId = newPageId
-        }
-
         {
             model with
                 Pages = model.Pages |> Map.add newPageId newPage
-                OpenTabs = model.OpenTabs @ [ newTab ]
-                ActiveTabId = Some newTab.Id
+                ActivePageId = Some newPageId
         },
         Cmd.none
 
@@ -98,23 +54,11 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
 
     | DeletePage pageId ->
         let newPages = model.Pages |> Map.remove pageId
-        let newTabs = model.OpenTabs |> List.filter (fun t -> t.PageId <> pageId)
-
-        let newActiveTabId =
-            if
-                model.ActiveTabId
-                |> Option.exists (fun activeTabId ->
-                    model.OpenTabs |> List.exists (fun t -> t.Id = activeTabId && t.PageId = pageId))
-            then
-                newTabs |> List.tryLast |> Option.map (fun t -> t.Id)
-            else
-                model.ActiveTabId
 
         {
             model with
                 Pages = newPages
-                OpenTabs = newTabs
-                ActiveTabId = newActiveTabId
+                ActivePageId = None
         },
         Cmd.none
 
@@ -125,30 +69,23 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         },
         Cmd.none
 
-    | OpenOrSelectTab pageId ->
-        let existingTab = model.OpenTabs |> List.tryFind (fun tab -> tab.PageId = pageId)
+    | OpenPage pageId ->
+        let existingTab = model.Pages |> Map.tryFind pageId
 
         match existingTab with
-        | Some tab -> { model with ActiveTabId = Some tab.Id }, Cmd.none
-        | None ->
-            let newTab = { Id = Guid.NewGuid(); PageId = pageId }
-
+        | Some tab ->
             {
                 model with
-                    OpenTabs = model.OpenTabs @ [ newTab ]
-                    ActiveTabId = Some newTab.Id
+                    ActivePageId = Some tab.Id
             },
             Cmd.none
+        | None ->
+
+            model, Cmd.none
 
 // View function that renders the Main application
 let view (model: Model) (dispatch: Msg -> unit) =
     let LowCodeEditor =
-        let activePageId =
-            model.ActiveTabId
-            |> Option.bind (fun tabId ->
-                model.OpenTabs
-                |> List.tryFind (fun tab -> tab.Id = tabId)
-                |> Option.map (fun tab -> tab.PageId))
 
         Html.div [
             prop.className "flex h-screen bg-gray-100 text-gray-800"
@@ -157,8 +94,7 @@ let view (model: Model) (dispatch: Msg -> unit) =
                 Html.div [
                     prop.className "flex-1 flex flex-col overflow-hidden"
                     prop.children [
-                        Tabs model dispatch
-                        match activePageId with
+                        match model.ActivePageId with
                         | Some pageId ->
                             match Map.tryFind pageId model.Pages with
                             | Some page -> PageEditor page dispatch

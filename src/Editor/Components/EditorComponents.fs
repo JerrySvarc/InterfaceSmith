@@ -28,12 +28,12 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) =
                                  prop.className (
                                      sprintf
                                          "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded %s"
-                                         (if model.ActiveTabId = Some pageId then
+                                         (if model.ActivePageId = Some pageId then
                                               "bg-gray-700"
                                           else
                                               "")
                                  )
-                                 prop.onClick (fun _ -> dispatch (OpenOrSelectTab pageId))
+                                 prop.onClick (fun _ -> dispatch (OpenPage pageId))
                                  prop.children [
                                      ReactBindings.React.createElement (
                                          fileIcon,
@@ -100,87 +100,5 @@ let Sidebar (model: Model) (dispatch: Msg -> unit) =
                 ]
             ]
             SideBarContent model dispatch
-        ]
-    ]
-
-[<ReactComponent>]
-let Tabs (model: Model) (dispatch: Msg -> unit) =
-    let scrollRef = React.useRef (null)
-    let (dragState, setDragState) = React.useState (None)
-
-    let onDragStart (e: DragEvent) (tabId: Guid) =
-        e.dataTransfer.effectAllowed <- "move"
-        setDragState (Some tabId)
-
-    let onDragOver (e: DragEvent) =
-        e.preventDefault ()
-        e.dataTransfer.dropEffect <- "move"
-
-    let onDrop (e: DragEvent) (targetTabId: Guid) =
-        e.preventDefault ()
-
-        match dragState with
-        | Some draggedTabId when draggedTabId <> targetTabId ->
-            let newOrder =
-                model.OpenTabs
-                |> List.filter (fun tab -> tab.Id <> draggedTabId)
-                |> List.fold
-                    (fun acc tab ->
-                        if tab.Id = targetTabId then
-                            acc @ [ model.OpenTabs |> List.find (fun t -> t.Id = draggedTabId) ] @ [ tab ]
-                        else
-                            acc @ [ tab ])
-                    []
-
-            dispatch (ReorderTabs newOrder)
-        | _ -> ()
-
-        setDragState (None)
-
-    Html.div [
-        prop.className "flex items-center bg-white border-b"
-        prop.children [
-            Html.div [
-                prop.ref (fun element -> scrollRef.current <- element)
-                prop.className "flex-1 overflow-x-auto flex"
-                prop.children [
-                    for tab in model.OpenTabs do
-                        match Map.tryFind tab.PageId model.Pages with
-                        | Some page ->
-                            Html.div [
-                                prop.key (string tab.Id)
-                                prop.className (
-                                    sprintf
-                                        "px-4 py-2 flex items-center cursor-move %s"
-                                        (if model.ActiveTabId = Some tab.Id then
-                                             "bg-gray-300"
-                                         else
-                                             "")
-                                )
-                                prop.draggable true
-                                prop.onDragStart (fun e -> onDragStart e tab.Id)
-                                prop.onDragOver onDragOver
-                                prop.onDrop (fun e -> onDrop e tab.Id)
-                                prop.children [
-                                    Html.button [
-                                        prop.onClick (fun _ -> dispatch (SetActiveTab tab.Id))
-                                        prop.text page.Name
-                                    ]
-                                    Html.button [
-                                        prop.className "ml-2"
-                                        prop.onClick (fun _ -> dispatch (CloseTab tab.Id))
-                                        prop.children [
-                                            ReactBindings.React.createElement (
-                                                xIcon,
-                                                createObj [ "size" ==> 16; "color" ==> "#000000" ],
-                                                []
-                                            )
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        | None -> ()
-                ]
-            ]
         ]
     ]

@@ -1,3 +1,4 @@
+[<AutoOpen>]
 module CoreLogic.Types.RenderingTypes
 
 type Tag =

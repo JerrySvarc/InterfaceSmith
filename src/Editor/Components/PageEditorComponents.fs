@@ -37,6 +37,7 @@ let pageEditorInit (page: Page) : PageEditorModel * Cmd<PageEditorMsg> =
 // This function is used to update the page editor model
 // It is called when the user interacts with the page editor
 // It updates the page editor model and sends a message to the main page via Cmd.ofMsg
+
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
     | UploadData jsonString ->
@@ -74,18 +75,6 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         newModel, Cmd.ofMsg (SyncWithMain updatedPage)
 
     | SyncWithMain _ -> model, Cmd.none
-    | SetActiveRightTab tab -> { model with ActiveRightTab = tab }, Cmd.none
-    | AddHandler(name, code) ->
-        let updatedHandlers = model.PageData.CustomHandlers.Add(name, code)
-
-        let updatedPage = {
-            model.PageData with
-                CustomHandlers = updatedHandlers
-        }
-
-        { model with PageData = updatedPage }, Cmd.ofMsg (SyncWithMain updatedPage)
-    | RemoveHandler name -> failwith "todo"
-    | TogglePreview -> failwith "Not Implemented"
 
 
 
@@ -136,72 +125,6 @@ let rec options
     | Hole _ -> Html.none
 
 
-// Custom handler editor component used to add custom JavaScript event handlers
-[<ReactComponent>]
-let CustomHandlerEditor (handlers: Map<string, Javascript>) (dispatch: PageEditorMsg -> unit) =
-    let (selectedHandler, setSelectedHandler) = React.useState ("")
-    let (handlerName, setHandlerName) = React.useState ("")
-    let (handlerCode, setHandlerCode) = React.useState ("")
-
-    let handleSave () =
-        if handlerName <> "" && handlerCode <> "" then
-            dispatch (AddHandler(handlerName, JSFunction(handlerName, handlerCode)))
-            setHandlerName ("")
-            setHandlerCode ("")
-
-    Html.div [
-        prop.className "flex flex-col h-full"
-        prop.children [
-            Html.div [
-                prop.className "mb-4"
-                prop.children [
-                    Html.select [
-                        prop.className "w-full p-2 border rounded"
-                        prop.onChange (fun (e: Event) ->
-                            let value = e.target?value
-                            setSelectedHandler value
-
-                            match handlers.TryFind value with
-                            | Some(JSFunction(_, code)) ->
-                                setHandlerName value
-                                setHandlerCode code
-                            | None -> ())
-                        prop.children [
-                            Html.option [ prop.value ""; prop.text "Select a handler" ]
-                            for KeyValue(name, _) in handlers do
-                                Html.option [ prop.value name; prop.text name ]
-                        ]
-                    ]
-                ]
-            ]
-            Html.input [
-                prop.className "p-2 mb-4 border rounded"
-                prop.placeholder "Handler name"
-                prop.value handlerName
-                prop.onChange setHandlerName
-            ]
-            Html.div [
-                prop.className "flex-grow mb-4"
-                prop.children [
-                    ReactBindings.React.createElement (
-                        CodeMirror,
-                        createObj [
-                            "value" ==> handlerCode
-                            "onChange" ==> setHandlerCode
-                            "extensions" ==> [| javascript?javascript () |]
-                            "theme" ==> "dark"
-                        ],
-                        []
-                    )
-                ]
-            ]
-            Html.button [
-                prop.className "p-2 bg-blue-500 text-white rounded"
-                prop.onClick (fun _ -> handleSave ())
-                prop.text "Save Handler"
-            ]
-        ]
-    ]
 
 
 [<ReactComponent>]
@@ -253,20 +176,6 @@ let SandboxPreviewView (model: PageEditorModel) =
         ]
     ]
 
-[<ReactComponent>]
-let RightPaneTabButton (label: string) (isActive: bool) (onClick: unit -> unit) =
-    Html.button [
-        prop.className [
-            "px-4 py-2 font-medium rounded-t-lg"
-            if isActive then
-                "bg-white text-blue-600"
-            else
-                "bg-gray-200 text-gray-600 hover:bg-gray-300"
-        ]
-        prop.text label
-        prop.onClick (fun _ -> onClick ())
-    ]
-
 
 [<ReactComponent>]
 let PageEditor (page: Page) (dispatch: Msg -> unit) =
@@ -283,65 +192,12 @@ let PageEditor (page: Page) (dispatch: Msg -> unit) =
             [| box page |]
         )
 
-    let leftWindow =
-        Html.div [
-            prop.className "w-1/2 p-4 overflow-auto border border-black"
-            prop.children [
-                Html.div [
-                    prop.className "h-1/2 flex flex-col"
-                    prop.children [
-                        Html.h3 [ prop.className "font-bold mb-2 bg-white"; prop.text "Preview" ]
-                        Html.div [
-                            prop.className "flex center-right mb-2 bg-white"
-                            prop.children [ DataUpload pageEditorDispatch ]
-                        ]
-                        renderingCodeToReactElement
-                            model.PageData.CurrentTree
-                            []
-                            model.PageData.ParsedJson
-                            "Data"
-                            options
-                            pageEditorDispatch
-                            true
-                            model.PageData
-                    ]
-                ]
-            ]
-        ]
-
-    let rightWindow =
-        Html.div [
-            prop.className "w-1/2 flex flex-col "
-            prop.children [
-                Html.div [
-                    prop.className "flex border-b"
-                    prop.children [
-                        RightPaneTabButton "JavaScript Editor" (model.ActiveRightTab = JavaScriptEditor) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab JavaScriptEditor))
-                        RightPaneTabButton "Sandbox Preview" (model.ActiveRightTab = SandboxPreview) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab SandboxPreview))
-                        RightPaneTabButton "Custom Handlers" (model.ActiveRightTab = CustomHandlerEditorTab) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab CustomHandlerEditorTab))
-                    ]
-                ]
-                Html.div [
-                    prop.className "flex-1 p-4  overflow-auto"
-                    prop.children [
-                        match model.ActiveRightTab with
-                        | JavaScriptEditor -> JavaScriptEditorView model pageEditorDispatch
-                        | SandboxPreview -> SandboxPreviewView model
-                        | CustomHandlerEditorTab -> CustomHandlerEditor model.PageData.CustomHandlers pageEditorDispatch
-                    ]
-                ]
-            ]
-        ]
 
 
     Html.div [
         prop.className "flex-1 flex overflow-hidden bg-white"
         prop.children [
-            leftWindow
-            rightWindow
+
 
         ]
     ]

@@ -9,7 +9,7 @@
     <None Include="index.html" />
     <None Include="paket.references" />
     <Compile Include="CoreLogic\Types\RenderingTypes.fs" />
-      <Folder Include="CoreLogic\Utilities\" />
+    <Folder Include="CoreLogic\Utilities\" />
     <Compile Include="CoreLogic\Operations\RenderingCode.fs" />
     <Compile Include="CoreLogic\Operations\DataRecognition.fs" />
     <Compile Include="CoreLogic\Operations\CodeGeneration.fs" />
@@ -22,10 +22,9 @@
     <Compile Include="Editor\Components\OptionComponents.fs" />
     <Compile Include="Editor\Components\CustomRendering.fs" />
     <Compile Include="Editor\Components\PageEditorComponents.fs" />
-      
     <Compile Include="Editor\Components\EditorComponents.fs" />
     <Compile Include="Main.fs" />
-    <Compile Include="App.fs" />    
+    <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.React" Version="9.3.0" />

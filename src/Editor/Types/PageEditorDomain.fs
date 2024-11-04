@@ -16,11 +16,9 @@ type PageEditorModel = {
     ActiveRightTab: RightPaneTab
 }
 
+
+
 type PageEditorMsg =
     | SyncWithMain of Page
-    | TogglePreview
     | UploadData of string
-    | SetActiveRightTab of RightPaneTab
     | ReplaceCode of RenderingCode * path: int list
-    | AddHandler of string * Javascript
-    | RemoveHandler of name: string

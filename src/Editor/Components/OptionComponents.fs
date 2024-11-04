@@ -16,131 +16,7 @@ open Editor.Types.EditorDomain
 // Each component takes a dispatch function, the current code, and the path to the code in the tree
 // The dispatch function is used to send messages to the parent component to update the specific code
 
-[<ReactComponent>]
-let EventHandlerMenu
-    (dispatch: PageEditorMsg -> unit, code: RenderingCode, path: int list, customHandlers: Map<string, Javascript>)
-    =
-    let availableEvents = [ "onClick"; "onMouseOver"; "onMouseOut"; "onKeyPress"; "onFocus"; "onBlur" ]
 
-    let (selectedEvent, setSelectedEvent) = React.useState ""
-    let (selectedHandler, setSelectedHandler) = React.useState ""
-    let (errorMessage, setErrorMessage) = React.useState ""
-
-    let addHandler eventName handlerName =
-        try
-            let newHandler =
-                match Map.tryFind handlerName customHandlers with
-                | Some handler -> handler
-                | None ->
-                    setErrorMessage (sprintf "Handler '%s' not found in custom handlers" handlerName)
-                    JSFunction(handlerName, "")
-
-            let newCode =
-                match code with
-                | HtmlElement(tag, attrs, innerValue, handlers) ->
-                    HtmlElement(tag, attrs, innerValue, (eventName, newHandler) :: handlers)
-                | HtmlList(listType, items, handlers) -> HtmlList(listType, items, (eventName, newHandler) :: handlers)
-                | HtmlObject(objType, keys, elements, handlers) ->
-                    HtmlObject(objType, keys, elements, (eventName, newHandler) :: handlers)
-                | Hole _ ->
-                    setErrorMessage "Cannot add handler to a Hole"
-                    code
-
-            dispatch (ReplaceCode(newCode, path))
-            setSelectedEvent ""
-            setSelectedHandler ""
-            setErrorMessage ""
-        with ex ->
-            setErrorMessage (sprintf "Error adding handler: %s" ex.Message)
-
-    let removeHandler eventName =
-        let newCode =
-            match code with
-            | HtmlElement(tag, attrs, innerValue, handlers) ->
-                HtmlElement(tag, attrs, innerValue, List.filter (fun (name, _) -> name <> eventName) handlers)
-            | HtmlList(listType, items, handlers) ->
-                HtmlList(listType, items, List.filter (fun (name, _) -> name <> eventName) handlers)
-            | HtmlObject(objType, keys, elements, handlers) ->
-                HtmlObject(objType, keys, elements, List.filter (fun (name, _) -> name <> eventName) handlers)
-            | Hole _ -> code
-
-        dispatch (ReplaceCode(newCode, path))
-
-    let getHandlers =
-        match code with
-        | HtmlElement(_, _, _, handlers) -> handlers
-        | HtmlList(_, _, handlers) -> handlers
-        | HtmlObject(_, _, _, handlers) -> handlers
-        | Hole _ -> []
-
-    Html.div [
-        prop.className "mb-4"
-        prop.children [
-            Html.h3 [ prop.className "text-xs font-medium mb-2"; prop.text "Event Handlers" ]
-            if not (System.String.IsNullOrEmpty errorMessage) then
-                Html.div [
-                    prop.className "bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mb-2"
-                    prop.text errorMessage
-                ]
-            Html.div [
-                prop.className "flex "
-                prop.children [
-                    Html.select [
-                        prop.className "flex-grow p-2 border border-gray-300 rounded-md"
-                        prop.value selectedEvent
-                        prop.onChange (fun (e: Browser.Types.Event) ->
-                            setSelectedEvent (e.target?value |> string)
-                            setSelectedHandler "")
-                        prop.children (
-                            Html.option [ prop.value ""; prop.text "Select an event" ]
-                            :: (availableEvents
-                                |> List.filter (fun e -> not (getHandlers |> List.exists (fun (name, _) -> name = e)))
-                                |> List.map (fun e -> Html.option [ prop.value e; prop.text e ]))
-                        )
-                    ]
-                    Html.select [
-                        prop.className "flex-grow p-2 border border-gray-300 rounded-md"
-                        prop.value selectedHandler
-                        prop.onChange (fun (e: Browser.Types.Event) -> setSelectedHandler (e.target?value |> string))
-                        prop.children (
-                            Html.option [ prop.value ""; prop.text "Select a handler" ]
-                            :: (customHandlers
-                                |> Map.toList
-                                |> List.map (fun (name, _) -> Html.option [ prop.value name; prop.text name ]))
-                        )
-                    ]
-                    Html.button [
-                        prop.className "bg-blue-500 text-white rounded p-2"
-                        prop.onClick (fun _ ->
-                            if selectedEvent <> "" && selectedHandler <> "" then
-                                addHandler selectedEvent selectedHandler
-                            else
-                                setErrorMessage "Please select both an event and a handler")
-                        prop.text "Add Handler"
-                    ]
-                ]
-            ]
-            Html.div [
-                prop.className "space-y-2"
-                prop.children (
-                    getHandlers
-                    |> List.map (fun (eventName, handler) ->
-                        Html.div [
-                            prop.key eventName
-                            prop.className "flex justify-between items-center bg-gray-100 p-2 rounded"
-                            prop.children [
-                                Html.span [ prop.text (sprintf "%s: %s" eventName (handler.ToString())) ]
-                                Html.button [
-                                    prop.className "text-red-500"
-                                    prop.onClick (fun _ -> removeHandler eventName)
-                                    prop.text "Remove"
-                                ]
-                            ]
-                        ])
-                )
-            ]
-        ]
-    ]
 
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
@@ -437,7 +313,6 @@ let ElementOption (dispatch, name: string, code, path, page: Page) =
                             TagMenu(dispatch, code, path)
                             InnerValueMenu(dispatch, innerValue, code, path)
                             AttributeMenu(dispatch, code, path)
-                            EventHandlerMenu(dispatch, code, path, page.CustomHandlers)
                         ]
                     ]
             ]
@@ -489,7 +364,6 @@ let ListOption (dispatch, name: string, code, path, page: Page) =
                                     ]
                                 ]
                             ]
-                            EventHandlerMenu(dispatch, code, path, page.CustomHandlers)
                         ]
                     ]
             ]
@@ -619,8 +493,6 @@ let SequenceOption (dispatch, name: string, code, path, page: Page) =
                         prop.children [
                             renderTypeSelector (objType, dispatch, keys, elements, handlers, path)
                             renderKeys (keys, objType, elements, handlers, dispatch, path)
-                            EventHandlerMenu(dispatch, code, path, page.CustomHandlers)
-
                             renderDeleteButton (dispatch, name, path)
                         ]
                     ]
