@@ -1,9 +1,34 @@
 module Editor.Types.PageEditorDomain
 
-open CoreLogic.Operations
 open CoreLogic.Types.RenderingTypes
-open Editor.Types.EditorDomain
+open System
 open Fable.SimpleJson
+
+
+//Represents a single created page
+type Page = {
+    Name: string
+    Id: Guid
+    ParsedJson: Json
+    CurrentTree: RenderingCode
+    JsonString: string
+    CustomHandlers: Map<string, Javascript>
+}
+
+
+type Position = { X: float; Y: float }
+
+
+type ElementType =
+    | Message
+    | View of RenderingCode
+    | Model
+
+type Item = {
+    Id: int
+    Position: Position
+    Content: ElementType
+}
 
 type RightPaneTab =
     | JavaScriptEditor
@@ -13,12 +38,27 @@ type RightPaneTab =
 type PageEditorModel = {
     PageData: Page
     FileUploadError: bool
-    ActiveRightTab: RightPaneTab
+    ViewportPosition: Position
+    Scale: float
+    Items: Item list
+    DraggingItemId: int option
+    IsPanning: bool
+    LastMousePosition: Position option
+    IsPreviewOpen: bool
 }
 
 
 
 type PageEditorMsg =
-    | SyncWithMain of Page
+    | SyncWithMain of PageEditorModel
     | UploadData of string
     | ReplaceCode of RenderingCode * path: int list
+    | StartPanning of Position
+    | UpdatePanning of Position
+    | EndPanning
+    | StartDraggingItem of int * Position
+    | UpdateDraggingItem of Position
+    | EndDraggingItem
+    | Zoom of float
+    | AddItem of Position
+    | TogglePreview

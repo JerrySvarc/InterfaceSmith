@@ -20,20 +20,18 @@ open CoreLogic.Operations.CodeGeneration
 open Editor.Utilities.JavaScriptEditor
 open Browser.Types
 
+
 // PageEditor elmish-style functionality
 // This is the main component for the page editor
 // It contains the left and right panes and the logic for updating the page data
 // It also contains the logic for updating the main page data
 // when the user makes changes to the page data
 
-let pageEditorInit (page: Page) : PageEditorModel * Cmd<PageEditorMsg> =
-    let newModel = {
-        PageData = page
-        FileUploadError = false
-        ActiveRightTab = JavaScriptEditor
-    }
+let pageEditorInit (existingModel: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> = existingModel, Cmd.none
 
-    newModel, Cmd.none
+
+
+
 // This function is used to update the page editor model
 // It is called when the user interacts with the page editor
 // It updates the page editor model and sends a message to the main page via Cmd.ofMsg
@@ -54,12 +52,13 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                         JsonString = jsonString
                 }
 
-                {
+                let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
-                },
-                Cmd.ofMsg (SyncWithMain updatedPage)
+                }
+
+                updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
             | _ -> { model with FileUploadError = true }, Cmd.none
         | None -> { model with FileUploadError = true }, Cmd.none
 
@@ -72,9 +71,116 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         }
 
         let newModel = { model with PageData = updatedPage }
-        newModel, Cmd.ofMsg (SyncWithMain updatedPage)
+        newModel, Cmd.ofMsg (SyncWithMain newModel)
 
     | SyncWithMain _ -> model, Cmd.none
+    | StartPanning pos when model.DraggingItemId.IsNone ->
+        {
+            model with
+                IsPanning = true
+                LastMousePosition = Some pos
+        },
+        Cmd.none
+
+    | UpdatePanning pos when model.IsPanning ->
+        match model.LastMousePosition with
+        | Some lastPos ->
+            let dx = (pos.X - lastPos.X) / model.Scale
+            let dy = (pos.Y - lastPos.Y) / model.Scale
+
+            let newViewport = {
+                X = model.ViewportPosition.X + dx
+                Y = model.ViewportPosition.Y + dy
+            }
+
+            {
+                model with
+                    ViewportPosition = newViewport
+                    LastMousePosition = Some pos
+            },
+            Cmd.none
+        | None -> model, Cmd.none
+
+    | EndPanning ->
+        {
+            model with
+                IsPanning = false
+                LastMousePosition = None
+        },
+        Cmd.none
+
+    | StartDraggingItem(itemId, pos) ->
+        {
+            model with
+                DraggingItemId = Some itemId
+                LastMousePosition = Some pos
+        },
+        Cmd.none
+
+    | UpdateDraggingItem pos ->
+        match model.DraggingItemId, model.LastMousePosition with
+        | Some itemId, Some lastPos ->
+            let dx = (pos.X - lastPos.X) / model.Scale
+            let dy = (pos.Y - lastPos.Y) / model.Scale
+
+            let updatedItems =
+                model.Items
+                |> List.map (fun item ->
+                    if item.Id = itemId then
+                        {
+                            item with
+                                Position = {
+                                    X = item.Position.X + dx
+                                    Y = item.Position.Y + dy
+                                }
+                        }
+
+                    else
+                        item)
+
+            {
+                model with
+                    Items = updatedItems
+                    LastMousePosition = Some pos
+            },
+            Cmd.none
+        | _ -> model, Cmd.none
+
+    | EndDraggingItem ->
+        {
+            model with
+                DraggingItemId = None
+                LastMousePosition = None
+        },
+        Cmd.none
+
+    | Zoom scaleFactor ->
+        {
+            model with
+                Scale = model.Scale * scaleFactor
+        },
+        Cmd.none
+
+    | AddItem pos ->
+        let newItem = {
+            Id = model.Items.Length
+            Position = { X = pos.X; Y = pos.Y }
+            Content = View(Hole(UnNamed))
+        }
+
+        {
+            model with
+                Items = newItem :: model.Items
+        },
+        Cmd.none
+
+    | TogglePreview ->
+        {
+            model with
+                IsPreviewOpen = not model.IsPreviewOpen
+        },
+        Cmd.none
+
 
 
 
@@ -119,18 +225,19 @@ let rec options
     (page: Page)
     : ReactElement =
     match code with
-    | HtmlElement _ -> ElementOption(dispatch, name, code, path, page)
-    | HtmlList _ -> ListOption(dispatch, name, code, path, page)
-    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path, page)
+    | HtmlElement _ -> Html.none
+    // ElementOption(dispatch, name, code, path, page)
+    | HtmlList _ -> Html.none
+    //ListOption(dispatch, name, code, path, page)
+    | HtmlObject(_) -> Html.none
+    //SequenceOption(dispatch, name, code, path, page)
     | Hole _ -> Html.none
 
 
 
 
 [<ReactComponent>]
-let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
-    let fullHtml, js =
-        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
+let JavaScriptEditorView code (dispatch: PageEditorMsg -> unit) =
 
     let extensions = [| javascript?javascript (); html?html (); css?css () |]
 
@@ -146,7 +253,7 @@ let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> un
                     ReactBindings.React.createElement (
                         CodeMirror,
                         createObj [
-                            "value" ==> fullHtml
+                            "value" ==> code
                             "extensions" ==> extensions
                             //"onChange" ==> onChange
                             "theme" ==> "dark"
@@ -160,44 +267,79 @@ let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> un
     ]
 
 
+
+
+
+
 [<ReactComponent>]
-let SandboxPreviewView (model: PageEditorModel) =
+let SandboxPreviewView (model: PageEditorModel) dispatch =
     let fullHtml, js =
         generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
 
-    Html.iframe [
-        prop.src "about:blank"
-        prop.custom ("sandbox", "allow-scripts allow-forms allow-modals")
-        prop.custom ("srcDoc", fullHtml)
-        prop.style [
-            style.width (length.percent 100)
-            style.height (length.px 500)
-            style.border (1, borderStyle.solid, color.gray)
+    Html.none
+
+[<ReactComponent>]
+let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
+
+    let viewportTransform (position: Position) = {
+        X = (position.X + model.ViewportPosition.X) * model.Scale + 400.0
+        Y = (position.Y + model.ViewportPosition.Y) * model.Scale + 300.0
+    }
+
+
+    let renderItem item =
+        let pos = viewportTransform item.Position
+
+        Html.div [
+            prop.className "absolute bg-blue-500 text-white p-2 rounded shadow-lg"
+            prop.style [
+                style.left (length.px pos.X)
+                style.top (length.px pos.Y)
+                style.transform [
+                    transform.translateX (length.percent -50)
+                    transform.translateY (length.percent -50)
+                ]
+            ]
+
+            prop.onMouseDown (fun e ->
+                e.stopPropagation ()
+                dispatch (StartDraggingItem(item.Id, { X = e.clientX; Y = e.clientY })))
+
+            prop.children [ Html.text "Menu item" ]
+        ]
+
+    Html.div [
+        prop.className "relative overflow-hidden w-full h-full bg-gray-600"
+
+        prop.onMouseDown (fun e ->
+            if model.DraggingItemId.IsNone then
+                dispatch (StartPanning { X = e.clientX; Y = e.clientY }))
+
+        prop.onMouseMove (fun e ->
+            match model.IsPanning, model.DraggingItemId with
+            | true, _ -> dispatch (UpdatePanning { X = e.clientX; Y = e.clientY })
+            | false, Some _ -> dispatch (UpdateDraggingItem { X = e.clientX; Y = e.clientY })
+            | _ -> ())
+
+        prop.onMouseUp (fun _ ->
+            dispatch EndPanning
+            dispatch EndDraggingItem)
+
+        prop.onWheel (fun e ->
+            let scaleFactor = if e.deltaY > 0.0 then 0.9 else 1.1
+            dispatch (Zoom scaleFactor))
+        prop.children [
+            Html.div [
+                prop.className "relative"
+                prop.children (model.Items |> List.map renderItem)
+            ]
         ]
     ]
 
 
 [<ReactComponent>]
-let PageEditor (page: Page) (dispatch: Msg -> unit) =
-
-    let model, pageEditorDispatch =
-        React.useElmish (
-            (fun () -> pageEditorInit page),
-            (fun msg model ->
-                let newModel, cmd = pageEditorUpdate msg model
-
-                match msg with
-                | SyncWithMain page -> newModel, Cmd.ofEffect (fun _ -> dispatch (UpdatePage page))
-                | _ -> newModel, cmd),
-            [| box page |]
-        )
-
-
-
+let PageEditorView (pageModel: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
     Html.div [
-        prop.className "flex-1 flex overflow-hidden bg-white"
-        prop.children [
-
-
-        ]
+        prop.className "flex-1 flex overflow-hidden"
+        prop.children [ Canvas pageModel dispatch; SandboxPreviewView pageModel dispatch ]
     ]

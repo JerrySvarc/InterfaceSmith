@@ -5,6 +5,7 @@ open Browser.Types
 open Feliz
 open Fable.React
 open Editor.Types.EditorDomain
+open Editor.Types.PageEditorDomain
 open Editor.Utilities.Icons
 open Fable.Core.JsInterop
 
@@ -23,8 +24,6 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) =
                          |> Map.toList
                          |> List.mapi (fun index (pageId, page) ->
                              Html.div [
-                                 // Combine pageId and index for a unique key
-                                 prop.key (sprintf "%s-%d" (string pageId) index)
                                  prop.className (
                                      sprintf
                                          "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded %s"
@@ -40,7 +39,7 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) =
                                          createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
                                          []
                                      )
-                                     Html.span [ prop.className "ml-2"; prop.text page.Name ]
+                                     Html.span [ prop.className "ml-2"; prop.text page.PageData.Name ]
                                  ]
                              ]))
                         @ [ // Append the "New Page" button to the list
