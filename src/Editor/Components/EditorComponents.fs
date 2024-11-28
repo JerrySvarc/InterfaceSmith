@@ -1,7 +1,5 @@
 module Editor.UIComponents.EditorComponents
 
-open System
-open Browser.Types
 open Feliz
 open Fable.React
 open Editor.Types.EditorDomain
@@ -42,7 +40,7 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) =
                                      Html.span [ prop.className "ml-2"; prop.text page.PageData.Name ]
                                  ]
                              ]))
-                        @ [ // Append the "New Page" button to the list
+                        @ [
                             Html.button [
                                 prop.key "create-new-page-button"
                                 prop.className
@@ -68,7 +66,7 @@ let Sidebar (model: Model) (dispatch: Msg -> unit) =
     Html.div [
         prop.className (
             sprintf
-                "relative bg-gray-800 text-white transition-all duration-300 %s overflow-auto"
+                "relative bg-gray-800 text-white transition-all duration-300 %s overflow-auto shadow-md"
                 (if model.IsSidebarOpen then "w-64" else "w-16")
         )
         prop.children [

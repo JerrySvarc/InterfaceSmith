@@ -9,55 +9,16 @@ open Fable.SimpleJson
 open System
 open Editor.UIComponents.EditorComponents
 open Editor.UIComponents.PageEditorComponents
-open Feliz.UseElmish
 
-
-let newPage = {
-    Name = "New page"
-    Id = Guid.NewGuid()
-    ParsedJson = JNull
-    CurrentTree = Hole(UnNamed)
-    JsonString = ""
-    CustomHandlers = Map([])
-}
-
-let initialItems = [
-    {
-        Id = 1
-        Position = { X = 100.0; Y = 150.0 }
-        Content = View(Hole(UnNamed))
-    }
-    {
-        Id = 2
-        Position = { X = 300.0; Y = 400.0 }
-        Content = View(Hole(UnNamed))
-    }
-    {
-        Id = 3
-        Position = { X = 500.0; Y = 250.0 }
-        Content = View(Hole(UnNamed))
-    }
-]
-
-let newPageEditorModel = {
-    PageData = newPage
-    FileUploadError = false
-    ViewportPosition = { X = 0.0; Y = 0.0 }
-    Scale = 1.0
-    Items = initialItems
-    DraggingItemId = None
-    IsPanning = false
-    LastMousePosition = None
-    IsPreviewOpen = false
-}
 
 let init () : Model * Cmd<Msg> =
+    let newEditorPage, cmd = pageEditorInit ()
 
     let newModel = {
         Pages = Map []
         IsSidebarOpen = true
-        ActivePageId = Some(newPage.Id)
-        CurrentPageEditor = Some(newPageEditorModel)
+        ActivePageId = Some(newEditorPage.PageData.Id)
+        CurrentPageEditor = Some(newEditorPage)
     }
 
     newModel, Cmd.none
@@ -65,13 +26,12 @@ let init () : Model * Cmd<Msg> =
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | CreatePage ->
-        let newPageId = Guid.NewGuid()
-        let newPage = { newPage with Id = newPageId }
+        let newEditorPage, cmd = pageEditorInit ()
 
         {
             model with
-                Pages = model.Pages |> Map.add newPageId newPageEditorModel
-                ActivePageId = Some newPageId
+                Pages = model.Pages |> Map.add newEditorPage.PageData.Id newEditorPage
+                ActivePageId = Some newEditorPage.PageData.Id
         },
         Cmd.none
 

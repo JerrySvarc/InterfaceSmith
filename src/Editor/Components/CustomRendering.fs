@@ -13,6 +13,10 @@ open CoreLogic.Operations.DataRecognition
 open Editor.Utilities.Icons
 open Editor.Types.EditorDomain
 
+
+
+
+
 let rec renderingCodeToReactElement
     (code: RenderingCode)
     (path: int list)
@@ -171,3 +175,40 @@ let rec renderingCodeToReactElement
     | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
     | HtmlObject(objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
     | Hole named -> renderHole named
+
+
+
+let renderElements (model: PageEditorModel) dispatch =
+    let viewportTransform (position: Position) = {
+        X = (position.X + model.ViewportPosition.X) * model.Scale
+        Y = (position.Y + model.ViewportPosition.Y) * model.Scale
+    }
+
+    let renderElement element =
+        let pos = viewportTransform element.Position
+        let baseWidth, baseHeight = 120.0, 50.0
+        let scaledWidth = baseWidth * model.Scale
+        let scaledHeight = baseHeight * model.Scale
+
+        Html.div [
+            prop.className
+                "absolute bg-blue-500 text-white rounded shadow-lg flex items-center justify-center draggable"
+            prop.style [
+                style.left (length.px pos.X)
+                style.top (length.px pos.Y)
+                style.transform [
+                    transform.translateX (length.percent -50)
+                    transform.translateY (length.percent -50)
+                ]
+                style.width (length.px scaledWidth)
+                style.height (length.px scaledHeight)
+                style.cursor "grabbing"
+                style.fontSize (length.px (16.0 * model.Scale))
+            ]
+            prop.onMouseDown (fun e ->
+                e.stopPropagation ()
+                dispatch (StartDraggingItem(element.Id, { X = e.clientX; Y = e.clientY })))
+            prop.children [ Html.div [ prop.text "Menu item"; prop.className "select-none" ]; Html.none ]
+        ]
+
+    model.Elements |> List.map renderElement

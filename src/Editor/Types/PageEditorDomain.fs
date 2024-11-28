@@ -24,7 +24,7 @@ type ElementType =
     | View of RenderingCode
     | Model
 
-type Item = {
+type Element = {
     Id: int
     Position: Position
     Content: ElementType
@@ -40,8 +40,8 @@ type PageEditorModel = {
     FileUploadError: bool
     ViewportPosition: Position
     Scale: float
-    Items: Item list
-    DraggingItemId: int option
+    Elements: Element list
+    DraggingElementId: int option
     IsPanning: bool
     LastMousePosition: Position option
     IsPreviewOpen: bool
