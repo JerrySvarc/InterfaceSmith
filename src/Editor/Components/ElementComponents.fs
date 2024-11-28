@@ -1,4 +1,4 @@
-module Editor.Components.OptionComponents
+module Editor.Components.ElementComponents
 
 open Editor.Types
 open Fable.React
@@ -11,6 +11,7 @@ open Fable.Core.JsInterop
 open Microsoft.FSharp.Reflection
 open Editor.Utilities.Icons
 open Editor.Types.EditorDomain
+open Fable.SimpleJson
 
 // Contains option menu components for each type of rendering code
 // Each component takes a dispatch function, the current code, and the path to the code in the tree
@@ -32,18 +33,53 @@ let rec options
     | Hole _ -> Html.none
 
 
-
-
-let ModelElement json dispatch =
-    let rec displayField json =
+let rec displayField (json: Json) =
+    match json with
+    | JObject obj ->
         Html.div [
-            prop.className ""
-            prop.children [
-
-            ]
+            prop.className "ml-4 space-y-2"
+            prop.children (
+                obj
+                |> Map.toList
+                |> List.map (fun (key, value) ->
+                    Html.div [
+                        prop.className "space-y-1"
+                        prop.children [
+                            Html.div [ prop.className "font-bold text-blue-400"; prop.text $"{key}:" ]
+                            displayField value
+                        ]
+                    ])
+            )
         ]
+    | JArray arr ->
+        Html.div [
+            prop.className "ml-4 space-y-2"
+            prop.children (
+                arr
+                |> List.mapi (fun i item ->
+                    Html.div [
+                        prop.className "flex flex-row space-x-2 items-start"
+                        prop.children [
+                            Html.div [ prop.className "font-bold text-green-400"; prop.text $"[{i}]:" ]
+                            displayField item
+                        ]
+                    ])
+            )
+        ]
+    | JString str -> Html.div [ prop.className "text-red-400"; prop.text $"\"{str}\"" ]
+    | JNumber num -> Html.div [ prop.className "text-purple-400"; prop.text $"{num}" ]
+    | JBool b -> Html.div [ prop.className "text-yellow-400"; prop.text (if b then "true" else "false") ]
+    | JNull -> Html.div [ prop.className "text-gray-500 italic"; prop.text "null" ]
 
-    Html.div [ prop.className ""; prop.children [ displayField json ] ]
+let ModelElement (json: Json) =
+    Html.div [
+        prop.className "font-mono bg-gray-900 text-white rounded p-4 shadow-lg "
+        prop.children [
+            Html.h3 [ prop.className "font-bold mb-4 text-white"; prop.text "JSON Model" ]
+            displayField json
+        ]
+    ]
+
 
 let MainView model dispatch = Html.div []
 

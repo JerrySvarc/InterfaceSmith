@@ -208,7 +208,7 @@ let renderElements (model: PageEditorModel) dispatch =
             prop.onMouseDown (fun e ->
                 e.stopPropagation ()
                 dispatch (StartDraggingItem(element.Id, { X = e.clientX; Y = e.clientY })))
-            prop.children [ Html.div [ prop.text "Menu item"; prop.className "select-none" ]; Html.none ]
+            prop.children [ element.Content ]
         ]
 
     model.Elements |> List.map renderElement

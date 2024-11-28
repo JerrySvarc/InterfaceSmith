@@ -14,10 +14,10 @@ open Editor.Utilities.JsonParsing
 open Editor.Components.CustomRendering
 open CoreLogic.Operations.DataRecognition
 open CoreLogic.Operations.RenderingCode
-open Editor.Components.OptionComponents
 open CoreLogic.Operations.CodeGeneration
 open Editor.Utilities.JavaScriptEditor
 open System
+open Editor.Components.ElementComponents
 
 // PageEditor elmish-style functionality
 
@@ -35,17 +35,17 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         {
             Id = 1
             Position = { X = 100.0; Y = 150.0 }
-            Content = View(Hole(UnNamed))
+            Content = Html.div []
         }
         {
             Id = 2
             Position = { X = 300.0; Y = 400.0 }
-            Content = View(Hole(UnNamed))
+            Content = Html.div []
         }
         {
             Id = 3
             Position = { X = 500.0; Y = 250.0 }
-            Content = View(Hole(UnNamed))
+            Content = Html.div []
         }
     ]
 
@@ -84,10 +84,17 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                         JsonString = jsonString
                 }
 
+                let newModelElement = {
+                    Id = model.Elements.Length + 1
+                    Position = { X = 400.0; Y = 350.0 }
+                    Content = ModelElement updatedPage.ParsedJson
+                }
+
                 let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
+                        Elements = model.Elements @ [ newModelElement ]
                 }
 
                 updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
@@ -197,7 +204,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         let newItem = {
             Id = model.Elements.Length
             Position = { X = pos.X; Y = pos.Y }
-            Content = View(Hole(UnNamed))
+            Content = Html.div []
         }
 
         {

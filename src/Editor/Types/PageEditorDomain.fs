@@ -3,7 +3,7 @@ module Editor.Types.PageEditorDomain
 open CoreLogic.Types.RenderingTypes
 open System
 open Fable.SimpleJson
-
+open Fable.React
 
 //Represents a single created page
 type Page = {
@@ -19,15 +19,10 @@ type Page = {
 type Position = { X: float; Y: float }
 
 
-type ElementType =
-    | Message
-    | View of RenderingCode
-    | Model
-
 type Element = {
     Id: int
     Position: Position
-    Content: ElementType
+    Content: ReactElement
 }
 
 type RightPaneTab =

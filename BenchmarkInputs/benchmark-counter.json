@@ -1,4 +1,4 @@
 {
-  "Celsius": 0,
-  "Farenheit": ""
+  "Count": 0,
+  "incrementButton": "Increment counter"
  }
