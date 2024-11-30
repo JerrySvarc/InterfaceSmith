@@ -121,6 +121,8 @@ let rec generateHtmlStructure
         (htmlString, eventHandlers @ List.concat childHandlers)
 
     | Hole _ -> (sprintf "%s<!-- Hole -->" indent, [])
+    | CustomWrapper(_) -> failwith "Not Implemented"
+    | CustomElement(_) -> failwith "Not Implemented"
 
 let generateJavaScript (code: RenderingCode) (customHandlers: Map<string, Javascript>) : string =
     let customFunctions =

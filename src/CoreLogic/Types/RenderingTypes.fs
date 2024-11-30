@@ -62,6 +62,8 @@ type RenderingCode =
         keyOrdering: string list *
         codes: Map<string, RenderingCode> *
         eventHandlers: (string * Javascript) list
+    | CustomWrapper of CustomWrapper
+    | CustomElement of CustomElement
     | Hole of FieldHole
 
 // Represents a JavaScript code
@@ -75,18 +77,18 @@ and Javascript = JSFunction of name: string * code: string
 
 // Potential definition of a custom wrapper around an existing RenderingCode element with children CustomElements
 // Primary motivation is the ability to add an existing RenderingCode as an inner value of a new custom element
-(*and CustomWrapper = {
+and CustomWrapper = {
     Tag: Tag
     Attributes: Attributes
     WrappedCode: RenderingCode
     Children: RenderingCode list
     EventHandlers: (string * Javascript) list
-}*)
+}
 
 // Potential implementation of a custom element not created based on a referential value from the JSON AST
-(*and CustomElement = {
+and CustomElement = {
     Tag: Tag
     Attributes: Attributes
     CustomInnerValue: string
     EventHandlers: (string * Javascript) list
-}*)
+}

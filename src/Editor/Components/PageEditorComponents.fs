@@ -35,17 +35,18 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         {
             Id = 1
             Position = { X = 100.0; Y = 150.0 }
-            Content = Html.div []
+            Content = Html.div [ prop.text "Hello" ]
         }
         {
             Id = 2
             Position = { X = 300.0; Y = 400.0 }
-            Content = Html.div []
+            Content = Html.div [ prop.text "Hello" ]
         }
         {
             Id = 3
             Position = { X = 500.0; Y = 250.0 }
-            Content = Html.div []
+            Content = Html.div [ prop.text "Hello" ]
+
         }
     ]
 
@@ -87,7 +88,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 let newModelElement = {
                     Id = model.Elements.Length + 1
                     Position = { X = 400.0; Y = 350.0 }
-                    Content = ModelElement updatedPage.ParsedJson
+                    Content = ModelElement data
                 }
 
                 let updatedEditorPage = {

@@ -15,9 +15,7 @@ type Page = {
     CustomHandlers: Map<string, Javascript>
 }
 
-
 type Position = { X: float; Y: float }
-
 
 type Element = {
     Id: int
@@ -57,3 +55,4 @@ type PageEditorMsg =
     | Zoom of float
     | AddItem of Position
     | TogglePreview
+    | OpenFieldView
