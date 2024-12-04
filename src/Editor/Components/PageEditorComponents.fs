@@ -11,7 +11,7 @@ open Fable.SimpleJson
 open Editor.Utilities.FileUpload
 open Editor.Utilities.Icons
 open Editor.Utilities.JsonParsing
-open Editor.Components.CustomRendering
+open Editor.CustomRendering
 open CoreLogic.Operations.DataRecognition
 open CoreLogic.Operations.RenderingCode
 open CoreLogic.Operations.CodeGeneration
@@ -31,31 +31,13 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         CustomHandlers = Map([])
     }
 
-    let initialItems = [
-        {
-            Id = 1
-            Position = { X = 100.0; Y = 150.0 }
-            Content = Html.div [ prop.text "Hello" ]
-        }
-        {
-            Id = 2
-            Position = { X = 300.0; Y = 400.0 }
-            Content = Html.div [ prop.text "Hello" ]
-        }
-        {
-            Id = 3
-            Position = { X = 500.0; Y = 250.0 }
-            Content = Html.div [ prop.text "Hello" ]
-
-        }
-    ]
 
     let newPageEditorModel = {
         PageData = newPage
         FileUploadError = false
         ViewportPosition = { X = 0.0; Y = 0.0 }
         Scale = 1.0
-        Elements = initialItems
+        Elements = []
         DraggingElementId = None
         IsPanning = false
         LastMousePosition = None
@@ -64,7 +46,18 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
 
     newPageEditorModel, Cmd.none
 
-
+let ElementOption =
+    Html.div [
+        prop.onMouseDown (fun e -> e.stopPropagation ())
+        prop.className "bg-gray-800 space-x-2 flex "
+        prop.children [
+            Html.h1 [ prop.text "Todo"; prop.className "text-lg text-white" ]
+            Html.div [
+                Html.div [ prop.className "text-sm text-white"; prop.text "div" ]
+                Html.div [ prop.className "text-sm text-white"; prop.text "attributes" ]
+            ]
+        ]
+    ]
 // This function is used to update the page editor model
 // It is called when the user interacts with the page editor
 // It updates the page editor model and sends a message to the main page via Cmd.ofMsg
@@ -91,11 +84,17 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                     Content = ModelElement data
                 }
 
+                let option = {
+                    Id = model.Elements.Length + 2
+                    Position = { X = 400.0; Y = 350.0 }
+                    Content = ElementOption
+                }
+
                 let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
-                        Elements = model.Elements @ [ newModelElement ]
+                        Elements = model.Elements @ [ newModelElement; option ]
                 }
 
                 updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
@@ -205,7 +204,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         let newItem = {
             Id = model.Elements.Length
             Position = { X = pos.X; Y = pos.Y }
-            Content = Html.div []
+            Content = Html.none
         }
 
         {
@@ -220,6 +219,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 IsPreviewOpen = not model.IsPreviewOpen
         },
         Cmd.none
+    | OpenFieldView -> failwith "Not Implemented"
     | StartPanning(_)
     | UpdatePanning(_) -> failwith "Not Implemented"
 
@@ -264,7 +264,7 @@ let DataUpload dispatch =
             prop.children [
                 Html.label [
                     prop.className
-                        "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-2 rounded shadow flex items-center justify-center h-10"
+                        "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow flex items-center justify-center h-10"
                     prop.children [
                         ReactBindings.React.createElement (
                             uploadIcon,
@@ -284,25 +284,26 @@ let DataUpload dispatch =
 
     let uploadButton = uploadButtonView (UploadData >> dispatch)
 
-    Html.div [ prop.className "m-2"; prop.children [ uploadButton ] ]
-
-
+    Html.div [ prop.className ""; prop.children [ uploadButton ] ]
 
 let toolBarElements dispatch = [
     DataUpload dispatch
     Html.button [
+        prop.children [
+            ReactBindings.React.createElement (downloadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ], [])
+            Html.span [ prop.text "Save" ]
+        ]
         prop.className
-            "bg-blue-500 hover:bg-blue-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center "
-        prop.text "Save"
+            "bg-blue-500 hover:bg-blue-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
     ]
     Html.button [
         prop.className
-            "bg-green-500 hover:bg-green-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center leading-none"
-        prop.text "Publish"
+            "bg-green-500 hover:bg-green-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
+        prop.text "Show source code"
     ]
     Html.button [
         prop.className
-            "bg-yellow-500 hover:bg-yellow-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center leading-none"
+            "bg-yellow-500 hover:bg-yellow-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
         prop.text "Preview Page"
         prop.onClick (fun _ -> dispatch TogglePreview)
     ]
@@ -311,10 +312,10 @@ let toolBarElements dispatch = [
 let ToolBar dispatch =
     Html.div [
         prop.className
-            "flex items-center justify-center bg-gray-500 text-white h-fit w-fit fixed top-5 z-10 shadow-md border-b border-gray-700 rounded"
+            "flex items-center justify-between bg-gray-500 text-white h-fit px-4 py-2 fixed space-x-4 top-2 left-1/2 transform -translate-x-1/2 z-10 shadow-md border border-gray-700 rounded"
         prop.children [
             Html.nav [
-                prop.className "flex space-x-1 items-center h-full"
+                prop.className "flex space-x-2 items-center h-full"
                 prop.children (toolBarElements dispatch)
             ]
         ]
@@ -323,23 +324,86 @@ let ToolBar dispatch =
 
 [<ReactComponent>]
 let SandboxPreviewView (model: PageEditorModel) dispatch =
-    let fullHtml, js =
-        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
+    let js =
+        """
+        const Msg = { IncrementCounter: "IncrementCounter", ToggleVisibility: "ToggleVisibility" };
+
+        const model = { counter: 0, isVisible: true };
+
+        const update = (msg, model) => {
+            switch (msg) {
+                case Msg.IncrementCounter:
+                    return { ...model, counter: model.counter + 1 };
+                case Msg.ToggleVisibility:
+                    return { ...model, isVisible: !model.isVisible };
+                default:
+                    return model;
+            }
+        };
+
+        const view = (model, dispatch) => `
+    <div>
+        <div>Counter: ${model.counter}</div>
+        <button class"bg-gray-500 onclick="window.dispatch(Msg.IncrementCounter)">Increment</button>
+        <button onclick="window.dispatch(Msg.ToggleVisibility)">Toggle</button>
+        <div style="display: ${model.isVisible ? 'block' : 'none'}">Hello World</div>
+    </div>
+`;
+        function startApp(initialModel, updateFn, viewFn) {
+            let currentModel = initialModel;
+
+            const render = () => {
+                const root = document.getElementById("app");
+                root.innerHTML = viewFn(currentModel, dispatch);
+            };
+
+           window.dispatch = (msg) => {
+                currentModel = updateFn(msg, currentModel);
+                render();
+            };
+
+            render();
+        }
+
+        startApp(model, update, view);
+        """
+
+    let fullHtml =
+        $"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sandbox Preview</title>
+        </head>
+        <body>
+            <div id="app"></div>
+            <script>
+            {js}
+            </script>
+        </body>
+        </html>
+        """
 
     if model.IsPreviewOpen then
         Html.div [
-            prop.className "bg-yellow-500"
+            prop.className "bg-white"
             prop.children [
                 Html.iframe [
                     prop.src "about:blank"
-                    prop.custom ("sandbox", "allow-scripts allow-forms allow-modals")
+                    prop.custom ("sandbox", "allow-scripts allow-same-origin allow-forms allow-modals")
                     prop.custom ("srcDoc", fullHtml)
-
                 ]
             ]
         ]
     else
         Html.none
+
+
+
+
+
 
 [<ReactComponent>]
 let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
@@ -373,7 +437,7 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
 [<ReactComponent>]
 let PageEditorView (pageModel: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
     Html.div [
-        prop.className "relative h-full w-full flex  "
+        prop.className "relative h-full w-full flex"
         prop.children [
             ToolBar dispatch
             Canvas pageModel dispatch

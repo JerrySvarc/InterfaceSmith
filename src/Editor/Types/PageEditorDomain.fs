@@ -17,6 +17,8 @@ type Page = {
 
 type Position = { X: float; Y: float }
 
+
+
 type Element = {
     Id: int
     Position: Position

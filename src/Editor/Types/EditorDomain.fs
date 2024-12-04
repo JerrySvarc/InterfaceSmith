@@ -9,6 +9,7 @@ open PageEditorDomain
 // Application state
 type Model = {
     Pages: Map<Guid, PageEditorModel>
+    PageOrder: Guid list
     ActivePageId: Guid option
     IsSidebarOpen: bool
     CurrentPageEditor: PageEditorModel option

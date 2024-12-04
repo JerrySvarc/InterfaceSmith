@@ -16,6 +16,7 @@ let init () : Model * Cmd<Msg> =
 
     let newModel = {
         Pages = Map []
+        PageOrder = []
         IsSidebarOpen = true
         ActivePageId = Some(newEditorPage.PageData.Id)
         CurrentPageEditor = Some(newEditorPage)
@@ -32,6 +33,7 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             model with
                 Pages = model.Pages |> Map.add newEditorPage.PageData.Id newEditorPage
                 ActivePageId = Some newEditorPage.PageData.Id
+                PageOrder = model.PageOrder @ [ newEditorPage.PageData.Id ]
         },
         Cmd.none
 
@@ -43,12 +45,26 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         Cmd.none
 
     | DeletePage pageId ->
-        let newPages = model.Pages |> Map.remove pageId
+        let newPages =
+            match Map.tryFind pageId model.Pages with
+            | Some page -> Map.remove pageId model.Pages
+            | None -> model.Pages
+
+        let newPageOrder =
+            match List.tryFindIndex (fun x -> x = pageId) model.PageOrder with
+            | Some index -> List.removeAt index model.PageOrder
+            | None -> model.PageOrder
+
+        let activePageId =
+            match model.ActivePageId with
+            | Some id -> if id = pageId then None else model.ActivePageId
+            | None -> None
 
         {
             model with
                 Pages = newPages
-                ActivePageId = None
+                ActivePageId = activePageId
+                PageOrder = newPageOrder
         },
         Cmd.none
 

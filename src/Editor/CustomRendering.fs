@@ -1,4 +1,4 @@
-module Editor.Components.CustomRendering
+module Editor.CustomRendering
 
 open System.Text
 open CoreLogic.Types.RenderingTypes
@@ -12,6 +12,7 @@ open Editor.Types.PageEditorDomain
 open CoreLogic.Operations.DataRecognition
 open Editor.Utilities.Icons
 open Editor.Types.EditorDomain
+open Editor.Components.ElementComponents
 
 
 let rec renderingCodeToReactElement
@@ -165,8 +166,11 @@ let renderElements (model: PageEditorModel) dispatch =
         Y = (position.Y + model.ViewportPosition.Y) * model.Scale
     }
 
+    printfn "renderElements re-rendering"
+
     let renderElement element =
         let pos = viewportTransform element.Position
+
 
         Html.div [
             prop.className "absolute flex items-center justify-center w-fit h-fit bg-blue-900 shadow-lg"
