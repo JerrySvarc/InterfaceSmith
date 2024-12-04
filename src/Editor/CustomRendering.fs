@@ -187,7 +187,7 @@ let renderElements (model: PageEditorModel) dispatch =
                 e.stopPropagation ()
                 dispatch (StartDraggingItem(element.Id, { X = e.clientX; Y = e.clientY })))
             prop.children [
-                Html.div[prop.className "m-4"
+                Html.div[prop.className "mt-4 ml-1 mr-1 mb-1"
                          prop.children [ element.Content ]]
             ]
         ]

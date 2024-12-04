@@ -20,15 +20,17 @@ open Fable.SimpleJson
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
         prop.className
-            "w-full p-2 bg-white border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            "text-xs w-1/3 h-fit p-2 bg-white border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
         prop.onMouseDown (fun e -> e.stopPropagation ())
         prop.value value
         prop.onChange (fun (e: Browser.Types.Event) -> e.target?value |> string |> onChange)
         prop.children (
-            Html.option [ prop.value ""; prop.text "Select an option" ]
-            :: (options |> List.map (fun opt -> Html.option [ prop.value opt; prop.text opt ]))
+            Html.option [ prop.value "string"; prop.text "Select an option" ]
+            :: (options
+                |> List.map (fun opt -> Html.option [ prop.className "text-xs"; prop.value opt; prop.text opt ]))
         )
     ]
+
 
 let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
     match code with
@@ -96,7 +98,7 @@ let ModelElement (json: Json) =
                     ])
 
             Collapsible {|
-                title = "{...}"
+                title = "Object"
                 children = entries
                 key = $"obj-{System.Guid.NewGuid()}"
             |}
@@ -111,7 +113,7 @@ let ModelElement (json: Json) =
                     ])
 
             Collapsible {|
-                title = $"[ {List.length arr} items ]"
+                title = $"[ List of {List.length arr} items ]"
                 children = items
                 key = $"arr-{arr.Length}"
             |}
@@ -133,7 +135,7 @@ let ModelElement (json: Json) =
 
 
 let ViewElement content =
-    Html.div [ prop.className "bg-gray-900 text-white rounded"; prop.children [ content ] ]
+    Html.div [ prop.className "text-white rounded"; prop.children [ content ] ]
 
 
 let MsgOverview model dispatch = Html.div []

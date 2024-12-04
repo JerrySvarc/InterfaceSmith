@@ -47,14 +47,27 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
     newPageEditorModel, Cmd.none
 
 let ElementOption =
+    let options1 = [ "Option 1"; "Option 2"; "Option 3" ]
+    let selectedValue1 = "Option 1" // Or dynamically set from state
+    let handleChange1 newValue = printfn "Selected: %s" newValue
+    let options2 = [ "Option 1"; "Option 2"; "Option 3" ]
+    let selectedValue2 = "Option 1" // Or dynamically set from state
+    let handleChange2 newValue = printfn "Selected: %s" newValue
+
     Html.div [
         prop.onMouseDown (fun e -> e.stopPropagation ())
-        prop.className "bg-gray-800 space-x-2 flex "
+        prop.className "bg-white flex flex-col p-4"
         prop.children [
-            Html.h1 [ prop.text "Todo"; prop.className "text-lg text-white" ]
+            Html.h1 [ prop.text "Todo"; prop.className "preview" ]
             Html.div [
-                Html.div [ prop.className "text-sm text-white"; prop.text "div" ]
-                Html.div [ prop.className "text-sm text-white"; prop.text "attributes" ]
+                prop.children [
+                    SelectMenu options1 selectedValue1 handleChange1
+                    SelectMenu options2 selectedValue2 handleChange2
+                ]
+            ]
+            Html.ul [
+                prop.className "preview"
+                prop.children [ Html.li [ prop.text "todo1" ]; Html.li [ prop.text "todo2" ] ]
             ]
         ]
     ]
@@ -83,6 +96,8 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                     Position = { X = 400.0; Y = 350.0 }
                     Content = ModelElement data
                 }
+
+
 
                 let option = {
                     Id = model.Elements.Length + 2
