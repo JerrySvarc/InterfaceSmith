@@ -12,7 +12,6 @@ type Model = {
     PageOrder: Guid list
     ActivePageId: Guid option
     IsSidebarOpen: bool
-    CurrentPageEditor: PageEditorModel option
 }
 
 // Application operations

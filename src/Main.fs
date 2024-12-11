@@ -12,14 +12,13 @@ open Editor.UIComponents.PageEditorComponents
 
 
 let init () : Model * Cmd<Msg> =
-    let newEditorPage, cmd = pageEditorInit ()
+    let newPageEditorModel, cmd = pageEditorInit ()
 
     let newModel = {
-        Pages = Map []
-        PageOrder = []
+        Pages = Map [ (newPageEditorModel.PageData.Id, newPageEditorModel) ]
+        PageOrder = [ newPageEditorModel.PageData.Id ]
         IsSidebarOpen = true
-        ActivePageId = Some(newEditorPage.PageData.Id)
-        CurrentPageEditor = Some(newEditorPage)
+        ActivePageId = Some(newPageEditorModel.PageData.Id)
     }
 
     newModel, Cmd.none
@@ -80,8 +79,6 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
             {
                 model with
                     ActivePageId = Some pageId
-                    CurrentPageEditor = Some pageModel
-
             },
             Cmd.none
         | None ->

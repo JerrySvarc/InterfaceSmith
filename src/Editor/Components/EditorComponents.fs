@@ -9,7 +9,7 @@ open Fable.Core.JsInterop
 
 
 ///<summary>
-let PageTab model page (dispatch: Msg -> unit) =
+let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : ReactElement =
     Html.div [
         prop.className (
             sprintf
@@ -45,8 +45,12 @@ let PageTab model page (dispatch: Msg -> unit) =
 
 
 
+/// <summary></summary>
+/// <param name="model"></param>
+/// <param name="dispatch"></param>
+/// <returns></returns>
 [<ReactComponent>]
-let SideBarContent (model: Model) (dispatch: Msg -> unit) =
+let SideBarContent (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [
         prop.className "p-4 mt-12 "
         prop.children [
@@ -84,8 +88,12 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) =
         ]
     ]
 
+/// <summary></summary>
+/// <param name="model"></param>
+/// <param name="dispatch"></param>
+/// <returns></returns>
 [<ReactComponent>]
-let Sidebar (model: Model) (dispatch: Msg -> unit) =
+let Sidebar (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [
         prop.className (
             sprintf

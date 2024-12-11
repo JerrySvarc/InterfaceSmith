@@ -15,17 +15,16 @@ open Editor.Types.EditorDomain
 open Editor.Components.ElementComponents
 
 
-let rec renderingCodeToReactElement
-    (code: RenderingCode)
-    (path: int list)
-    (json: Json)
-    (name: string)
-    (options: (PageEditorMsg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement)
-    (dispatch: PageEditorMsg -> unit)
-    : ReactElement =
+/// <summary></summary>
+/// <param name="context"></param>
+/// <param name="code"></param>
+/// <returns></returns>
+let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (code: RenderingCode) : ReactElement =
 
     let renderWithOptions (preview: ReactElement) =
-        Html.div [ prop.children [ preview; options dispatch code path name ] ]
+        Html.div [
+            prop.children [ preview; options context.Dispatch code context.Path context.Name ]
+        ]
 
     let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =
         try
@@ -39,11 +38,11 @@ let rec renderingCodeToReactElement
     let renderHtmlElement (tag: Tag) (attrs: Attributes) (innerValue: InnerValue) =
         let attributes =
             attrs
-            |> List.map (fun (key, value) ->
-                match value with
-                | Data -> key, box (json |> Json.convertFromJsonAs<string>)
-                | Constant s -> (key, box s)
-                | InnerValue.Empty -> (key, box value))
+            |> List.map (fun attr ->
+                match attr.Value with
+                | Data -> attr.Key, box (context.Json |> Json.convertFromJsonAs<string>)
+                | Constant s -> (attr.Key, box s)
+                | InnerValue.Empty -> (attr.Key, box attr.Value))
             |> List.append [ ("className", box "preview") ]
             |> createObj
 
@@ -51,24 +50,29 @@ let rec renderingCodeToReactElement
             match innerValue with
             | Data ->
                 try
-                    let jsonStr = json |> Json.convertFromJsonAs<string>
+                    let jsonStr = context.Json |> Json.convertFromJsonAs<string>
                     [ Html.text jsonStr ]
                 with ex -> [ Html.text $"Data parsing error: {ex.Message}" ]
             | InnerValue.Empty -> []
             | Constant value -> [ Html.text value ]
 
-        createPreview (tagToString tag) attributes children |> renderWithOptions
+        createPreview (tag.Name) attributes children |> renderWithOptions
 
     let renderHtmlList (listType: ListType) (codes: RenderingCode list) =
-        match json with
+        match context.Json with
         | JArray array ->
             let elements =
                 codes
                 |> List.mapi (fun index code ->
                     let arrayItem = List.item index array
 
-                    let renderedItem =
-                        renderingCodeToReactElement code (path @ [ index ]) arrayItem name options dispatch
+                    let newContext = {
+                        context with
+                            Path = context.Path @ [ index ]
+                            Json = arrayItem
+                    }
+
+                    let renderedItem = renderingCodeToReactElement newContext code
 
                     Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
 
@@ -79,7 +83,7 @@ let rec renderingCodeToReactElement
         | _ -> Html.div [ prop.text "Invalid JSON for HtmlList: not an array" ]
 
     let renderHtmlObject (keys: string list) (codes: Map<string, RenderingCode>) =
-        match json with
+        match context.Json with
         | JObject object ->
             let renderedElements =
                 keys
@@ -89,8 +93,13 @@ let rec renderingCodeToReactElement
 
                     match element, jsonValue with
                     | Some code, Some value ->
-                        renderingCodeToReactElement code (path @ [ index ]) value key options dispatch
-                    //TODO: styling
+                        let newContext = {
+                            context with
+                                Path = context.Path @ [ index ]
+                                Json = value
+                        }
+
+                        renderingCodeToReactElement newContext code
                     | None, Some(_) ->
                         Html.div [ prop.text ("RenderingCode element with the name " + key + " not found.") ]
                     | Some(_), None ->
@@ -116,57 +125,62 @@ let rec renderingCodeToReactElement
             | UnNamed -> "Unnamed"
             | Named n -> n
 
-        let fieldType = recognizeJson json
-        options dispatch fieldType path holeName
+        let fieldType = recognizeJson context.Json
+        options context.Dispatch fieldType context.Path holeName
 
     let renderCustomWrapper (customWrapper: CustomWrapper) =
         let attributes =
             customWrapper.Attributes
-            |> List.map (fun (key, value) -> (key, box value))
+            |> List.map (fun attr -> (attr.Key, box attr.Value))
             |> List.append [ ("className", box "preview custom-wrapper") ]
             |> createObj
 
-        let wrappedContent =
-            renderingCodeToReactElement customWrapper.WrappedCode (path) json name options dispatch
+        let wrappedContent = renderingCodeToReactElement context customWrapper.WrappedCode
+
 
         let children =
             wrappedContent
             :: (customWrapper.Children
                 |> List.mapi (fun index child ->
-                    renderingCodeToReactElement child (path @ [ -1; index ]) json name options dispatch))
+                    let newContext = {
+                        context with
+                            Path = context.Path @ [ -1; index ]
+                    }
 
-        createPreview (tagToString customWrapper.Tag) attributes children
-        |> renderWithOptions
+                    renderingCodeToReactElement newContext child))
+
+        createPreview (customWrapper.Tag.Name) attributes children |> renderWithOptions
 
     let renderCustomElement (customElement: CustomElement) =
         let attributes =
             customElement.Attributes
-            |> List.map (fun (key, value) -> (key, box value))
+            |> List.map (fun attr -> (attr.Key, box attr.Value))
             |> List.append [ ("className", box "preview custom-element") ]
             |> createObj
 
         let children = [ Html.text customElement.CustomInnerValue ]
 
-        createPreview (tagToString customElement.Tag) attributes children
-        |> renderWithOptions
+        createPreview (customElement.Tag.Name) attributes children |> renderWithOptions
 
     match code with
-    | HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
-    | HtmlList(listType, codes, eventHandlers) -> renderHtmlList listType codes
-    | HtmlObject(objType, keys, codes, eventHandlers) -> renderHtmlObject keys codes
-    | Hole named -> renderHole named
-    | CustomWrapper customWrapper -> renderCustomWrapper customWrapper
-    | CustomElement customElement -> renderCustomElement customElement
+    | RenderingCode.HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
+    | RenderingCode.HtmlList(listType, attrs, codes, eventHandlers) -> renderHtmlList listType codes
+    | RenderingCode.HtmlObject(objType, attrs, keys, codes, eventHandlers) -> renderHtmlObject keys codes
+    | RenderingCode.Hole named -> renderHole named
+    | RenderingCode.CustomWrapper customWrapper -> renderCustomWrapper customWrapper
+    | RenderingCode.CustomElement customElement -> renderCustomElement customElement
 
 
 
-let renderElements (model: PageEditorModel) dispatch =
+/// <summary></summary>
+/// <param name="model"></param>
+/// <param name="dispatch"></param>
+/// <returns></returns>
+let renderCanvasElements (model: PageEditorModel) dispatch =
     let viewportTransform (position: Position) = {
         X = (position.X + model.ViewportPosition.X) * model.Scale
         Y = (position.Y + model.ViewportPosition.Y) * model.Scale
     }
-
-    printfn "renderElements re-rendering"
 
     let renderElement element =
         let pos = viewportTransform element.Position
