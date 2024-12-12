@@ -1,53 +1,39 @@
-# SAFE Template
+# Data DrUId
+**Data DrUId** (Data-driven UI) is a programming system combining a **Data-driven** approach to creating web application UIs with a **Low-code** programming interface. 
 
-This template can be used to generate a full-stack web application using the [SAFE Stack](https://safe-stack.github.io/). It was created using the dotnet [SAFE Template](https://safe-stack.github.io/docs/template-overview/). If you want to learn more about the template why not start with the [quick start](https://safe-stack.github.io/docs/quickstart/) guide?
 
-## Install pre-requisites
+## Motivation
 
-You'll need to install the following pre-requisites in order to build SAFE applications
+**Data DrUId** explores a method of creating web applications with a system which guides the programmer during the creation process and provides capabilities that make this process faster and without the need to write large amounts of boilerplate code.
+We will explain the differences between the standard way of creating web applications today compared to our prototype system. 
+
+### Standard workflow today
+Imagine you aquire some JSON data from a public API and you wish to create an application which displays some of this data, and you also want to add custom functionality for the elements.
+The standard method would be to create an empty project in your favourite programming language, analyze the data and then create the UI elements by hand, making sure that each element properly displays the corresponding data.
+Then you would also change the styling of the elements using either pure CSS or a library such as Tailwind.
+Finally, you would add custom behaviour to react to user events, such as clicking a button or clicking on a dropdown menu.  
+
+
+### Workflow using Data DrUId
+Imagine you have the same data as in the previous section. You upload this data to the Data DrUId system, which presents you with a view of the uploaded data.
+It also presents you the option to create UI elements based on the data you uploaded. 
+You pick and choose which data to use by incrementally creating the UI elements
+and modify these elements using the context menus which allow you to change the tag, attributes, and handlers of the element.
+You can also style the application using Tailwind and immedeately see the preview of the element after each change. 
+Then you can define events and define how the data should change when the event occurs, which in turn changes the content of the UI elements.
+
+
+## Installation
+The preffered method of running the application is by using the provided Dockerfile. 
+
+## Development
+
+### Install pre-requisites
+You'll need to install the following pre-requisites in order to build the applications
 
 * [.NET Core SDK](https://www.microsoft.com/net/download) 8.0 or higher
 * [Node 20](https://nodejs.org/en/download/)
 
-## Starting the application
+### Build commands
+### 
 
-Before you run the project **for the first time only** you must install dotnet "local tools" with this command:
-
-```bash
-dotnet tool restore
-```
-
-To concurrently run the server and the client components in watch mode use the following command:
-
-```bash
-dotnet run
-```
-
-Then open `http://localhost:8080` in your browser.
-
-The build project in root directory contains a couple of different build targets. You can specify them after `--` (target name is case-insensitive).
-
-To run concurrently server and client tests in watch mode (you can run this command in parallel to the previous one in new terminal):
-
-```bash
-dotnet run -- RunTests
-```
-
-Client tests are available under `http://localhost:8081` in your browser and server tests are running in watch mode in console.
-
-Finally, there are `Bundle` and `Azure` targets that you can use to package your app and deploy to Azure, respectively:
-
-```bash
-dotnet run -- Bundle
-dotnet run -- Azure
-```
-
-## SAFE Stack Documentation
-
-If you want to know more about the full Azure Stack and all of it's components (including Azure) visit the official [SAFE documentation](https://safe-stack.github.io/docs/).
-
-You will find more documentation about the used F# components at the following places:
-
-* [Saturn](https://saturnframework.org/)
-* [Fable](https://fable.io/docs/)
-* [Elmish](https://elmish.github.io/elmish/)
