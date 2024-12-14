@@ -50,294 +50,6 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
 
 
 
-[<ReactComponent>]
-let InnerValueMenu (currentInnerValue: InnerValue) (code: RenderingCode) path =
-    let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
-
-    let constantValue, setConstantValue =
-        React.useState (
-            match currentInnerValue with
-            | Constant str -> str
-            | _ -> ""
-        )
-
-    let updateInnerValue newValue =
-        match code with
-        | RenderingCode.HtmlElement(tag, attrs, _, handlers) ->
-            //dispatch (ReplaceCode(RenderingCode.HtmlElement(tag, attrs, newValue, handlers), path))
-            ()
-        | _ -> ()
-
-    Html.span [
-        prop.children [
-            Html.span [
-                prop.children [
-                    SelectMenu innerValueOptions (currentInnerValue |> innerValueToString) (fun selectedValue ->
-                        let newValue =
-                            match selectedValue with
-                            | "Data" -> InnerValue.Data
-                            | "Constant" -> Constant constantValue
-                            | "Empty" -> InnerValue.Empty
-                            | _ -> currentInnerValue
-
-                        updateInnerValue newValue)
-
-                ]
-            ]
-
-            if innerValueToString currentInnerValue = "Constant" then
-                Html.span [
-                    prop.children [
-                        Html.input [
-                            prop.type' "text"
-                            prop.value constantValue
-                            prop.onChange (fun (value: string) ->
-                                setConstantValue value
-                                updateInnerValue (Constant value))
-                            prop.className "text-xs overflow-auto bg-white border border-black shadow-sm "
-                        ]
-                    ]
-                ]
-            else
-                Html.none
-        ]
-    ]
-
-
-[<ReactComponent>]
-let TagMenu (code: RenderingCode) path dispatch =
-    let tagOptions = [
-        Tags.p.Name
-        Tags.h1.Name
-        Tags.h2.Name
-        Tags.h3.Name
-        Tags.h4.Name
-        Tags.h5.Name
-        Tags.h6.Name
-        Tags.strong.Name
-        Tags.em.Name
-        Tags.a.Name
-        Tags.pre.Name
-        Tags.code.Name
-        Tags.blockquote.Name
-        Tags.div.Name
-        Tags.span.Name
-        Tags.article.Name
-        Tags.section.Name
-        Tags.header.Name
-        Tags.footer.Name
-        Tags.nav.Name
-        Tags.input.Name
-        Tags.li.Name
-        Tags.ol.Name
-        Tags.ul.Name
-        Tags.button.Name
-        Tags.label.Name
-    ]
-
-    match code with
-    | RenderingCode.HtmlElement(tag, attrs, value, handlers) ->
-        let changeTag selectedTag =
-            dispatch (ReplaceCode(RenderingCode.HtmlElement(stringToTag selectedTag, attrs, value, handlers), path))
-
-        SelectMenu tagOptions tag.Name changeTag
-    | _ -> ErrorDisplay "Invalid code type for TagMenu"
-
-
-
-
-[<ReactComponent>]
-let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
-    let selectedKey, setSelectedKey = React.useState ""
-    let selectedInnerValue, setSelectedInnerValue = React.useState InnerValue.Empty
-    let attributesOpen, setOpenAttributes = React.useState false
-
-    let toggleAttributes () = setOpenAttributes (not attributesOpen)
-
-    let handleSelectChange key =
-        match List.tryFind (fun attr -> attr.Key = key) attributes with
-        | Some attr ->
-            setSelectedKey key
-            setSelectedInnerValue attr.Value
-        | None -> ()
-
-    let handleAddClick () = ()
-
-    Html.div [
-        prop.className "space-y-4 "
-        prop.children [
-            Html.button [
-                prop.className "flex flex-row items-center space-x-2"
-                prop.onClick (fun e ->
-                    e.stopPropagation () // Prevent toggle conflict
-                    toggleAttributes ())
-
-                prop.children [
-                    ReactBindings.React.createElement (
-                        (if attributesOpen then chevronDown else chevronRight),
-                        createObj [ "size" ==> 16; "color" ==> "#000000" ],
-                        []
-                    )
-                    Html.span [ prop.text ("Attributes"); prop.className "text-xs px-1 py-1" ]
-                ]
-            ]
-
-            if attributesOpen then
-                Html.div [
-                    prop.children [
-                        if attributes.Length = 0 then
-                            Html.span [ prop.text "No attributes " ]
-                        else
-                            SelectMenu (attributes |> List.map (fun attr -> attr.Key)) selectedKey handleSelectChange
-
-                            if selectedKey <> "" then
-                                InnerValueMenu selectedInnerValue code path
-
-                                Html.div [
-                                    Html.button [
-                                        prop.text "Add New Attribute"
-                                        prop.className "bg-blue-500 text-white text-xs m-1 px-2 py-1 rounded"
-                                        prop.onClick (fun _ -> handleAddClick ())
-                                    ]
-                                ]
-                            else
-                                setSelectedKey attributes.Head.Key
-                                setSelectedInnerValue attributes.Head.Value
-                    ]
-                ]
-        ]
-    ]
-
-
-
-let sampleElement =
-    RenderingCode.HtmlElement(
-        Tags.div, // Use the div tag
-        [
-            {
-                Key = "class"
-                Value = Constant "container"
-                Namespace = None
-            } // class="container"
-            {
-                Key = "dataasdfoasdfh;uojasdhfjiasdhfjklasdhfjkasdhflk-id"
-                Value = Constant "123s45"
-                Namespace = None
-            } // data-id="12345"
-        ],
-        Constant "hello",
-        []
-    )
-
-let sampleList =
-    RenderingCode.HtmlList(
-        ListType.UnorderedList,
-        [
-            {
-                Key = "class"
-                Value = Constant "container"
-                Namespace = None
-            } // class="container"
-            {
-                Key = "data-id"
-                Value = Constant "123s45"
-                Namespace = None
-            } // data-id="12345"
-        ],
-        [ sampleElement ],
-        []
-    )
-
-
-let EventHandlerMenu
-    (dispatch: PageEditorMsg -> unit, code: RenderingCode, path: int list, customHandlers: Map<string, Javascript>)
-    =
-    let availableEvents = [ "onClick"; "onMouseOver"; "onBlur"; "onMouseDown"; "onMouseUp" ]
-
-
-
-    let (selectedEvent, setSelectedEvent) = React.useState ""
-    let (selectedHandler, setSelectedHandler) = React.useState ""
-    let (errorMessage, setErrorMessage) = React.useState ""
-
-    Html.div [
-
-    ]
-
-
-
-
-[<ReactComponent>]
-let ListOption (name: string) code path =
-
-    let handleChange2 newValue = printfn "Selected:"
-    let handleChange3 () = ()
-
-    match code with
-    | RenderingCode.HtmlList(listType, attrs, elementCode, handlers) ->
-        let listTypeOptions = [ "Unordered"; "Ordered" ]
-
-        Html.div [
-            prop.className "bg-gray-300   border border-black w-fit h-fit mt-4"
-            prop.children [
-                Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
-                match code with
-                | RenderingCode.HtmlList(listType, attrs, itemCodes, handlers) ->
-                    Html.div [
-                        prop.children [
-                            SelectMenu listTypeOptions (listTypeToString listType) handleChange2
-                            (AttributeMenu code path attrs)
-
-                        ]
-                    ]
-                | _ -> Html.none
-
-            ]
-        ]
-    | _ -> ErrorDisplay "Invalid code type for ListOption"
-
-[<ReactComponent>]
-let ElementOption (name: string) code path dispatch =
-    let handleChange2 newValue = printfn "Selected:"
-    let handleChange3 () = ()
-
-    Html.div [
-        prop.onMouseDown (fun e -> e.stopPropagation ())
-        prop.className "bg-white  p-4 border border-gray-300 shadow-md"
-        prop.style [
-            style.resize.both
-            style.overflow.auto
-            style.whitespace.normal
-            style.overflowWrap.normal
-            style.wordWrap.normal
-            style.width 800
-            style.height 600
-            style.minWidth (length.px 200)
-            style.minHeight (length.px 200)
-            style.maxWidth (length.percent 100)
-            style.maxHeight (length.percent 100)
-        ]
-        prop.children [
-            Html.div [
-                prop.className "bg-gray-300  border border-black w-fit h-fit mt-4"
-                prop.children [
-                    Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
-                    match code with
-                    | RenderingCode.HtmlElement(_, attrs, innerValue, _) ->
-                        Html.div [
-                            prop.children [
-                                (TagMenu code path dispatch)
-                                InnerValueMenu innerValue code path
-                                (AttributeMenu code path attrs)
-                            ]
-                        ]
-                    | _ -> Html.none
-                ]
-            ]
-        ]
-    ]
-
-
 /// <summary>This function is used to update the page editor model.
 ///It is called when the user interacts with the page editor.
 ///It updates the page editor model and sends a message to the main page via Cmd.ofMsg.</summary>
@@ -346,7 +58,7 @@ let ElementOption (name: string) code path dispatch =
 /// <returns></returns>
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
-    | UploadData jsonString ->
+    | UploadData(jsonString, dispatch) ->
         let loadedDataOption = loadJson jsonString
 
         match loadedDataOption with
@@ -363,22 +75,15 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 let newModelElement = {
                     Id = model.Elements.Length + 1
                     Position = { X = 400.0; Y = 350.0 }
-                    Content = ModelElement data
+                    Content = ModelElement data dispatch
                 }
 
-
-
-                let option = {
-                    Id = model.Elements.Length + 2
-                    Position = { X = 400.0; Y = 350.0 }
-                    Content = ListOption "List" sampleList []
-                }
 
                 let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
-                        Elements = model.Elements @ [ newModelElement; option ]
+                        Elements = model.Elements @ [ newModelElement ]
                 }
 
                 updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
@@ -498,7 +203,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
     | StartPanning(_)
     | UpdatePanning(_) -> failwith "Not Implemented"
     | AddMsg -> failwith "Not Implemented"
-    | DeletMsg -> failwith "Not Implemented"
+    | DeleteMsg -> failwith "Not Implemented"
     | OpenRightClickMenu(position, dispatch) ->
         let elementPosition = {
             X = (model.ViewportPosition.X) / model.Scale
@@ -535,39 +240,24 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 RightClickMenuIndex = None
         },
         Cmd.none
+    | CreateViewElement dispatch ->
+        let viewElement = {
+            Id = model.Elements.Length + 1
+            Position = { X = 400.0; Y = 350.0 }
+            Content = ViewElement model.PageData.CurrentTree model.PageData.ParsedJson dispatch
+        }
+
+        let newElements = model.Elements @ [ viewElement ]
+
+        { model with Elements = newElements }, Cmd.none
 
 
 
 
-[<ReactComponent>]
-let JavaScriptEditorView code (dispatch) =
 
-    let extensions = [| javascript?javascript (); html?html (); css?css () |]
-
-    Html.div [
-        prop.className "flex flex-col h-full border-solid border-2 border-black overflow-auto"
-        prop.children [
-            Html.h3 [ prop.className "font-bold mb-2 px-2"; prop.text "Code preview" ]
-            Html.div [
-                prop.className "flex-grow overflow-auto"
-                prop.children [
-                    ReactBindings.React.createElement (
-                        CodeMirror,
-                        createObj [
-                            "value" ==> code
-                            "extensions" ==> extensions
-                            "theme" ==> "dark"
-                            "readOnly" ==> "true"
-                        ],
-                        []
-                    )
-                ]
-            ]
-        ]
-    ]
-
-// These are the main components that make up the page editor
-// They are used to render the page editor and handle user interactions
+//  These are the main components that make up the page editor.
+//  They are used to render the page editor and handle user interactions.
+//||---------------------------------------------------------------------------||
 let DataUpload dispatch =
     let uploadButtonView onLoad =
         Html.div [
@@ -593,7 +283,8 @@ let DataUpload dispatch =
             ]
         ]
 
-    let uploadButton = uploadButtonView (UploadData >> dispatch)
+    let uploadButton =
+        uploadButtonView (fun jsonString -> dispatch (UploadData(jsonString, dispatch)))
 
     Html.div [ prop.className ""; prop.children [ uploadButton ] ]
 
@@ -782,9 +473,5 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
 let PageEditorView (pageModel: PageEditorModel) (dispatch: PageEditorMsg -> unit) : ReactElement =
     Html.div [
         prop.className "relative h-full w-full flex"
-        prop.children [
-            ToolBar dispatch
-            Canvas pageModel dispatch
-        //SandboxPreviewView pageModel dispatch
-        ]
+        prop.children [ ToolBar dispatch; Canvas pageModel dispatch ]
     ]

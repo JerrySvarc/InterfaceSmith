@@ -12,8 +12,15 @@ open Editor.Types.PageEditorDomain
 open CoreLogic.Operations.DataRecognition
 open Editor.Utilities.Icons
 open Editor.Types.EditorDomain
-open Editor.Components.ElementComponents
 
+let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+    match code with
+    | RenderingCode.HtmlElement _ -> Html.none //ElementOption dispatch name code path
+    | RenderingCode.HtmlList _ -> Html.none
+    //ListOption(dispatch, name, code, path)
+    | RenderingCode.HtmlObject(_) -> Html.none
+    //SequenceOption(dispatch, name, code, path)
+    | RenderingCode.Hole _ -> Html.none
 
 /// <summary></summary>
 /// <param name="context"></param>
@@ -118,57 +125,40 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
         | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
 
 
-
     let renderHole (named: FieldHole) =
         let holeName =
             match named with
             | UnNamed -> "Unnamed"
-            | Named n -> n
+            | Named name -> name
 
         let fieldType = recognizeJson context.Json
-        options context.Dispatch fieldType context.Path holeName
 
-    let renderCustomWrapper (customWrapper: CustomWrapper) =
-        let attributes =
-            customWrapper.Attributes
-            |> List.map (fun attr -> (attr.Key, box attr.Value))
-            |> List.append [ ("className", box "preview custom-wrapper") ]
-            |> createObj
+        Html.div [
+            prop.className "flex items-center justify-between p-2 bg-gray-100 rounded"
+            prop.children [
+                Html.span [ prop.className "text-sm text-gray-600"; prop.text ("Hole: " + holeName) ]
+                Html.button [
+                    prop.className
+                        "px-2 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center space-x-1"
+                    prop.onClick (fun _ -> context.Dispatch(ReplaceCode(fieldType, context.Path)))
+                    prop.children [
+                        ReactBindings.React.createElement (
+                            replaceIcon,
+                            createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
+                            []
+                        )
+                        Html.span [ prop.text "Replace" ]
+                    ]
+                ]
+            ]
+        ]
 
-        let wrappedContent = renderingCodeToReactElement context customWrapper.WrappedCode
-
-
-        let children =
-            wrappedContent
-            :: (customWrapper.Children
-                |> List.mapi (fun index child ->
-                    let newContext = {
-                        context with
-                            Path = context.Path @ [ -1; index ]
-                    }
-
-                    renderingCodeToReactElement newContext child))
-
-        createPreview (customWrapper.Tag.Name) attributes children |> renderWithOptions
-
-    let renderCustomElement (customElement: CustomElement) =
-        let attributes =
-            customElement.Attributes
-            |> List.map (fun attr -> (attr.Key, box attr.Value))
-            |> List.append [ ("className", box "preview custom-element") ]
-            |> createObj
-
-        let children = [ Html.text customElement.CustomInnerValue ]
-
-        createPreview (customElement.Tag.Name) attributes children |> renderWithOptions
 
     match code with
     | RenderingCode.HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
     | RenderingCode.HtmlList(listType, attrs, codes, eventHandlers) -> renderHtmlList listType codes
     | RenderingCode.HtmlObject(objType, attrs, keys, codes, eventHandlers) -> renderHtmlObject keys codes
     | RenderingCode.Hole named -> renderHole named
-    | RenderingCode.CustomWrapper customWrapper -> renderCustomWrapper customWrapper
-    | RenderingCode.CustomElement customElement -> renderCustomElement customElement
 
 
 
@@ -184,7 +174,6 @@ let renderCanvasElements (model: PageEditorModel) dispatch =
 
     let renderElement element =
         let pos = viewportTransform element.Position
-
 
         Html.div [
             prop.className "absolute flex items-center justify-center w-fit h-fit bg-blue-900 shadow-lg"

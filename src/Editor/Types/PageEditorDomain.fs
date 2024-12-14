@@ -62,7 +62,7 @@ type PageEditorModel = {
 
 type PageEditorMsg =
     | SyncWithMain of PageEditorModel
-    | UploadData of string
+    | UploadData of string * (PageEditorMsg -> unit)
     | ReplaceCode of RenderingCode * path: int list
     | StartPanning of Position
     | UpdatePanning of Position
@@ -74,9 +74,10 @@ type PageEditorMsg =
     | TogglePreview
     | OpenFieldView
     | AddMsg
-    | DeletMsg
+    | DeleteMsg
     | AddUpdateFunction
     | RemoveUpdateFunction
     | UpdateMsgEvent of msg: UserMessage * code: string
     | OpenRightClickMenu of position: Position * (PageEditorMsg -> unit)
     | CloseRightClickMenu
+    | CreateViewElement of (PageEditorMsg -> unit)

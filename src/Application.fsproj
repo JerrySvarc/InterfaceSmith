@@ -19,8 +19,9 @@
     <Compile Include="Editor\Utilities\FileUpload.fs" />
     <Compile Include="Editor\Utilities\JsonParsing.fs" />
     <Compile Include="Editor\Utilities\JavaScriptEditor.fs" />
-    <Compile Include="Editor\Components\ElementComponents.fs" />
+    <Compile Include="Editor\Components\OptionsComponents.fs" />
     <Compile Include="Editor\CustomRendering.fs" />
+    <Compile Include="Editor\Components\ElementComponents.fs" />
     <Compile Include="Editor\Components\PageEditorComponents.fs" />
     <Compile Include="Editor\Components\EditorComponents.fs" />
     <Compile Include="Main.fs" />

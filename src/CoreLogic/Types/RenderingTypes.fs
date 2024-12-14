@@ -52,8 +52,6 @@ type RenderingCode =
         keyOrdering: string list *
         codes: Map<string, RenderingCode> *
         eventHandlers: (string * EventHandler) list
-    | CustomWrapper of CustomWrapper
-    | CustomElement of CustomElement
     | Hole of FieldHole
 
 and EventHandler =
@@ -63,25 +61,6 @@ and EventHandler =
 // Represents a JavaScript code
 // JSFunction: Represents a JavaScript function used for event handling of custom RenderingCode events, accepts only the parameter "this"
 and Javascript = JSFunction of name: string * code: string
-
-/// <summary></summary>
-and CustomWrapper = {
-    Tag: Tag
-    Attributes: Attributes
-    WrappedCode: RenderingCode
-    Children: RenderingCode list
-    EventHandlers: (string * EventHandler) list
-}
-
-/// <summary></summary>
-and CustomElement = {
-    Tag: Tag
-    Attributes: Attributes
-    CustomInnerValue: string
-    EventHandlers: (string * EventHandler) list
-}
-
-
 
 
 /// <summary></summary>
