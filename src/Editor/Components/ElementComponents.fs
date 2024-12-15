@@ -29,9 +29,7 @@ let Collapsible =
                 |}) ->
             let (isExpanded, setIsExpanded) = React.useState false
 
-            let handleToggle _ =
-                printfn "Toggling state: %b" (not isExpanded)
-                setIsExpanded (not isExpanded)
+            let handleToggle _ = setIsExpanded (not isExpanded)
 
             Html.div [
                 Html.div [
@@ -148,6 +146,7 @@ let ViewElement model dispatch =
             Path = []
             Json = model.PageData.ParsedJson
             Name = "View"
+            CustomHandlers = model.PageData.CustomHandlers
         }
 
         prop.children [ renderingCodeToReactElement renderContext model.PageData.CurrentTree ]

@@ -12,14 +12,19 @@ open Editor.Types.PageEditorDomain
 open CoreLogic.Operations.DataRecognition
 open Editor.Utilities.Icons
 open Editor.Types.EditorDomain
+open Editor.Components.OptionsComponents
 
-let rec options (dispatch: PageEditorMsg -> unit) (code: RenderingCode) (path: int list) (name: string) : ReactElement =
+let rec options
+    (dispatch: PageEditorMsg -> unit)
+    (code: RenderingCode)
+    (path: int list)
+    (name: string)
+    customHandlers
+    : ReactElement =
     match code with
-    | RenderingCode.HtmlElement _ -> Html.none //ElementOption dispatch name code path
-    | RenderingCode.HtmlList _ -> Html.none
-    //ListOption(dispatch, name, code, path)
-    | RenderingCode.HtmlObject(_) -> Html.none
-    //SequenceOption(dispatch, name, code, path)
+    | RenderingCode.HtmlElement _ -> ElementOption name code path customHandlers dispatch
+    | RenderingCode.HtmlList _ -> ListOption name code path customHandlers dispatch
+    | RenderingCode.HtmlObject(_) -> SequenceOption name code path customHandlers dispatch
     | RenderingCode.Hole _ -> Html.none
 
 /// <summary></summary>
@@ -30,7 +35,10 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
     let renderWithOptions (preview: ReactElement) =
         Html.div [
-            prop.children [ preview; options context.Dispatch code context.Path context.Name ]
+            prop.children [
+                preview
+                options context.Dispatch code context.Path context.Name context.CustomHandlers
+            ]
         ]
 
     let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =

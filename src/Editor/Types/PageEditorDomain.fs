@@ -23,11 +23,12 @@ type Page = {
 
 /// <summary></summary>
 type RenderContext<'Msg> = {
-    Options: ('Msg -> unit) -> RenderingCode -> list<int> -> string -> ReactElement
+    Options: ('Msg -> unit) -> RenderingCode -> list<int> -> string -> Map<string, Javascript> -> ReactElement
     Dispatch: 'Msg -> unit
     Json: Json
     Path: int list
     Name: string
+    CustomHandlers: Map<string, Javascript>
 }
 
 /// <summary></summary>
@@ -77,4 +78,3 @@ and PageEditorMsg =
     | OpenRightClickMenu of position: Position * (PageEditorMsg -> unit)
     | CloseRightClickMenu
     | CreateViewElement of (PageEditorMsg -> unit)
-    | UpdateElement of Element

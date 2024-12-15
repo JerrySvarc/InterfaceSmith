@@ -10,10 +10,8 @@ open CoreLogic.Operations.RenderingCode
 open Microsoft.FSharp.Reflection
 
 
-// Contains option menu components for each type of rendering code
-// Each component takes a dispatch function, the current code, and the path to the code in the tree
-// The dispatch function is used to send messages to the parent component to update the specific code
-
+//                  General helper components
+//||------------------------------------------------------------||
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
         prop.className
@@ -33,8 +31,10 @@ let ErrorDisplay (message: string) =
         prop.children [ Html.span [ prop.className "font-medium"; prop.text message ] ]
     ]
 
+//    General option components common for all RenderingCodes
+//||-----------------------------------------------------------||
 [<ReactComponent>]
-let InnerValueMenu (currentInnerValue: InnerValue) (code: RenderingCode) path =
+let InnerValueMenu (currentInnerValue: InnerValue) updateInnerValue =
     let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
 
     let constantValue, setConstantValue =
@@ -43,13 +43,6 @@ let InnerValueMenu (currentInnerValue: InnerValue) (code: RenderingCode) path =
             | Constant str -> str
             | _ -> ""
         )
-
-    let updateInnerValue newValue =
-        match code with
-        | RenderingCode.HtmlElement(tag, attrs, _, handlers) ->
-            //dispatch (ReplaceCode(RenderingCode.HtmlElement(tag, attrs, newValue, handlers), path))
-            ()
-        | _ -> ()
 
     Html.span [
         prop.children [
@@ -87,46 +80,6 @@ let InnerValueMenu (currentInnerValue: InnerValue) (code: RenderingCode) path =
     ]
 
 
-[<ReactComponent>]
-let TagMenu (code: RenderingCode) path =
-    let tagOptions = [
-        Tags.p.Name
-        Tags.h1.Name
-        Tags.h2.Name
-        Tags.h3.Name
-        Tags.h4.Name
-        Tags.h5.Name
-        Tags.h6.Name
-        Tags.strong.Name
-        Tags.em.Name
-        Tags.a.Name
-        Tags.pre.Name
-        Tags.code.Name
-        Tags.blockquote.Name
-        Tags.div.Name
-        Tags.span.Name
-        Tags.article.Name
-        Tags.section.Name
-        Tags.header.Name
-        Tags.footer.Name
-        Tags.nav.Name
-        Tags.input.Name
-        Tags.li.Name
-        Tags.ol.Name
-        Tags.ul.Name
-        Tags.button.Name
-        Tags.label.Name
-    ]
-
-    match code with
-    | RenderingCode.HtmlElement(tag, attrs, value, handlers) ->
-        //let changeTag selectedTag =
-        //dispatch (ReplaceCode(RenderingCode.HtmlElement(stringToTag selectedTag, attrs, value, handlers), path))
-        let handleChange2 newValue = printfn "Selected:"
-        SelectMenu tagOptions tag.Name handleChange2
-    | _ -> ErrorDisplay "Invalid code type for TagMenu"
-
-
 
 [<ReactComponent>]
 let AttributeRow
@@ -136,8 +89,6 @@ let AttributeRow
     (onKeyChange: string -> string -> unit)
     (onValueChange: InnerValue -> unit)
     (onDelete: unit -> unit)
-    (code: RenderingCode)
-    path
     =
     Html.tr [
         prop.className "border-b hover:bg-gray-50"
@@ -171,7 +122,7 @@ let AttributeRow
 
             Html.td [
                 prop.className "p-2 text-sm"
-                prop.children [ InnerValueMenu attr.Value code path ]
+                prop.children [ InnerValueMenu attr.Value onValueChange ]
             ]
 
             Html.div [
@@ -194,22 +145,70 @@ let AttributeRow
         ]
     ]
 
-[<ReactComponent>]
-let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
+let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispatch =
     let editingKey, setEditingKey = React.useState ""
-    let attributesOpen, setAttributesOpen = React.useState false
+    let menuOpen, setMenuOpen = React.useState false
+    let newKey, setNewKey = React.useState "" // For new attribute key
+    let newValue, setNewValue = React.useState "" // For new attribute value
 
-    let toggleAttributes () = setAttributesOpen (not attributesOpen)
+    let toggleMenu () = setMenuOpen (not menuOpen)
+
+    let updateAttributes newAttrs =
+        let updatedCode =
+            match code with
+            | RenderingCode.HtmlElement(tag, _, innerValue, handlers) ->
+                RenderingCode.HtmlElement(tag, newAttrs, innerValue, handlers)
+            | RenderingCode.HtmlList(listType, _, items, handlers) ->
+                RenderingCode.HtmlList(listType, newAttrs, items, handlers)
+            | RenderingCode.HtmlObject(objType, _, keys, codes, handlers) ->
+                RenderingCode.HtmlObject(objType, newAttrs, keys, codes, handlers)
+            | _ -> code
+
+        dispatch (ReplaceCode(updatedCode, path))
 
     let handleKeyChange oldKey newKey =
         if not (System.String.IsNullOrWhiteSpace newKey) then
-            ()
+            let oldAttributeIndex =
+                attributes |> List.tryFindIndex (fun attr -> attr.Key = oldKey)
 
-    let handleValueChange key newValue = ()
+            match oldAttributeIndex with
+            | Some index ->
+                let oldAttribute = attributes[index]
+                let newAttribute = { oldAttribute with Key = newKey }
+                let newAttributes = List.insertAt index newAttribute attributes
+                updateAttributes newAttributes
+            | None -> ()
 
-    let handleDelete key = ()
+    let handleValueChange key newValue =
+        let oldAttributeIndex = attributes |> List.tryFindIndex (fun attr -> attr.Key = key)
 
-    let handleAddClick () = ()
+        match oldAttributeIndex with
+        | Some index ->
+            let oldAttribute = attributes[index]
+            let newAttribute = { oldAttribute with Value = newValue }
+            let newAttributes = List.insertAt index newAttribute attributes
+            updateAttributes newAttributes
+        | None -> ()
+
+    let handleDelete key =
+        let newAttributes = attributes |> List.filter (fun attr -> attr.Key <> key)
+        updateAttributes newAttributes
+
+    let handleAddNewAttribute () =
+        if
+            not (System.String.IsNullOrWhiteSpace newKey)
+            && not (System.String.IsNullOrWhiteSpace newValue)
+        then
+            let newAttribute = {
+                Key = newKey
+                Value = Constant newValue
+                Namespace = None
+            }
+
+            let newAttributes = attributes @ [ newAttribute ]
+            updateAttributes newAttributes
+            setNewKey ""
+            setNewValue ""
 
     Html.div [
         prop.className "space-y-4"
@@ -218,10 +217,10 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
                 prop.className "flex flex-row items-center space-x-2"
                 prop.onClick (fun e ->
                     e.stopPropagation () // Prevent propagation
-                    toggleAttributes ())
+                    toggleMenu ())
                 prop.children [
                     ReactBindings.React.createElement (
-                        (if attributesOpen then chevronDown else chevronRight),
+                        (if menuOpen then chevronDown else chevronRight),
                         createObj [ "size" ==> 16; "color" ==> "#000000" ],
                         []
                     )
@@ -229,7 +228,7 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
                 ]
             ]
 
-            if attributesOpen then
+            if menuOpen then
                 Html.div [
                     prop.className "space-y-2"
                     prop.children [
@@ -261,23 +260,39 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
                                             setEditingKey
                                             (fun oldKey newKey -> handleKeyChange oldKey newKey)
                                             (fun newValue -> handleValueChange attr.Key newValue)
-                                            (fun () -> handleDelete attr.Key)
-                                            code
-                                            path)
+                                            (fun () -> handleDelete attr.Key))
                                     |> prop.children
                                 ]
                             ]
                         ]
 
-                        // Add New Attribute Button
                         Html.div [
-                            prop.className "mt-4"
+                            prop.className "mt-4 space-y-2"
                             prop.children [
+                                Html.div [
+                                    prop.className "flex space-x-2"
+                                    prop.children [
+                                        Html.input [
+                                            prop.className "text-sm px-2 py-1 border border-gray-300 rounded"
+                                            prop.placeholder "Attribute Name"
+                                            prop.value newKey
+                                            prop.onChange (fun (event: Browser.Types.Event) ->
+                                                setNewKey (event.target?value |> Option.defaultValue ""))
+                                        ]
+                                        Html.input [
+                                            prop.className "text-sm px-2 py-1 border border-gray-300 rounded"
+                                            prop.placeholder "Attribute Value"
+                                            prop.value newValue
+                                            prop.onChange (fun (event: Browser.Types.Event) ->
+                                                setNewValue (event.target?value |> Option.defaultValue ""))
+                                        ]
+                                    ]
+                                ]
                                 Html.button [
                                     prop.className
                                         "bg-blue-500 text-white text-sm px-4 py-2 rounded shadow hover:bg-blue-600"
                                     prop.text "Add New Attribute"
-                                    prop.onClick (fun _ -> handleAddClick ())
+                                    prop.onClick (fun _ -> handleAddNewAttribute ())
                                 ]
                             ]
                         ]
@@ -289,43 +304,16 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) =
 
 
 [<ReactComponent>]
-let EventHandlerMenu code path customHandlers eventHandlers =
+let EventHandlerMenu code path customHandlers eventHandlers dispatch =
     let availableEvents = [ "onClick"; "onMouseOver"; "onMouseOut"; "onKeyPress"; "onFocus"; "onBlur" ]
 
     let selectedEvent, setSelectedEvent = React.useState ""
     let selectedHandler, setSelectedHandler = React.useState ""
     let menuOpen, setMenuOpen = React.useState false
 
-    // Toggle visibility
     let toggleMenu () = setMenuOpen (not menuOpen)
 
-    let addHandler () =
-        if selectedEvent <> "" && selectedHandler <> "" then
-            let newHandler =
-                match Map.tryFind selectedHandler customHandlers with
-                | Some js -> JsHandler js
-                | None -> JsHandler(JSFunction(selectedHandler, ""))
-
-            let updatedHandlers = (selectedEvent, newHandler) :: eventHandlers
-
-            let updatedCode =
-                match code with
-                | RenderingCode.HtmlElement(tag, attrs, innerValue, _) ->
-                    RenderingCode.HtmlElement(tag, attrs, innerValue, updatedHandlers)
-                | RenderingCode.HtmlList(listType, attrs, items, _) ->
-                    RenderingCode.HtmlList(listType, attrs, items, updatedHandlers)
-                | RenderingCode.HtmlObject(objType, attrs, keys, codes, _) ->
-                    RenderingCode.HtmlObject(objType, attrs, keys, codes, updatedHandlers)
-                | _ -> code
-
-            //dispatch (ReplaceCode(updatedCode, path))
-            setSelectedEvent ""
-            setSelectedHandler ""
-
-    let removeHandler eventName =
-        let updatedHandlers =
-            eventHandlers |> List.filter (fun (name, _) -> name <> eventName)
-
+    let updateCode updatedHandlers =
         let updatedCode =
             match code with
             | RenderingCode.HtmlElement(tag, attrs, innerValue, _) ->
@@ -336,8 +324,28 @@ let EventHandlerMenu code path customHandlers eventHandlers =
                 RenderingCode.HtmlObject(objType, attrs, keys, codes, updatedHandlers)
             | _ -> code
 
-        ()
-    //dispatch (ReplaceCode(updatedCode, path))
+        dispatch (ReplaceCode(updatedCode, path))
+        setSelectedEvent ""
+        setSelectedHandler ""
+
+
+    let addHandler () =
+        if selectedEvent <> "" && selectedHandler <> "" then
+            let newHandler =
+                match Map.tryFind selectedHandler customHandlers with
+                | Some js -> JsHandler js
+                | None -> JsHandler(JSFunction(selectedHandler, ""))
+
+            let updatedHandlers = (selectedEvent, newHandler) :: eventHandlers
+            updateCode updatedHandlers
+
+
+    let removeHandler eventName =
+        let updatedHandlers =
+            eventHandlers |> List.filter (fun (name, _) -> name <> eventName)
+
+        updateCode updatedHandlers
+
 
     Html.div [
         prop.className "space-y-4"
@@ -445,6 +453,10 @@ let EventHandlerMenu code path customHandlers eventHandlers =
         ]
     ]
 
+
+//       Option components for modification of a HtmlObject
+// ||---------------------------------------------------------------||
+
 let moveKey (keys: string list) (index: int) (direction: int) =
     if index + direction >= 0 && index + direction < List.length keys then
         let item = List.item index keys
@@ -548,13 +560,12 @@ let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
 
 [<ReactComponent>]
 let SequenceOption
-    (dispatch: PageEditorMsg -> unit)
     (name: string)
     (code: RenderingCode)
     (path: int list)
     customHandlers
+    (dispatch: PageEditorMsg -> unit)
     =
-
 
     let handleChange2 newValue = printfn "Selected:"
 
@@ -567,9 +578,9 @@ let SequenceOption
                     prop.className "p-2 space-y-2"
                     prop.children [
                         (SelectMenu [] (objTypeToString objType) handleChange2)
-                        AttributeMenu code path attrs
+                        AttributeMenu code path attrs dispatch
                         KeysList(keyOrdering, objType, codes, handlers, dispatch, path)
-                        EventHandlerMenu code path customHandlers handlers
+                        EventHandlerMenu code path customHandlers handlers dispatch
                         Html.div [
                             prop.className "ml-auto relative hover:bg-red-600 rounded"
                             prop.children [
@@ -594,13 +605,13 @@ let SequenceOption
     | _ -> Html.div [ prop.text "Invalid code type for SequenceOption" ]
 
 
-
+//      HtmlList modification components
+// ||----------------------------------------||
 
 [<ReactComponent>]
-let ListOption (name: string) code path model =
+let ListOption (name: string) code path customHandlers dispatch =
 
     let handleChange2 newValue = printfn "Selected:"
-    let handleChange3 () = ()
 
     match code with
     | RenderingCode.HtmlList(listType, attrs, elementCode, handlers) ->
@@ -615,8 +626,8 @@ let ListOption (name: string) code path model =
                     Html.div [
                         prop.children [
                             SelectMenu listTypeOptions (listTypeToString listType) handleChange2
-                            (AttributeMenu code path attrs)
-                            (EventHandlerMenu code path model.CustomHandlers handlers)
+                            (AttributeMenu code path attrs dispatch)
+                            (EventHandlerMenu code path customHandlers handlers dispatch)
 
                         ]
                     ]
@@ -626,10 +637,57 @@ let ListOption (name: string) code path model =
         ]
     | _ -> ErrorDisplay "Invalid code type for ListOption"
 
+
+//      HtmlElement modification components
+// ||----------------------------------------||
+
 [<ReactComponent>]
-let ElementOption (name: string) code path model =
-    let handleChange2 newValue = printfn "Selected:"
-    let handleChange3 () = ()
+let TagMenu (code: RenderingCode) path dispatch =
+    let tagOptions = [
+        Tags.p.Name
+        Tags.h1.Name
+        Tags.h2.Name
+        Tags.h3.Name
+        Tags.h4.Name
+        Tags.h5.Name
+        Tags.h6.Name
+        Tags.strong.Name
+        Tags.em.Name
+        Tags.a.Name
+        Tags.pre.Name
+        Tags.code.Name
+        Tags.blockquote.Name
+        Tags.div.Name
+        Tags.span.Name
+        Tags.article.Name
+        Tags.section.Name
+        Tags.header.Name
+        Tags.footer.Name
+        Tags.nav.Name
+        Tags.input.Name
+        Tags.li.Name
+        Tags.ol.Name
+        Tags.ul.Name
+        Tags.button.Name
+        Tags.label.Name
+    ]
+
+    match code with
+    | RenderingCode.HtmlElement(tag, attrs, value, handlers) ->
+        let changeTag selectedTag =
+            dispatch (ReplaceCode(RenderingCode.HtmlElement(stringToTag selectedTag, attrs, value, handlers), path))
+
+        SelectMenu tagOptions tag.Name changeTag
+    | _ -> ErrorDisplay "Invalid code type for TagMenu"
+
+[<ReactComponent>]
+let ElementOption (name: string) code path customHandlers dispatch =
+
+    let updateInnerValue newVal =
+        match code with
+        | RenderingCode.HtmlElement(tag, attrs, _, handlers) ->
+            dispatch (ReplaceCode(RenderingCode.HtmlElement(tag, attrs, newVal, handlers), path))
+        | _ -> ()
 
     Html.div [
         prop.onMouseDown (fun e -> e.stopPropagation ())
@@ -643,10 +701,10 @@ let ElementOption (name: string) code path model =
                     | RenderingCode.HtmlElement(_, attrs, innerValue, handlers) ->
                         Html.div [
                             prop.children [
-                                (TagMenu code path)
-                                InnerValueMenu innerValue code path
-                                (AttributeMenu code path attrs)
-                                (EventHandlerMenu code path model.CustomHandlers handlers)
+                                (TagMenu code path dispatch)
+                                InnerValueMenu innerValue updateInnerValue
+                                (AttributeMenu code path attrs dispatch)
+                                (EventHandlerMenu code path customHandlers handlers dispatch)
                             ]
                         ]
                     | _ -> Html.none

@@ -250,15 +250,6 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         let newElements = model.Elements @ [ viewElement ]
 
         { model with Elements = newElements }, Cmd.none
-    | UpdateElement element ->
-        let newElements = model.Elements |> List.filter (fun item -> element.Id <> item.Id)
-
-        {
-            model with
-                Elements = newElements @ [ element ]
-        },
-        Cmd.none
-
 
 
 
