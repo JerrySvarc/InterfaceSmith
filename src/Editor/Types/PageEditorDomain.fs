@@ -37,15 +37,11 @@ type Position = { X: float; Y: float }
 type Element = {
     Id: int
     Position: Position
-    Content: ReactElement
+    Render: PageEditorModel -> (PageEditorMsg -> unit) -> ReactElement
 }
 
-type RightPaneTab =
-    | JavaScriptEditor
-    | SandboxPreview
-
 /// <summary></summary>
-type PageEditorModel = {
+and PageEditorModel = {
     PageData: Page
     FileUploadError: bool
     ViewportPosition: Position
@@ -60,7 +56,7 @@ type PageEditorModel = {
 
 
 
-type PageEditorMsg =
+and PageEditorMsg =
     | SyncWithMain of PageEditorModel
     | UploadData of string * (PageEditorMsg -> unit)
     | ReplaceCode of RenderingCode * path: int list
@@ -81,3 +77,4 @@ type PageEditorMsg =
     | OpenRightClickMenu of position: Position * (PageEditorMsg -> unit)
     | CloseRightClickMenu
     | CreateViewElement of (PageEditorMsg -> unit)
+    | UpdateElement of Element

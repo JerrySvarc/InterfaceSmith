@@ -172,10 +172,11 @@ let renderCanvasElements (model: PageEditorModel) dispatch =
         Y = (position.Y + model.ViewportPosition.Y) * model.Scale
     }
 
-    let renderElement element =
+    let renderElement (element: Element) =
         let pos = viewportTransform element.Position
 
         Html.div [
+            prop.key (string element.Id)
             prop.className "absolute flex items-center justify-center w-fit h-fit bg-blue-900 shadow-lg"
             prop.style [
                 style.left (length.px pos.X)
@@ -190,9 +191,14 @@ let renderCanvasElements (model: PageEditorModel) dispatch =
                 e.stopPropagation ()
                 dispatch (StartDraggingItem(element.Id, { X = e.clientX; Y = e.clientY })))
             prop.children [
-                Html.div[prop.className "mt-4 ml-1 mr-1 mb-1"
-                         prop.children [ element.Content ]]
+                Html.div [
+                    prop.className "mt-4 ml-1 mr-1 mb-1"
+                    prop.children [ element.Render model dispatch ]
+                ]
             ]
         ]
 
-    model.Elements |> List.map renderElement
+    Html.div [
+        prop.className "relative w-full h-full"
+        prop.children (model.Elements |> List.map renderElement)
+    ]

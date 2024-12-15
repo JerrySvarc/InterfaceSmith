@@ -20,24 +20,23 @@ open Editor.CustomRendering
 open Editor.Utilities.JavaScriptEditor
 
 let Collapsible =
-    React.memo
+    React.functionComponent
         (fun
             (props:
                 {|
                     title: string
                     children: ReactElement list
-                    key: string
                 |}) ->
             let (isExpanded, setIsExpanded) = React.useState false
 
-            let handleClick _ =
+            let handleToggle _ =
+                printfn "Toggling state: %b" (not isExpanded)
                 setIsExpanded (not isExpanded)
-                printfn "Toggled state to: %A" (not isExpanded)
 
             Html.div [
                 Html.div [
                     prop.className "cursor-pointer text-blue-500 font-bold flex items-center"
-                    prop.onClick handleClick
+                    prop.onClick handleToggle
                     prop.children [
                         if isExpanded then
                             ReactBindings.React.createElement (
@@ -59,7 +58,7 @@ let Collapsible =
             ])
 
 [<ReactComponent>]
-let ModelElement (json: Json) dispatch =
+let ModelElement model dispatch =
     let rec displayField (json: Json) : ReactElement =
         match json with
         | JObject obj ->
@@ -75,7 +74,6 @@ let ModelElement (json: Json) dispatch =
             Collapsible {|
                 title = "Object"
                 children = entries
-                key = $"obj-{System.Guid.NewGuid()}"
             |}
 
         | JArray arr ->
@@ -90,7 +88,6 @@ let ModelElement (json: Json) dispatch =
             Collapsible {|
                 title = $"[ List of {List.length arr} items ]"
                 children = items
-                key = $"arr-{arr.Length}"
             |}
 
         | JString str -> Html.span [ prop.className "text-red-400"; prop.text $"\"{str}\"" ]
@@ -103,10 +100,12 @@ let ModelElement (json: Json) dispatch =
         prop.children [
             Html.h3 [ prop.className "font-bold mb-4 text-white"; prop.text "JSON Model" ]
             Html.button [
-                prop.onClick (fun _ -> dispatch (CreateViewElement dispatch))
+                prop.onClick (fun event ->
+                    event.stopPropagation ()
+                    dispatch (CreateViewElement dispatch))
                 prop.text "Open View"
             ]
-            displayField json
+            displayField model.PageData.ParsedJson
         ]
         prop.onMouseDown (fun e -> e.stopPropagation ())
     ]
@@ -125,7 +124,7 @@ let RightClickMenu dispatch =
     ]
 
 [<ReactComponent>]
-let ViewElement currentTree parsedJson dispatch =
+let ViewElement model dispatch =
     Html.div [
         prop.className "border border-black bg-gray-600 text-white "
         prop.onMouseDown (fun e -> e.stopPropagation ())
@@ -147,11 +146,11 @@ let ViewElement currentTree parsedJson dispatch =
             Options = options
             Dispatch = dispatch
             Path = []
-            Json = parsedJson
+            Json = model.PageData.ParsedJson
             Name = "View"
         }
 
-        prop.children [ renderingCodeToReactElement renderContext currentTree ]
+        prop.children [ renderingCodeToReactElement renderContext model.PageData.CurrentTree ]
     ]
 
 [<ReactComponent>]

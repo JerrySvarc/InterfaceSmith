@@ -75,7 +75,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 let newModelElement = {
                     Id = model.Elements.Length + 1
                     Position = { X = 400.0; Y = 350.0 }
-                    Content = ModelElement data dispatch
+                    Render = fun model dispatch -> ModelElement model dispatch
                 }
 
 
@@ -213,7 +213,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         let newMenuElement = {
             Id = model.Elements.Length + 1
             Position = position
-            Content = (RightClickMenu dispatch)
+            Render = fun model dispatch -> RightClickMenu dispatch
         }
 
         let newElements = model.Elements @ [ newMenuElement ]
@@ -244,13 +244,20 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         let viewElement = {
             Id = model.Elements.Length + 1
             Position = { X = 400.0; Y = 350.0 }
-            Content = ViewElement model.PageData.CurrentTree model.PageData.ParsedJson dispatch
+            Render = fun model dispatch -> ViewElement model dispatch
         }
 
         let newElements = model.Elements @ [ viewElement ]
 
         { model with Elements = newElements }, Cmd.none
+    | UpdateElement element ->
+        let newElements = model.Elements |> List.filter (fun item -> element.Id <> item.Id)
 
+        {
+            model with
+                Elements = newElements @ [ element ]
+        },
+        Cmd.none
 
 
 
@@ -414,7 +421,7 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
 
     Html.div [
         prop.className "relative overflow-hidden w-full h-full bg-gray-600 "
-        //Create the canvas dot pattern using pure CSS
+        //We create the canvas dot pattern using pure CSS
         prop.style [
             style.backgroundImage "radial-gradient(circle, #1F2937 1px, transparent 1px)"
             style.backgroundSize "20px 20px"
@@ -444,10 +451,9 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
         prop.children [
             Html.div [
                 prop.className "relative"
-                prop.children (renderCanvasElements model dispatch)
+                prop.children [ renderCanvasElements model dispatch ]
 
             ]
-
         ]
     (*
         prop.onContextMenu (fun (e: Browser.Types.MouseEvent) ->
