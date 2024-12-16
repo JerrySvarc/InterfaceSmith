@@ -1,5 +1,5 @@
-# Data DrUId
-**Data DrUId** (Data-driven UI) is a programming system combining a **Data-driven** approach to creating web application UIs with a **Low-code** programming interface. 
+# InterfaceSmith
+**InterfaceSmith** is a programming system combining a **data-driven** approach to creating web application UIs with a **low-code** programming interface. 
 
 
 ## Motivation
@@ -14,7 +14,7 @@ Then you would also change the styling of the elements using either pure CSS or 
 Finally, you would add custom behaviour to react to user events, such as clicking a button or clicking on a dropdown menu.  
 
 
-### Workflow using Data DrUId
+### Workflow using InterfaceSmith
 Imagine you have the same data as in the previous section. You upload this data to the Data DrUId system, which presents you with a view of the uploaded data.
 It also presents you the option to create UI elements based on the data you uploaded. 
 You pick and choose which data to use by incrementally creating the UI elements
