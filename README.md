@@ -1,10 +1,16 @@
-# InterfaceSmith
+```
+██╗███╗   ██╗████████╗███████╗██████╗ ███████╗ █████╗  ██████╗███████╗███████╗███╗   ███╗██╗████████╗██╗  ██╗
+██║████╗  ██║╚══██╔══╝██╔════╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔════╝██╔════╝████╗ ████║██║╚══██╔══╝██║  ██║
+██║██╔██╗ ██║   ██║   █████╗  ██████╔╝█████╗  ███████║██║     █████╗  ███████╗██╔████╔██║██║   ██║   ███████║
+██║██║╚██╗██║   ██║   ██╔══╝  ██╔══██╗██╔══╝  ██╔══██║██║     ██╔══╝  ╚════██║██║╚██╔╝██║██║   ██║   ██╔══██║
+██║██║ ╚████║   ██║   ███████╗██║  ██║██║     ██║  ██║╚██████╗███████╗███████║██║ ╚═╝ ██║██║   ██║   ██║  ██║
+╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝
+```                                                  
 **InterfaceSmith** is a programming system combining a **data-driven** approach to creating web application UIs with a **low-code** programming interface. 
-
 
 ## Motivation
 
-**Data DrUId** explores a method of creating web applications with a system which guides the programmer during the creation process and provides capabilities that make this process faster and without the need to write large amounts of boilerplate code.
+**InterfaceSmith** explores a method of creating web applications with a system which guides the programmer during the creation process and provides capabilities that make this process faster and without the need to write large amounts of boilerplate code.
 We will explain the differences between the standard way of creating web applications today compared to our prototype system. 
 
 ### Standard workflow today
