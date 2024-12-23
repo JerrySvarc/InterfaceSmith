@@ -586,10 +586,11 @@ let SequenceOption
     match code with
     | RenderingCode.HtmlObject(objType, attrs, keyOrdering, codes, handlers) ->
         Html.div [
-            prop.className "bg-white p-4 border border-gray-300 shadow-md"
+            prop.className "bg-gray-300 border border-black w-fit h-fit mt-4"
             prop.children [
+                Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
                 Html.div [
-                    prop.className "p-2 space-y-2"
+                    prop.className "p-2 space-y-1"
                     prop.children [
                         (SelectMenu objTypeOptions (objTypeToString objType) changeObjType)
                         AttributeMenu code path attrs dispatch
@@ -611,12 +612,12 @@ let SequenceOption
                                 ]
                             ]
                         ]
-
                     ]
                 ]
             ]
         ]
     | _ -> Html.div [ prop.text "Invalid code type for SequenceOption" ]
+
 
 
 //      HtmlList modification components
@@ -625,31 +626,41 @@ let SequenceOption
 [<ReactComponent>]
 let ListOption (name: string) code path customHandlers dispatch =
 
-    let handleChange2 newValue = printfn "Selected:"
+    let changeListType newValueString =
+        let newValue = stringToListType newValueString
+        printf "%s" newValueString
+
+        match code with
+        | RenderingCode.HtmlList(_, attrs, itemCodes, handlers) ->
+            dispatch (ReplaceCode(RenderingCode.HtmlList(newValue, attrs, itemCodes, handlers), path))
+        | _ -> ()
+
+
+    let listTypeOptions = [ "Unordered"; "Ordered" ]
 
     match code with
-    | RenderingCode.HtmlList(listType, attrs, elementCode, handlers) ->
-        let listTypeOptions = [ "Unordered"; "Ordered" ]
-
+    | RenderingCode.HtmlList(listType, attrs, itemCodes, handlers) ->
         Html.div [
-            prop.className "bg-white  p-4 border border-gray-300 shadow-md"
+            prop.onMouseDown (fun e -> e.stopPropagation ())
+            prop.className "bg-gray-300 border border-black w-fit h-fit mt-4 group"
             prop.children [
                 Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
-                match code with
-                | RenderingCode.HtmlList(listType, attrs, itemCodes, handlers) ->
-                    Html.div [
-                        prop.children [
-                            SelectMenu listTypeOptions (listTypeToString listType) handleChange2
-                            (AttributeMenu code path attrs dispatch)
-                            (EventHandlerMenu code path customHandlers handlers dispatch)
-
+                Html.div [
+                    prop.children [
+                        SelectMenu listTypeOptions (listTypeToString listType) changeListType
+                        Html.div [
+                            prop.className "hidden group-hover:block"
+                            prop.children [
+                                AttributeMenu code path attrs dispatch
+                                EventHandlerMenu code path customHandlers handlers dispatch
+                            ]
                         ]
                     ]
-                | _ -> Html.none
-
+                ]
             ]
         ]
     | _ -> ErrorDisplay "Invalid code type for ListOption"
+
 
 
 //      HtmlElement modification components
@@ -705,23 +716,24 @@ let ElementOption (name: string) code path customHandlers dispatch =
 
     Html.div [
         prop.onMouseDown (fun e -> e.stopPropagation ())
+        prop.className "bg-gray-300  border border-black w-fit h-fit mt-4 group"
         prop.children [
-            Html.div [
-                prop.className "bg-gray-300  border border-black w-fit h-fit mt-4"
-                prop.children [
-                    Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
-                    match code with
-                    | RenderingCode.HtmlElement(_, attrs, innerValue, handlers) ->
+            Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
+            match code with
+            | RenderingCode.HtmlElement(_, attrs, innerValue, handlers) ->
+                Html.div [
+                    prop.children [
+                        (TagMenu code path dispatch)
+                        InnerValueMenu innerValue updateInnerValue
                         Html.div [
+                            prop.className "hidden group-hover:block"
                             prop.children [
-                                (TagMenu code path dispatch)
-                                InnerValueMenu innerValue updateInnerValue
                                 (AttributeMenu code path attrs dispatch)
                                 (EventHandlerMenu code path customHandlers handlers dispatch)
                             ]
                         ]
-                    | _ -> Html.none
+                    ]
                 ]
-            ]
+            | _ -> Html.none
         ]
     ]

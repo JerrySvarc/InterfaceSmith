@@ -87,6 +87,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                         context with
                             Path = context.Path @ [ index ]
                             Json = arrayItem
+                            Name = sprintf "List item: %i" index
                     }
 
                     let renderedItem = renderingCodeToReactElement newContext code
@@ -105,7 +106,6 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
         (attributes: Attributes)
         (codes: Map<string, RenderingCode>)
         =
-
         match context.Json with
         | JObject object ->
             let renderedElements =
@@ -120,6 +120,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                             context with
                                 Path = context.Path @ [ index ]
                                 Json = value
+                                Name = key
                         }
 
                         renderingCodeToReactElement newContext code

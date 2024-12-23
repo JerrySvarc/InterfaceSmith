@@ -38,8 +38,8 @@ let stringToListType (str: string) =
     let loweredStr = str.ToLower()
 
     match loweredStr with
-    | "unorderedlist" -> UnorderedList
-    | "orderedlist" -> OrderedList
+    | "unordered" -> UnorderedList
+    | "ordered" -> OrderedList
     | _ -> failwith "Invalid list type"
 
 let listTypeToString listType =
