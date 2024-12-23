@@ -125,7 +125,7 @@ let AttributeRow
                 prop.children [ InnerValueMenu attr.Value onValueChange ]
             ]
 
-            Html.div [
+            Html.td [
                 prop.className "ml-auto relative hover:bg-red-600 rounded"
                 prop.children [
                     Html.button [
@@ -148,8 +148,8 @@ let AttributeRow
 let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispatch =
     let editingKey, setEditingKey = React.useState ""
     let menuOpen, setMenuOpen = React.useState false
-    let newKey, setNewKey = React.useState "" // For new attribute key
-    let newValue, setNewValue = React.useState "" // For new attribute value
+    let newKey, setNewKey = React.useState ""
+    let newValue, setNewValue = React.useState Empty
 
     let toggleMenu () = setMenuOpen (not menuOpen)
 
@@ -168,47 +168,56 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
 
     let handleKeyChange oldKey newKey =
         if not (System.String.IsNullOrWhiteSpace newKey) then
-            let oldAttributeIndex =
-                attributes |> List.tryFindIndex (fun attr -> attr.Key = oldKey)
+            let updatedAttributes =
+                attributes
+                |> List.map (fun attr ->
+                    if attr.Key = oldKey then
+                        { attr with Key = newKey }
+                    else
+                        attr)
 
-            match oldAttributeIndex with
-            | Some index ->
-                let oldAttribute = attributes[index]
-                let newAttribute = { oldAttribute with Key = newKey }
-                let newAttributes = List.insertAt index newAttribute attributes
-                updateAttributes newAttributes
-            | None -> ()
+            updateAttributes updatedAttributes
 
     let handleValueChange key newValue =
-        let oldAttributeIndex = attributes |> List.tryFindIndex (fun attr -> attr.Key = key)
+        let updatedAttributes =
+            attributes
+            |> List.map (fun attr ->
+                if attr.Key = key then
+                    { attr with Value = newValue }
+                else
+                    attr)
 
-        match oldAttributeIndex with
-        | Some index ->
-            let oldAttribute = attributes[index]
-            let newAttribute = { oldAttribute with Value = newValue }
-            let newAttributes = List.insertAt index newAttribute attributes
-            updateAttributes newAttributes
-        | None -> ()
+        updateAttributes updatedAttributes
 
     let handleDelete key =
         let newAttributes = attributes |> List.filter (fun attr -> attr.Key <> key)
         updateAttributes newAttributes
 
     let handleAddNewAttribute () =
-        if
-            not (System.String.IsNullOrWhiteSpace newKey)
-            && not (System.String.IsNullOrWhiteSpace newValue)
-        then
-            let newAttribute = {
-                Key = newKey
-                Value = Constant newValue
-                Namespace = None
-            }
+        if not (System.String.IsNullOrWhiteSpace newKey) then
+            let updatedAttributes =
+                attributes
+                |> List.map (fun attr ->
+                    if attr.Key = newKey then
+                        { attr with Value = newValue }
+                    else
+                        attr)
+                |> fun attrs ->
+                    if List.exists (fun attr -> attr.Key = newKey) attrs then
+                        attrs
+                    else
+                        attrs
+                        @ [
+                            {
+                                Key = newKey
+                                Value = newValue
+                                Namespace = None
+                            }
+                        ]
 
-            let newAttributes = attributes @ [ newAttribute ]
-            updateAttributes newAttributes
+            updateAttributes updatedAttributes
             setNewKey ""
-            setNewValue ""
+            setNewValue Empty
 
     Html.div [
         prop.className "space-y-4"
@@ -278,13 +287,6 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                                             prop.value newKey
                                             prop.onChange (fun (event: Browser.Types.Event) ->
                                                 setNewKey (event.target?value |> Option.defaultValue ""))
-                                        ]
-                                        Html.input [
-                                            prop.className "text-sm px-2 py-1 border border-gray-300 rounded"
-                                            prop.placeholder "Attribute Value"
-                                            prop.value newValue
-                                            prop.onChange (fun (event: Browser.Types.Event) ->
-                                                setNewValue (event.target?value |> Option.defaultValue ""))
                                         ]
                                     ]
                                 ]
@@ -567,7 +569,19 @@ let SequenceOption
     (dispatch: PageEditorMsg -> unit)
     =
 
-    let handleChange2 newValue = printfn "Selected:"
+    let changeObjType newValueString =
+        let newValue = stringToObjType newValueString
+        printf "%s" newValueString
+
+        match code with
+        | RenderingCode.HtmlObject(_, attrs, keys, codes, handlers) ->
+            dispatch (ReplaceCode(RenderingCode.HtmlObject(newValue, attrs, keys, codes, handlers), path))
+        | _ -> ()
+
+    let objTypeOptions =
+        FSharpType.GetUnionCases(typeof<ObjType>)
+        |> Array.map (fun item -> item.Name.ToLower())
+        |> Array.toList
 
     match code with
     | RenderingCode.HtmlObject(objType, attrs, keyOrdering, codes, handlers) ->
@@ -577,7 +591,7 @@ let SequenceOption
                 Html.div [
                     prop.className "p-2 space-y-2"
                     prop.children [
-                        (SelectMenu [] (objTypeToString objType) handleChange2)
+                        (SelectMenu objTypeOptions (objTypeToString objType) changeObjType)
                         AttributeMenu code path attrs dispatch
                         KeysList(keyOrdering, objType, codes, handlers, dispatch, path)
                         EventHandlerMenu code path customHandlers handlers dispatch
@@ -691,7 +705,6 @@ let ElementOption (name: string) code path customHandlers dispatch =
 
     Html.div [
         prop.onMouseDown (fun e -> e.stopPropagation ())
-        prop.className "bg-white  p-4 border border-gray-300 shadow-md"
         prop.children [
             Html.div [
                 prop.className "bg-gray-300  border border-black w-fit h-fit mt-4"

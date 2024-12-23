@@ -55,8 +55,10 @@ let objTypeToString objType =
     | Section -> "section"
     | Form -> "form"
 
-let stringToObjType str =
-    match str with
+let stringToObjType (str: string) =
+    let loweredString = str.ToLower()
+
+    match loweredString with
     | "div" -> Div
     | "span" -> Span
     | "article" -> Article

@@ -41,6 +41,16 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
             ]
         ]
 
+    let renderAttributes attributes =
+        attributes
+        |> List.map (fun attr ->
+            match attr.Value with
+            | Data -> attr.Key, box (context.Json |> Json.convertFromJsonAs<string>)
+            | Constant s -> (attr.Key, box s)
+            | InnerValue.Empty -> (attr.Key, box attr.Value))
+        |> List.append [ ("className", box "preview") ]
+        |> createObj
+
     let createPreview (tag: string) (attributes: obj) (children: ReactElement list) =
         try
             if tag.ToLower() = "input" then
@@ -50,16 +60,8 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
         with ex ->
             Html.div [ prop.className "error-message"; prop.text $"Unexpected error: {ex.Message}" ]
 
-    let renderHtmlElement (tag: Tag) (attrs: Attributes) (innerValue: InnerValue) =
-        let attributes =
-            attrs
-            |> List.map (fun attr ->
-                match attr.Value with
-                | Data -> attr.Key, box (context.Json |> Json.convertFromJsonAs<string>)
-                | Constant s -> (attr.Key, box s)
-                | InnerValue.Empty -> (attr.Key, box attr.Value))
-            |> List.append [ ("className", box "preview") ]
-            |> createObj
+    let renderHtmlElement (tag: Tag) (attributes: Attributes) (innerValue: InnerValue) =
+        let attributes = renderAttributes attributes
 
         let children =
             match innerValue with
@@ -73,7 +75,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
         createPreview (tag.Name) attributes children |> renderWithOptions
 
-    let renderHtmlList (listType: ListType) (codes: RenderingCode list) =
+    let renderHtmlList (listType: ListType) (attributes: Attributes) (codes: RenderingCode list) =
         match context.Json with
         | JArray array ->
             let elements =
@@ -92,12 +94,18 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                     Html.li [ prop.className "preview"; prop.children [ renderedItem ] ])
 
             let listTag = listTypeToString listType
+            let attributes = renderAttributes attributes
 
-            createPreview listTag (createObj [ "className" ==> "preview" ]) elements
-            |> renderWithOptions
+            createPreview listTag attributes elements |> renderWithOptions
         | _ -> Html.div [ prop.text "Invalid JSON for HtmlList: not an array" ]
 
-    let renderHtmlObject (keys: string list) (codes: Map<string, RenderingCode>) =
+    let renderHtmlObject
+        (objType: ObjType)
+        (keys: string list)
+        (attributes: Attributes)
+        (codes: Map<string, RenderingCode>)
+        =
+
         match context.Json with
         | JObject object ->
             let renderedElements =
@@ -128,8 +136,9 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                             )
                         ])
 
-            Html.div [ prop.className "preview"; prop.children renderedElements ]
-            |> renderWithOptions
+            let attributes = renderAttributes attributes
+            let tag = objTypeToString objType
+            createPreview tag attributes renderedElements |> renderWithOptions
         | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
 
 
@@ -164,8 +173,8 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
     match code with
     | RenderingCode.HtmlElement(tag, attrs, innerValue, eventHandlers) -> renderHtmlElement tag attrs innerValue
-    | RenderingCode.HtmlList(listType, attrs, codes, eventHandlers) -> renderHtmlList listType codes
-    | RenderingCode.HtmlObject(objType, attrs, keys, codes, eventHandlers) -> renderHtmlObject keys codes
+    | RenderingCode.HtmlList(listType, attrs, codes, eventHandlers) -> renderHtmlList listType attrs codes
+    | RenderingCode.HtmlObject(objType, attrs, keys, codes, eventHandlers) -> renderHtmlObject objType keys attrs codes
     | RenderingCode.Hole named -> renderHole named
 
 
@@ -204,6 +213,7 @@ let renderCanvasElements (model: PageEditorModel) dispatch =
                     prop.children [ element.Render model dispatch ]
                 ]
             ]
+            prop.onWheel (fun event -> event.stopPropagation ())
         ]
 
     Html.div [
