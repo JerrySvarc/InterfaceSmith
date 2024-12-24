@@ -627,8 +627,7 @@ let SequenceOption
 let ListOption (name: string) code path customHandlers dispatch =
 
     let changeListType newValueString =
-        let newValue = stringToListType newValueString
-        printf "%s" newValueString
+        let newValue = (stringToListType newValueString)
 
         match code with
         | RenderingCode.HtmlList(_, attrs, itemCodes, handlers) ->
@@ -637,6 +636,11 @@ let ListOption (name: string) code path customHandlers dispatch =
 
 
     let listTypeOptions = [ "Unordered"; "Ordered" ]
+
+    let listTypeToListOption (listType: ListType) : string =
+        match listType with
+        | ListType.UnorderedList -> "Unordered"
+        | ListType.OrderedList -> "Ordered"
 
     match code with
     | RenderingCode.HtmlList(listType, attrs, itemCodes, handlers) ->
@@ -647,7 +651,7 @@ let ListOption (name: string) code path customHandlers dispatch =
                 Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
                 Html.div [
                     prop.children [
-                        SelectMenu listTypeOptions (listTypeToString listType) changeListType
+                        SelectMenu listTypeOptions (listTypeToListOption listType) changeListType
                         Html.div [
                             prop.className "hidden group-hover:block"
                             prop.children [
@@ -716,7 +720,7 @@ let ElementOption (name: string) code path customHandlers dispatch =
 
     Html.div [
         prop.onMouseDown (fun e -> e.stopPropagation ())
-        prop.className "bg-gray-300  border border-black w-fit h-fit mt-4 group"
+        prop.className "bg-gray-300 text-black  border border-black w-fit h-fit mt-4 group"
         prop.children [
             Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
             match code with
@@ -725,13 +729,8 @@ let ElementOption (name: string) code path customHandlers dispatch =
                     prop.children [
                         (TagMenu code path dispatch)
                         InnerValueMenu innerValue updateInnerValue
-                        Html.div [
-                            prop.className "hidden group-hover:block"
-                            prop.children [
-                                (AttributeMenu code path attrs dispatch)
-                                (EventHandlerMenu code path customHandlers handlers dispatch)
-                            ]
-                        ]
+                        (AttributeMenu code path attrs dispatch)
+                        (EventHandlerMenu code path customHandlers handlers dispatch)
                     ]
                 ]
             | _ -> Html.none

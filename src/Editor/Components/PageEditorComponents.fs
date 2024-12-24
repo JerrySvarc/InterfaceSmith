@@ -43,7 +43,8 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         IsPanning = false
         LastMousePosition = None
         IsPreviewOpen = false
-        RightClickMenuIndex = None
+        ContextMenuPosition = None
+        ContextMenuVisible = false
     }
 
     newPageEditorModel, Cmd.none
@@ -199,57 +200,15 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         }
 
         newModel, Cmd.ofMsg (SyncWithMain newModel)
-    | OpenFieldView -> failwith "Not Implemented"
-    | StartPanning(_)
-    | UpdatePanning(_) -> failwith "Not Implemented"
     | AddMsg -> failwith "Not Implemented"
     | DeleteMsg -> failwith "Not Implemented"
-    | OpenRightClickMenu(position, dispatch) ->
-        let elementPosition = {
-            X = (model.ViewportPosition.X) / model.Scale
-            Y = (model.ViewportPosition.Y) / model.Scale
-        }
-
-        let newMenuElement = {
-            Id = model.Elements.Length + 1
-            Position = position
-            Render = fun model dispatch -> RightClickMenu dispatch
-        }
-
-        let newElements = model.Elements @ [ newMenuElement ]
-
-        {
-            model with
-                Elements = newElements
-                LastMousePosition = Some(position)
-                RightClickMenuIndex = Some(newMenuElement.Id)
-        },
-        Cmd.none
+    | OpenRightClickMenu(position, dispatch) -> model, Cmd.none
+    | CloseRightClickMenu -> model, Cmd.none
     | AddUpdateFunction -> failwith "Not Implemented"
     | RemoveUpdateFunction -> failwith "Not Implemented"
     | UpdateMsgEvent(msg, code) -> failwith "Not Implemented"
-    | CloseRightClickMenu ->
-        let newElements =
-            match model.RightClickMenuIndex with
-            | Some id -> model.Elements |> List.filter (fun item -> id <> item.Id)
-            | None -> model.Elements
-
-        {
-            model with
-                Elements = newElements
-                RightClickMenuIndex = None
-        },
-        Cmd.none
-    | CreateViewElement dispatch ->
-        let viewElement = {
-            Id = model.Elements.Length + 1
-            Position = { X = 400.0; Y = 350.0 }
-            Render = fun model dispatch -> ViewElement model dispatch
-        }
-
-        let newElements = model.Elements @ [ viewElement ]
-
-        { model with Elements = newElements }, Cmd.none
+    | StartPanning(_)
+    | UpdatePanning(_) -> failwith "Not Implemented"
 
 
 

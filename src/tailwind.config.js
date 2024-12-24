@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
     content: ["./index.html", "./**/*.{fs,js,ts,jsx,tsx}"],
+    mode: "jit",
     theme: {
         fontFamily: {
             display: ["IBM Plex Mono", "Menlo", "monospace"],

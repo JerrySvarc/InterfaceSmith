@@ -35,6 +35,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
     let renderWithOptions (preview: ReactElement) =
         Html.div [
+            prop.className "hover:bg-gray-100"
             prop.children [
                 preview
                 options context.Dispatch code context.Path context.Name context.CustomHandlers
@@ -73,7 +74,10 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
             | InnerValue.Empty -> []
             | Constant value -> [ Html.text value ]
 
-        createPreview (tag.Name) attributes children |> renderWithOptions
+        if context.ShowOptions then
+            createPreview (tag.Name) attributes children |> renderWithOptions
+        else
+            createPreview (tag.Name) attributes children
 
     let renderHtmlList (listType: ListType) (attributes: Attributes) (codes: RenderingCode list) =
         match context.Json with
@@ -82,12 +86,14 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                 codes
                 |> List.mapi (fun index code ->
                     let arrayItem = List.item index array
+                    let showOptions = index = 0
 
                     let newContext = {
                         context with
                             Path = context.Path @ [ index ]
                             Json = arrayItem
                             Name = sprintf "List item: %i" index
+                            ShowOptions = showOptions && context.ShowOptions
                     }
 
                     let renderedItem = renderingCodeToReactElement newContext code
@@ -97,7 +103,10 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
             let listTag = listTypeToString listType
             let attributes = renderAttributes attributes
 
-            createPreview listTag attributes elements |> renderWithOptions
+            if context.ShowOptions then
+                createPreview listTag attributes elements |> renderWithOptions
+            else
+                createPreview listTag attributes elements
         | _ -> Html.div [ prop.text "Invalid JSON for HtmlList: not an array" ]
 
     let renderHtmlObject
@@ -113,6 +122,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                 |> List.mapi (fun index key ->
                     let element = codes.TryFind key
                     let jsonValue = object.TryFind key
+
 
                     match element, jsonValue with
                     | Some code, Some value ->
@@ -139,7 +149,11 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
             let attributes = renderAttributes attributes
             let tag = objTypeToString objType
-            createPreview tag attributes renderedElements |> renderWithOptions
+
+            if context.ShowOptions then
+                createPreview tag attributes renderedElements |> renderWithOptions
+            else
+                createPreview tag attributes renderedElements
         | _ -> Html.div [ prop.text "Invalid JSON for Sequence: not an object" ]
 
 
@@ -151,25 +165,36 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
         let fieldType = recognizeJson context.Json
 
-        Html.div [
-            prop.className "flex items-center justify-between p-2 bg-gray-100 rounded"
-            prop.children [
-                Html.span [ prop.className "text-sm text-gray-600"; prop.text ("Hole: " + holeName) ]
-                Html.button [
-                    prop.className
-                        "px-2 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 flex items-center space-x-1"
-                    prop.onClick (fun _ -> context.Dispatch(ReplaceCode(fieldType, context.Path)))
-                    prop.children [
-                        ReactBindings.React.createElement (
-                            replaceIcon,
-                            createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
-                            []
-                        )
-                        Html.span [ prop.text "Replace" ]
+        if context.ShowOptions then
+            Html.div [
+                prop.className "bg-gray-300 border border-black w-56 h-fit mt-4 p-2 rounded"
+                prop.children [
+                    Html.div [
+                        prop.className "flex items-center justify-between"
+                        prop.children [
+                            Html.span [
+                                prop.className "text-xs font-semibold text-black px-5"
+                                prop.text ("Hole: " + holeName)
+                            ]
+                            Html.button [
+                                prop.className
+                                    "flex items-center px-5 py-1 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
+                                prop.onClick (fun _ -> context.Dispatch(ReplaceCode(fieldType, context.Path)))
+                                prop.children [
+                                    ReactBindings.React.createElement (
+                                        replaceIcon,
+                                        createObj [ "size" ==> 12; "color" ==> "#FFFFFF" ],
+                                        []
+                                    )
+                                    Html.span [ prop.className "ml-1"; prop.text "Replace" ]
+                                ]
+                            ]
+                        ]
                     ]
                 ]
             ]
-        ]
+        else
+            Html.none
 
 
     match code with

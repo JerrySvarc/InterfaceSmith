@@ -123,6 +123,9 @@ let RightClickMenu dispatch =
 
 [<ReactComponent>]
 let ViewElement model dispatch =
+    let showOptions, setShowOptions = React.useState true
+    let toggleOptions () = setShowOptions (not showOptions)
+
     Html.div [
         prop.className "border border-black bg-gray-600 text-white "
         prop.onMouseDown (fun e -> e.stopPropagation ())
@@ -147,9 +150,13 @@ let ViewElement model dispatch =
             Json = model.PageData.ParsedJson
             Name = "View"
             CustomHandlers = model.PageData.CustomHandlers
+            ShowOptions = showOptions
         }
 
-        prop.children [ renderingCodeToReactElement renderContext model.PageData.CurrentTree ]
+        prop.children [
+            Html.button [ prop.onClick (fun _ -> toggleOptions ()); prop.text "Toggle options" ]
+            renderingCodeToReactElement renderContext model.PageData.CurrentTree
+        ]
     ]
 
 [<ReactComponent>]

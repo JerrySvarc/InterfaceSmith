@@ -29,6 +29,7 @@ type RenderContext<'Msg> = {
     Path: int list
     Name: string
     CustomHandlers: Map<string, Javascript>
+    ShowOptions: bool
 }
 
 /// <summary></summary>
@@ -52,7 +53,8 @@ and PageEditorModel = {
     IsPanning: bool
     LastMousePosition: Position option
     IsPreviewOpen: bool
-    RightClickMenuIndex: int option
+    ContextMenuVisible: bool
+    ContextMenuPosition: Position option
 }
 
 
@@ -69,7 +71,6 @@ and PageEditorMsg =
     | EndDraggingItem
     | Zoom of float
     | TogglePreview
-    | OpenFieldView
     | AddMsg
     | DeleteMsg
     | AddUpdateFunction

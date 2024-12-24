@@ -13,7 +13,7 @@ let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : Rea
     Html.div [
         prop.className (
             sprintf
-                "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded group %s"
+                "flex items-center p-2 hover:bg-gray-700 cursor-pointer rounded group/tab %s"
                 (if model.ActivePageId = Some page.PageData.Id then
                      "bg-gray-700"
                  else
@@ -24,7 +24,7 @@ let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : Rea
             ReactBindings.React.createElement (fileIcon, createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ], [])
             Html.span [ prop.className "ml-2"; prop.text page.PageData.Name ]
             Html.div [
-                prop.className "ml-auto relative invisible group-hover:visible hover:bg-red-900 rounded"
+                prop.className "ml-auto relative invisible group-hover/tab:visible hover:bg-red-900 rounded"
                 prop.children [
                     Html.button [
                         prop.className "flex items-center justify-center w-8 h-8 rounded-full"
@@ -41,9 +41,6 @@ let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : Rea
             ]
         ]
     ]
-
-
-
 
 /// <summary></summary>
 /// <param name="model"></param>
