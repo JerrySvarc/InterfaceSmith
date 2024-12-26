@@ -55,10 +55,10 @@ type RenderingCode =
     | Hole of FieldHole
 
 and EventHandler =
-    | JsHandler of Javascript
-    | MsgHandler of string
+    | JsHandler of functionName: string
+    | MsgHandler of message: string
 
-// Represents a JavaScript code
+
 // JSFunction: Represents a JavaScript function used for event handling of custom RenderingCode events, accepts only the parameter "this"
 and Javascript = JSFunction of name: string * code: string
 

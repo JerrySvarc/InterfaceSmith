@@ -27,7 +27,7 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         ParsedJson = JNull
         CurrentTree = RenderingCode.Hole(UnNamed)
         JsonString = ""
-        CustomHandlers = Map([])
+        CustomFunctions = Map([ "functionExample", JSFunction("functionExample", "console.log()") ])
         UserMessages = []
         UpdateFunction = Map([])
     }
@@ -75,16 +75,37 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 
                 let newModelElement = {
                     Id = model.Elements.Length + 1
-                    Position = { X = 400.0; Y = 350.0 }
+                    Position = { X = 150.0; Y = 250.0 }
                     Render = fun model dispatch -> ModelElement model dispatch
                 }
 
+                let viewElement = {
+                    Id = model.Elements.Length + 2
+                    Position = { X = 700.0; Y = 550.0 }
+                    Render = fun model dispatch -> ViewElement model dispatch
+                }
+
+                let functionsElement = {
+                    Id = model.Elements.Length + 3
+                    Position = { X = 700.0; Y = 550.0 }
+                    Render = fun model dispatch -> FunctionsElement model.PageData.CustomFunctions dispatch
+                }
+
+                let updateElement = {
+                    Id = model.Elements.Length + 4
+                    Position = { X = 700.0; Y = 550.0 }
+                    Render =
+                        fun model dispatch ->
+                            MessageAndUpdateElement model.PageData.UserMessages model.PageData.UpdateFunction dispatch
+                }
 
                 let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
-                        Elements = model.Elements @ [ newModelElement ]
+                        Elements =
+                            model.Elements
+                            @ [ newModelElement; viewElement; functionsElement; updateElement ]
                 }
 
                 updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
@@ -153,7 +174,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
             let dx = (pos.X - lastPos.X) / model.Scale
             let dy = (pos.Y - lastPos.Y) / model.Scale
 
-            let updatedItems =
+            let updatedElements =
                 model.Elements
                 |> List.map (fun item ->
                     if item.Id = itemId then
@@ -164,19 +185,17 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                                     Y = item.Position.Y + dy
                                 }
                         }
-
                     else
                         item)
 
             let newModel = {
                 model with
-                    Elements = updatedItems
+                    Elements = updatedElements
                     LastMousePosition = Some pos
             }
 
             newModel, Cmd.ofMsg (SyncWithMain newModel)
         | _ -> model, Cmd.none
-
     | EndDraggingItem ->
         {
             model with
@@ -200,15 +219,73 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         }
 
         newModel, Cmd.ofMsg (SyncWithMain newModel)
-    | AddMsg -> failwith "Not Implemented"
-    | DeleteMsg -> failwith "Not Implemented"
-    | OpenRightClickMenu(position, dispatch) -> model, Cmd.none
-    | CloseRightClickMenu -> model, Cmd.none
-    | AddUpdateFunction -> failwith "Not Implemented"
-    | RemoveUpdateFunction -> failwith "Not Implemented"
-    | UpdateMsgEvent(msg, code) -> failwith "Not Implemented"
-    | StartPanning(_)
-    | UpdatePanning(_) -> failwith "Not Implemented"
+
+    | CreateFunction ->
+        let newName = $"newFunction {(model.PageData.CustomFunctions.Count)}"
+        let newFunction = JSFunction(newName, "console.log()")
+        let newFunctions = model.PageData.CustomFunctions.Add(newName, newFunction)
+
+        {
+            model with
+                PageData.CustomFunctions = newFunctions
+        },
+        Cmd.none
+    | UpdateFunction(_, _) -> failwith "Not Implemented"
+    | DeleteFunction(_) -> failwith "Not Implemented"
+
+    | AddMsg message ->
+        let messageFoundCount =
+            model.PageData.UserMessages
+            |> List.filter (fun element -> element = message)
+            |> List.length
+
+        let defaultUpdateFunction = sprintf "return { ...model };"
+
+        if messageFoundCount = 0 then
+            let newMessages = model.PageData.UserMessages @ [ message ]
+
+            {
+                model with
+                    PageData = {
+                        model.PageData with
+                            UserMessages = newMessages
+                    }
+            },
+            Cmd.none
+        else
+            model, Cmd.ofMsg (AddUpdateMessage(message, defaultUpdateFunction))
+    | DeleteMsg message ->
+        let newMessages =
+            model.PageData.UserMessages |> List.filter (fun element -> element <> message)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.ofMsg (DeleteUpdateMessage(message))
+
+    | AddUpdateMessage(message, code)
+    | ModifyUpdateMessage(message, code) ->
+        let newUpdate = model.PageData.UpdateFunction.Add(message, code)
+
+        {
+            model with
+                PageData.UpdateFunction = newUpdate
+        },
+        Cmd.none
+    | DeleteUpdateMessage message ->
+        let newUpdate = model.PageData.UpdateFunction.Remove message
+
+        {
+            model with
+                PageData.UpdateFunction = newUpdate
+        },
+        Cmd.none
+    | StartPanning(_) -> failwith "Panning already started."
+    | UpdatePanning(_) -> failwith "Not panning the canvas."
 
 
 
@@ -360,6 +437,8 @@ let SandboxPreviewView (model: PageEditorModel) dispatch =
         Html.none
 
 
+
+
 /// <summary></summary>
 /// <param name="model"></param>
 /// <param name="dispatch"></param>
@@ -380,7 +459,6 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
 
         prop.onMouseDown (fun event ->
             if model.DraggingElementId.IsNone && event.button = 0 then
-                dispatch CloseRightClickMenu
                 dispatch (StartPanning { X = event.clientX; Y = event.clientY }))
 
         prop.onMouseMove (fun event ->
@@ -406,19 +484,10 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
             ]
         ]
     (*
-        prop.onContextMenu (fun (e: Browser.Types.MouseEvent) ->
-            e.preventDefault ()
-            let target = e.currentTarget :?> Browser.Types.HTMLElement
-            let canvasBounds = target.getBoundingClientRect ()
-
-            let mouseX =
-                (e.clientX - canvasBounds.left) / model.Scale + model.ViewportPosition.X
-
-            let mouseY = (e.clientY - canvasBounds.top) / model.Scale + model.ViewportPosition.Y
-
-
-            if model.RightClickMenuIndex = None then
-                dispatch (OpenRightClickMenu({ X = mouseX; Y = mouseY }, dispatch)))*)
+        prop.onContextMenu (fun event ->
+            event.preventDefault ()
+            let position = { X = event.clientX; Y = event.clientY }
+            dispatch (OpenContextMenu position))*)
     ]
 
 /// <summary></summary>

@@ -306,7 +306,14 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
 
 
 [<ReactComponent>]
-let EventHandlerMenu code path customHandlers eventHandlers dispatch =
+let EventHandlerMenu
+    code
+    path
+    (customFunctions: Map<string, Javascript>)
+    eventHandlers
+    (userMessages: UserMessage list)
+    dispatch
+    =
     let availableEvents = [ "onClick"; "onMouseOver"; "onMouseOut"; "onKeyPress"; "onFocus"; "onBlur" ]
 
     let selectedEvent, setSelectedEvent = React.useState ""
@@ -333,10 +340,15 @@ let EventHandlerMenu code path customHandlers eventHandlers dispatch =
 
     let addHandler () =
         if selectedEvent <> "" && selectedHandler <> "" then
+            let funtionOption = Map.tryFind selectedHandler customFunctions
+            let messageOption = List.tryFind (fun item -> item = selectedHandler) userMessages
+
             let newHandler =
-                match Map.tryFind selectedHandler customHandlers with
-                | Some js -> JsHandler js
-                | None -> JsHandler(JSFunction(selectedHandler, ""))
+                match funtionOption, messageOption with
+                | Some _, Some _ -> JsHandler(selectedHandler)
+                | Some _, None -> JsHandler(selectedHandler)
+                | None, Some _ -> MsgHandler(selectedHandler)
+                | None, None -> failwith "Selected handler does not exist"
 
             let updatedHandlers = (selectedEvent, newHandler) :: eventHandlers
             updateCode updatedHandlers
@@ -390,9 +402,11 @@ let EventHandlerMenu code path customHandlers eventHandlers dispatch =
                                 setSelectedHandler (e.target?value |> string))
                             prop.children (
                                 Html.option [ prop.value ""; prop.text "Select a handler" ]
-                                :: (customHandlers
+                                :: (customFunctions
                                     |> Map.toList
                                     |> List.map (fun (name, _) -> Html.option [ prop.value name; prop.text name ]))
+                                @ (userMessages
+                                   |> List.map (fun message -> Html.option [ prop.value message; prop.text message ]))
                             )
                         ]
                         Html.button [
@@ -431,7 +445,7 @@ let EventHandlerMenu code path customHandlers eventHandlers dispatch =
                                         Html.td [
                                             prop.text (
                                                 match handler with
-                                                | JsHandler(JSFunction(name, _)) -> sprintf "JS: %s" name
+                                                | JsHandler(name) -> sprintf "JS: %s" name
                                                 | MsgHandler msg -> sprintf "Msg: %s" msg
                                             )
                                             prop.className "p-2 text-sm"
@@ -565,7 +579,8 @@ let SequenceOption
     (name: string)
     (code: RenderingCode)
     (path: int list)
-    customHandlers
+    customFunctions
+    userMessages
     (dispatch: PageEditorMsg -> unit)
     =
 
@@ -595,7 +610,7 @@ let SequenceOption
                         (SelectMenu objTypeOptions (objTypeToString objType) changeObjType)
                         AttributeMenu code path attrs dispatch
                         KeysList(keyOrdering, objType, codes, handlers, dispatch, path)
-                        EventHandlerMenu code path customHandlers handlers dispatch
+                        EventHandlerMenu code path customFunctions handlers userMessages dispatch
                         Html.div [
                             prop.className "ml-auto relative hover:bg-red-600 rounded"
                             prop.children [
@@ -624,7 +639,7 @@ let SequenceOption
 // ||----------------------------------------||
 
 [<ReactComponent>]
-let ListOption (name: string) code path customHandlers dispatch =
+let ListOption (name: string) code path customFunctions userMessages dispatch =
 
     let changeListType newValueString =
         let newValue = (stringToListType newValueString)
@@ -652,13 +667,8 @@ let ListOption (name: string) code path customHandlers dispatch =
                 Html.div [
                     prop.children [
                         SelectMenu listTypeOptions (listTypeToListOption listType) changeListType
-                        Html.div [
-                            prop.className "hidden group-hover:block"
-                            prop.children [
-                                AttributeMenu code path attrs dispatch
-                                EventHandlerMenu code path customHandlers handlers dispatch
-                            ]
-                        ]
+                        AttributeMenu code path attrs dispatch
+                        EventHandlerMenu code path customFunctions handlers userMessages dispatch
                     ]
                 ]
             ]
@@ -710,7 +720,7 @@ let TagMenu (code: RenderingCode) path dispatch =
     | _ -> ErrorDisplay "Invalid code type for TagMenu"
 
 [<ReactComponent>]
-let ElementOption (name: string) code path customHandlers dispatch =
+let ElementOption (name: string) code path customFunctions userMessages dispatch =
 
     let updateInnerValue newVal =
         match code with
@@ -730,7 +740,7 @@ let ElementOption (name: string) code path customHandlers dispatch =
                         (TagMenu code path dispatch)
                         InnerValueMenu innerValue updateInnerValue
                         (AttributeMenu code path attrs dispatch)
-                        (EventHandlerMenu code path customHandlers handlers dispatch)
+                        (EventHandlerMenu code path customFunctions handlers userMessages dispatch)
                     ]
                 ]
             | _ -> Html.none

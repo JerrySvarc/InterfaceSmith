@@ -18,18 +18,26 @@ type Page = {
     JsonString: string
     UserMessages: UserMessage list
     UpdateFunction: UpdateFunction
-    CustomHandlers: Map<string, Javascript>
+    CustomFunctions: Map<string, Javascript>
 }
 
 /// <summary></summary>
 type RenderContext<'Msg> = {
-    Options: ('Msg -> unit) -> RenderingCode -> list<int> -> string -> Map<string, Javascript> -> ReactElement
+    Options:
+        ('Msg -> unit)
+            -> RenderingCode
+            -> list<int>
+            -> string
+            -> Map<string, Javascript>
+            -> UserMessage list
+            -> ReactElement
     Dispatch: 'Msg -> unit
     Json: Json
     Path: int list
     Name: string
-    CustomHandlers: Map<string, Javascript>
+    CustomFunctions: Map<string, Javascript>
     ShowOptions: bool
+    UserMessages: UserMessage list
 }
 
 /// <summary></summary>
@@ -58,7 +66,6 @@ and PageEditorModel = {
 }
 
 
-
 and PageEditorMsg =
     | SyncWithMain of PageEditorModel
     | UploadData of string * (PageEditorMsg -> unit)
@@ -71,11 +78,11 @@ and PageEditorMsg =
     | EndDraggingItem
     | Zoom of float
     | TogglePreview
-    | AddMsg
-    | DeleteMsg
-    | AddUpdateFunction
-    | RemoveUpdateFunction
-    | UpdateMsgEvent of msg: UserMessage * code: string
-    | OpenRightClickMenu of position: Position * (PageEditorMsg -> unit)
-    | CloseRightClickMenu
-    | CreateViewElement of (PageEditorMsg -> unit)
+    | CreateFunction
+    | UpdateFunction of string * Javascript
+    | DeleteFunction of string
+    | AddMsg of string
+    | DeleteMsg of string
+    | AddUpdateMessage of message: UserMessage * code: string
+    | ModifyUpdateMessage of message: UserMessage * code: string
+    | DeleteUpdateMessage of string

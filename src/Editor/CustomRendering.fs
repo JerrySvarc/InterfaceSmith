@@ -19,12 +19,13 @@ let rec options
     (code: RenderingCode)
     (path: int list)
     (name: string)
-    customHandlers
+    customFunctions
+    userMessages
     : ReactElement =
     match code with
-    | RenderingCode.HtmlElement _ -> ElementOption name code path customHandlers dispatch
-    | RenderingCode.HtmlList _ -> ListOption name code path customHandlers dispatch
-    | RenderingCode.HtmlObject(_) -> SequenceOption name code path customHandlers dispatch
+    | RenderingCode.HtmlElement _ -> ElementOption name code path customFunctions userMessages dispatch
+    | RenderingCode.HtmlList _ -> ListOption name code path customFunctions userMessages dispatch
+    | RenderingCode.HtmlObject(_) -> SequenceOption name code path customFunctions userMessages dispatch
     | RenderingCode.Hole _ -> Html.none
 
 /// <summary></summary>
@@ -35,10 +36,11 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
     let renderWithOptions (preview: ReactElement) =
         Html.div [
-            prop.className "hover:bg-gray-100"
+            prop.className
+                "bg-white hover:bg-gray-50 border-l-2 border-transparent hover:border-indigo-400 transition-colors duration-150 p-2"
             prop.children [
                 preview
-                options context.Dispatch code context.Path context.Name context.CustomHandlers
+                options context.Dispatch code context.Path context.Name context.CustomFunctions context.UserMessages
             ]
         ]
 
@@ -92,7 +94,7 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
                         context with
                             Path = context.Path @ [ index ]
                             Json = arrayItem
-                            Name = sprintf "List item: %i" index
+                            Name = sprintf "List item"
                             ShowOptions = showOptions && context.ShowOptions
                     }
 
@@ -167,23 +169,23 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
         if context.ShowOptions then
             Html.div [
-                prop.className "bg-gray-300 border border-black w-56 h-fit mt-4 p-2 rounded"
+                prop.className "bg-gray-300 border border-black w-64 h-auto mt-4 p-3 rounded"
                 prop.children [
                     Html.div [
-                        prop.className "flex items-center justify-between"
+                        prop.className "flex justify-between items-center"
                         prop.children [
                             Html.span [
-                                prop.className "text-xs font-semibold text-black px-5"
+                                prop.className "text-sm font-semibold text-black"
                                 prop.text ("Hole: " + holeName)
                             ]
                             Html.button [
                                 prop.className
-                                    "flex items-center px-5 py-1 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
+                                    "flex items-center px-3 py-2 ml-4 bg-blue-500 text-white text-sm font-semibold rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200"
                                 prop.onClick (fun _ -> context.Dispatch(ReplaceCode(fieldType, context.Path)))
                                 prop.children [
                                     ReactBindings.React.createElement (
                                         replaceIcon,
-                                        createObj [ "size" ==> 12; "color" ==> "#FFFFFF" ],
+                                        createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
                                         []
                                     )
                                     Html.span [ prop.className "ml-1"; prop.text "Replace" ]

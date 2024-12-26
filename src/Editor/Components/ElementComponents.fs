@@ -96,30 +96,12 @@ let ModelElement model dispatch =
     Html.div [
         prop.className "bg-gray-900 text-white rounded w-56"
         prop.children [
-            Html.h3 [ prop.className "font-bold mb-4 text-white"; prop.text "JSON Model" ]
-            Html.button [
-                prop.onClick (fun event ->
-                    event.stopPropagation ()
-                    dispatch (CreateViewElement dispatch))
-                prop.text "Open View"
-            ]
+            Html.h3 [ prop.className "font-bold mb-4 text-white"; prop.text "Uploaded JSON data" ]
             displayField model.PageData.ParsedJson
         ]
         prop.onMouseDown (fun e -> e.stopPropagation ())
     ]
 
-
-
-[<ReactComponent>]
-let RightClickMenu dispatch =
-    Html.div [
-        prop.className "border border-black bg-gray-600 text-white "
-        prop.children [
-            Html.div [ prop.text "Create Message" ]
-            Html.div [ prop.text "Create Attribute" ]
-            Html.div [ prop.text "Create Attribute" ]
-        ]
-    ]
 
 [<ReactComponent>]
 let ViewElement model dispatch =
@@ -127,7 +109,6 @@ let ViewElement model dispatch =
     let toggleOptions () = setShowOptions (not showOptions)
 
     Html.div [
-        prop.className "border border-black bg-gray-600 text-white "
         prop.onMouseDown (fun e -> e.stopPropagation ())
         prop.className "bg-white  p-4 border border-gray-300 shadow-md"
         prop.style [
@@ -148,9 +129,10 @@ let ViewElement model dispatch =
             Dispatch = dispatch
             Path = []
             Json = model.PageData.ParsedJson
-            Name = "View"
-            CustomHandlers = model.PageData.CustomHandlers
+            Name = "Uploaded Data"
+            CustomFunctions = model.PageData.CustomFunctions
             ShowOptions = showOptions
+            UserMessages = model.PageData.UserMessages
         }
 
         prop.children [
@@ -160,33 +142,137 @@ let ViewElement model dispatch =
     ]
 
 [<ReactComponent>]
-let JavaScriptEditorView code (dispatch) =
-
-    let extensions = [| javascript?javascript (); html?html (); css?css () |]
+let JavaScriptEditorView code onChange =
+    let extensions = [| javascript?javascript () |]
 
     Html.div [
-        prop.className "flex flex-col h-full border-solid border-2 border-black overflow-auto"
+        prop.style [ style.height (length.percent 100); style.width (length.percent 100) ]
+        prop.className "border-solid border-2 border-black"
+        prop.onMouseDown (fun e -> e.stopPropagation ())
         prop.children [
-            Html.h3 [ prop.className "font-bold mb-2 px-2"; prop.text "Code preview" ]
-            Html.div [
-                prop.className "flex-grow overflow-auto"
-                prop.children [
-                    ReactBindings.React.createElement (
-                        CodeMirror,
-                        createObj [
-                            "value" ==> code
-                            "extensions" ==> extensions
-                            "theme" ==> "dark"
-                            "readOnly" ==> "true"
-                        ],
-                        []
-                    )
-                ]
-            ]
+            ReactBindings.React.createElement (
+                CodeMirror,
+                createObj [
+                    "value" ==> code
+                    "extensions" ==> extensions
+                    "theme" ==> "light"
+                    "readOnly" ==> "false"
+                    "height" ==> "100%"
+                    "style" ==> {| height = "100%"; width = "100%" |}
+                ],
+                []
+            )
         ]
     ]
 
-let MsgOverview model dispatch = Html.div []
-let MsgElement msgs dispatch = Html.div []
-let UpdateOverview model dispatch = Html.div []
-let UpdateElement updateFun dispatch = Html.div []
+
+
+[<ReactComponent>]
+let FunctionsElement (functions: Map<string, Javascript>) dispatch =
+    let (selectedFunction, setSelectedFunction) = React.useState<string option> (None)
+
+    Html.div [
+        prop.className "bg-white p-4 border border-gray-300 shadow-md"
+        prop.style [
+            style.resize.both
+            style.overflow.hidden
+            style.minWidth (length.px 200)
+            style.minHeight (length.px 200)
+            style.maxWidth (length.percent 100)
+            style.maxHeight (length.percent 100)
+            style.width (length.px 400)
+            style.height (length.px 600)
+            style.display.flex
+            style.flexDirection.column
+        ]
+        prop.onMouseDown (fun e -> e.stopPropagation ())
+        prop.children [
+            Html.div [
+                prop.style [ style.flexShrink 0; style.marginBottom (length.px 8) ]
+                prop.className "flex items-center gap-2"
+                prop.children [
+                    SelectMenu
+                        (functions |> Map.keys |> List.ofSeq)
+                        (selectedFunction |> Option.defaultValue "Select Function")
+                        (Some >> setSelectedFunction)
+
+                    Html.button [
+                        prop.className "text-xs px-2 py-1 bg-white border border-black hover:bg-gray-50"
+                        prop.text "New Function"
+                        prop.onClick (fun _ -> dispatch (CreateFunction))
+                    ]
+                ]
+            ]
+
+            match selectedFunction with
+            | Some name when Map.containsKey name functions ->
+                Html.div [
+                    prop.style [ style.flexGrow 1; style.height (length.percent 100) ]
+                    let code =
+                        match functions[name] with
+                        | JSFunction(_, code) -> code
+
+                    prop.children [ JavaScriptEditorView code dispatch ]
+                ]
+            | _ ->
+                Html.div [
+                    prop.className "flex items-center justify-center h-full text-gray-500"
+                    prop.text "Select a function to edit"
+                ]
+        ]
+    ]
+
+[<ReactComponent>]
+let MessageAndUpdateElement (messages: string list) (updateFunction: Map<string, string>) dispatch =
+    let (selectedMessage, setSelectedMessage) = React.useState<string option> None
+
+    Html.div [
+        prop.className "bg-white p-4 border border-gray-300 shadow-md"
+        prop.onMouseDown (fun e -> e.stopPropagation ())
+        prop.style [ style.display.flex; style.flexDirection.column; style.gap (length.px 16) ]
+        prop.children [
+            Html.div [
+                prop.className "flex items-center gap-2"
+                prop.children [
+                    SelectMenu
+                        messages
+                        (selectedMessage |> Option.defaultValue "Select Message")
+                        (Some >> setSelectedMessage)
+
+                    Html.button [
+                        prop.className "text-xs px-2 py-1 bg-white border border-black hover:bg-gray-50"
+                        prop.text "New Message"
+                        prop.onClick (fun _ ->
+                            let newMsg = sprintf "NewMessage%d" (messages.Length + 1)
+
+                            dispatch (AddMsg(newMsg)))
+                    ]
+
+                    match selectedMessage with
+                    | Some msg ->
+                        Html.button [
+                            prop.className "text-xs px-2 py-1 bg-red-500 text-white hover:bg-red-600"
+                            prop.text "Delete Message"
+                            prop.onClick (fun _ ->
+                                dispatch (DeleteMsg msg)
+                                setSelectedMessage None)
+                        ]
+                    | None -> Html.none
+                ]
+            ]
+
+            match selectedMessage with
+            | Some msg when Map.containsKey msg updateFunction ->
+                Html.div [
+                    prop.children [
+                        JavaScriptEditorView updateFunction[msg] (fun newCode ->
+                            dispatch (ModifyUpdateMessage(msg, newCode)))
+                    ]
+                ]
+            | _ ->
+                Html.div [
+                    prop.className "flex items-center justify-center text-gray-500"
+                    prop.text "Select a message to edit its update function"
+                ]
+        ]
+    ]
