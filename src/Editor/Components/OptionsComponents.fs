@@ -98,7 +98,7 @@ let AttributeRow
                 prop.children [
                     if isEditing then
                         Html.input [
-                            prop.className "border rounded px-2 py-1 text-sm w-full"
+                            prop.className "text-xs overflow-auto bg-white border border-black shadow-sm "
                             prop.defaultValue attr.Key
                             prop.autoFocus true
                             prop.onBlur (fun e ->
@@ -113,7 +113,7 @@ let AttributeRow
                         ]
                     else
                         Html.span [
-                            prop.className "cursor-pointer"
+                            prop.className "cursor-pointer text-xs overflow-auto w-36 max-w-36"
                             prop.text attr.Key
                             prop.onClick (fun _ -> onEditKey attr.Key)
                         ]
@@ -253,7 +253,7 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                                                 prop.text "Property"
                                             ]
                                             Html.th [
-                                                prop.className "text-left text-sm font-medium text-gray-600"
+                                                prop.className "text-left pl-3 text-sm font-medium text-gray-600"
                                                 prop.text "Value"
                                             ]
                                             Html.th [ prop.className "text-sm" ]
@@ -282,7 +282,8 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                                     prop.className "flex space-x-2"
                                     prop.children [
                                         Html.input [
-                                            prop.className "text-sm px-2 py-1 border border-gray-300 rounded"
+                                            prop.className
+                                                "text-xs overflow-auto bg-white border border-black shadow-sm "
                                             prop.placeholder "Attribute Name"
                                             prop.value newKey
                                             prop.onChange (fun (event: Browser.Types.Event) ->
@@ -292,7 +293,7 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                                 ]
                                 Html.button [
                                     prop.className
-                                        "bg-blue-500 text-white text-sm px-4 py-2 rounded shadow hover:bg-blue-600"
+                                        "bg-gray-600 text-white text-xs px-2 py-1 rounded shadow-md hover:bg-gray-400"
                                     prop.text "Add New Attribute"
                                     prop.onClick (fun _ -> handleAddNewAttribute ())
                                 ]
@@ -454,9 +455,16 @@ let EventHandlerMenu
                                             prop.className "p-2 text-sm text-right"
                                             prop.children [
                                                 Html.button [
-                                                    prop.className "text-red-500 text-xs"
-                                                    prop.text "Remove"
+                                                    prop.className
+                                                        "flex items-center justify-center w-8 h-8 rounded-full"
                                                     prop.onClick (fun _ -> removeHandler eventName)
+                                                    prop.children [
+                                                        ReactBindings.React.createElement (
+                                                            trashIcon,
+                                                            createObj [ "size" ==> 16; "color" ==> "#000000" ],
+                                                            []
+                                                        )
+                                                    ]
                                                 ]
                                             ]
                                         ]

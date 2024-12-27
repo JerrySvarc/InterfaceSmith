@@ -44,7 +44,7 @@ type RenderingCode =
     | HtmlList of
         listType: ListType *
         attrs: Attributes *
-        itemCode: RenderingCode list *
+        itemCodes: RenderingCode list *
         eventHandlers: (string * EventHandler) list
     | HtmlObject of
         objectType: ObjType *
