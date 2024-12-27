@@ -25,7 +25,7 @@ let rec options
     match code with
     | RenderingCode.HtmlElement _ -> ElementOption name code path customFunctions userMessages dispatch
     | RenderingCode.HtmlList _ -> ListOption name code path customFunctions userMessages dispatch
-    | RenderingCode.HtmlObject(_) -> SequenceOption name code path customFunctions userMessages dispatch
+    | RenderingCode.HtmlObject(_) -> ObjectOption name code path customFunctions userMessages dispatch
     | RenderingCode.Hole _ -> Html.none
 
 /// <summary></summary>

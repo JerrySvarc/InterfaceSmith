@@ -1,0 +1,14 @@
+ {
+    "title": "TODO list",
+    "tasks": [
+        {
+        "task": "Complete project proposal"
+        },
+        {
+        "task": "Prepare presentation slides"
+        },
+        {
+        "task": "Send meeting agenda to team"
+        }
+    ]
+}

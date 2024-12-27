@@ -94,7 +94,7 @@ let AttributeRow
         prop.className "border-b hover:bg-gray-50"
         prop.children [
             Html.td [
-                prop.className "p-2 text-sm"
+                prop.className "text-sm"
                 prop.children [
                     if isEditing then
                         Html.input [
@@ -120,16 +120,13 @@ let AttributeRow
                 ]
             ]
 
-            Html.td [
-                prop.className "p-2 text-sm"
-                prop.children [ InnerValueMenu attr.Value onValueChange ]
-            ]
+            Html.td [ prop.children [ InnerValueMenu attr.Value onValueChange ] ]
 
             Html.td [
-                prop.className "ml-auto relative hover:bg-red-600 rounded"
+                prop.className "flex relative  items-center justify-center hover:bg-red-600 rounded"
                 prop.children [
                     Html.button [
-                        prop.className "flex items-center justify-center w-8 h-8 rounded-full"
+                        prop.className "flex items-center justify-center w-8 h-8 "
                         prop.onClick (fun _ -> onDelete ())
                         prop.children [
                             ReactBindings.React.createElement (
@@ -241,40 +238,6 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                 Html.div [
                     prop.className "space-y-2"
                     prop.children [
-                        Html.table [
-                            prop.className "w-full border-collapse"
-                            prop.children [
-                                Html.thead [
-                                    Html.tr [
-                                        prop.className "border-b"
-                                        prop.children [
-                                            Html.th [
-                                                prop.className "text-left text-sm font-medium text-gray-600"
-                                                prop.text "Property"
-                                            ]
-                                            Html.th [
-                                                prop.className "text-left pl-3 text-sm font-medium text-gray-600"
-                                                prop.text "Value"
-                                            ]
-                                            Html.th [ prop.className "text-sm" ]
-                                        ]
-                                    ]
-                                ]
-                                Html.tbody [
-                                    attributes
-                                    |> List.map (fun attr ->
-                                        AttributeRow
-                                            attr
-                                            (editingKey = attr.Key)
-                                            setEditingKey
-                                            (fun oldKey newKey -> handleKeyChange oldKey newKey)
-                                            (fun newValue -> handleValueChange attr.Key newValue)
-                                            (fun () -> handleDelete attr.Key))
-                                    |> prop.children
-                                ]
-                            ]
-                        ]
-
                         Html.div [
                             prop.className "mt-4 space-y-2"
                             prop.children [
@@ -299,6 +262,41 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
                                 ]
                             ]
                         ]
+
+                        Html.table [
+                            prop.className "w-full border-collapse"
+                            prop.children [
+                                Html.thead [
+                                    Html.tr [
+                                        prop.className "border-b"
+                                        prop.children [
+                                            Html.th [
+                                                prop.className "text-left text-sm font-medium text-black"
+                                                prop.text "Key"
+                                            ]
+                                            Html.th [
+                                                prop.className "text-left pl-3 text-sm font-medium text-black"
+                                                prop.text "Value"
+                                            ]
+                                            Html.th [ prop.className "text-sm" ]
+                                        ]
+                                    ]
+                                ]
+                                Html.tbody [
+                                    attributes
+                                    |> List.map (fun attr ->
+                                        AttributeRow
+                                            attr
+                                            (editingKey = attr.Key)
+                                            setEditingKey
+                                            (fun oldKey newKey -> handleKeyChange oldKey newKey)
+                                            (fun newValue -> handleValueChange attr.Key newValue)
+                                            (fun () -> handleDelete attr.Key))
+                                    |> prop.children
+                                ]
+                            ]
+                        ]
+
                     ]
                 ]
         ]
@@ -380,16 +378,18 @@ let EventHandlerMenu
                 ]
             ]
 
+
             if menuOpen then
                 Html.div [
                     prop.className "flex space-x-2"
                     prop.children [
                         Html.select [
-                            prop.className "p-2 border border-gray-300 rounded text-xs"
+                            prop.className
+                                "text-xs w-36 h-fit  bg-white border border-black shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                             prop.value selectedEvent
                             prop.onChange (fun (e: Browser.Types.Event) -> setSelectedEvent (e.target?value |> string))
                             prop.children (
-                                Html.option [ prop.value ""; prop.text "Select an event" ]
+                                Html.option [ prop.value "text-xs"; prop.text "Select an event" ]
                                 :: (availableEvents
                                     |> List.filter (fun e ->
                                         not (List.exists (fun (name, _) -> name = e) eventHandlers))
@@ -397,7 +397,9 @@ let EventHandlerMenu
                             )
                         ]
                         Html.select [
-                            prop.className "p-2 border border-gray-300 rounded text-xs"
+                            prop.className
+                                "text-xs w-36 h-fit  bg-white border border-black shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+
                             prop.value selectedHandler
                             prop.onChange (fun (e: Browser.Types.Event) ->
                                 setSelectedHandler (e.target?value |> string))
@@ -411,7 +413,7 @@ let EventHandlerMenu
                             )
                         ]
                         Html.button [
-                            prop.className "bg-blue-500 text-white px-4 rounded text-xs"
+                            prop.className "bg-gray-600 text-white text-xs px-1 rounded shadow-md hover:bg-gray-400"
                             prop.text "Add Handler"
                             prop.onClick (fun _ -> addHandler ())
                         ]
@@ -425,11 +427,11 @@ let EventHandlerMenu
                             Html.tr [
                                 prop.children [
                                     Html.th [
-                                        prop.className "text-left text-xs font-medium text-gray-600"
+                                        prop.className "text-left text-sm font-medium text-black"
                                         prop.text "Event"
                                     ]
                                     Html.th [
-                                        prop.className "text-left text-xs font-medium text-gray-600"
+                                        prop.className "text-left text-sm font-medium text-black"
                                         prop.text "Handler"
                                     ]
                                     Html.th []
@@ -442,21 +444,21 @@ let EventHandlerMenu
                                 Html.tr [
                                     prop.className "border-b hover:bg-gray-50"
                                     prop.children [
-                                        Html.td [ prop.text eventName; prop.className "p-2 text-sm" ]
+                                        Html.td [ prop.text eventName; prop.className "p-2 text-xs" ]
                                         Html.td [
                                             prop.text (
                                                 match handler with
                                                 | JsHandler(name) -> sprintf "JS: %s" name
                                                 | MsgHandler msg -> sprintf "Msg: %s" msg
                                             )
-                                            prop.className "p-2 text-sm"
+                                            prop.className "p-2 text-xs"
                                         ]
                                         Html.td [
-                                            prop.className "p-2 text-sm text-right"
+                                            prop.className
+                                                " flex relative items-center justify-center hover:bg-red-600 rounded"
                                             prop.children [
                                                 Html.button [
-                                                    prop.className
-                                                        "flex items-center justify-center w-8 h-8 rounded-full"
+                                                    prop.className "flex items-center justify-center  w-8 h-8 rounded "
                                                     prop.onClick (fun _ -> removeHandler eventName)
                                                     prop.children [
                                                         ReactBindings.React.createElement (
@@ -583,7 +585,7 @@ let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
 
 
 [<ReactComponent>]
-let SequenceOption
+let ObjectOption
     (name: string)
     (code: RenderingCode)
     (path: int list)
@@ -611,7 +613,24 @@ let SequenceOption
         Html.div [
             prop.className "bg-gray-300 border border-black w-fit h-fit mt-4"
             prop.children [
-                Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
+                Html.div [
+                    prop.className "flex items-center justify-between"
+                    prop.children [
+                        Html.p [ prop.text (name + ":"); prop.className "text-xs font-semibold" ]
+
+                        Html.button [
+                            prop.className "flex items-center justify-center w-8 h-8 relative  hover:bg-red-600 rounded"
+                            prop.onClick (fun _ -> dispatch (ReplaceCode(RenderingCode.Hole(Named name), path)))
+                            prop.children [
+                                ReactBindings.React.createElement (
+                                    trashIcon,
+                                    createObj [ "size" ==> 16; "color" ==> "#000000" ],
+                                    []
+                                )
+                            ]
+                        ]
+                    ]
+                ]
                 Html.div [
                     prop.className "p-2 space-y-1"
                     prop.children [
@@ -619,22 +638,6 @@ let SequenceOption
                         AttributeMenu code path attrs dispatch
                         KeysList(keyOrdering, objType, codes, handlers, dispatch, path)
                         EventHandlerMenu code path customFunctions handlers userMessages dispatch
-                        Html.div [
-                            prop.className "ml-auto relative hover:bg-red-600 rounded"
-                            prop.children [
-                                Html.button [
-                                    prop.className "flex items-center justify-center w-8 h-8 rounded-full"
-                                    prop.onClick (fun _ -> dispatch (ReplaceCode(RenderingCode.Hole(Named name), path)))
-                                    prop.children [
-                                        ReactBindings.React.createElement (
-                                            trashIcon,
-                                            createObj [ "size" ==> 16; "color" ==> "#000000" ],
-                                            []
-                                        )
-                                    ]
-                                ]
-                            ]
-                        ]
                     ]
                 ]
             ]
