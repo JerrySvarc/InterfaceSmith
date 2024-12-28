@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,27 +9,23 @@
     <None Include="index.html" />
     <None Include="paket.references" />
     <Compile Include="CoreLogic\Types\RenderingTypes.fs" />
-      <Folder Include="CoreLogic\Utilities\" />
+    <Folder Include="CoreLogic\Utilities\" />
     <Compile Include="CoreLogic\Operations\RenderingCode.fs" />
     <Compile Include="CoreLogic\Operations\DataRecognition.fs" />
+    <Compile Include="Editor\Types\PageEditorDomain.fs" />
     <Compile Include="CoreLogic\Operations\CodeGeneration.fs" />
     <Compile Include="Editor\Types\EditorDomain.fs" />
-    <Compile Include="Editor\Types\PageEditorDomain.fs" />
     <Compile Include="Editor\Utilities\Icons.fs" />
     <Compile Include="Editor\Utilities\FileUpload.fs" />
     <Compile Include="Editor\Utilities\JsonParsing.fs" />
     <Compile Include="Editor\Utilities\JavaScriptEditor.fs" />
-    <Compile Include="Editor\Components\OptionComponents.fs" />
-    <Compile Include="Editor\Components\CustomRendering.fs" />
+    <Compile Include="Editor\Components\OptionsComponents.fs" />
+    <Compile Include="Editor\CustomRendering.fs" />
+    <Compile Include="Editor\Components\ElementComponents.fs" />
     <Compile Include="Editor\Components\PageEditorComponents.fs" />
-      
     <Compile Include="Editor\Components\EditorComponents.fs" />
     <Compile Include="Main.fs" />
-    <Compile Include="App.fs" />    
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Fable.React" Version="9.3.0" />
-    <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
+    <Compile Include="App.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
 </Project>

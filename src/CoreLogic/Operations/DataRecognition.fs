@@ -8,13 +8,13 @@ let recognizeJson (json: Json) =
     match json with
     | JArray array ->
         match array.IsEmpty with
-        | true -> HtmlList(UnorderedList, [], [])
+        | true -> RenderingCode.HtmlList(UnorderedList, [], [], [])
         | false ->
-            let codes = List.map (fun item -> Hole(Named "List item")) array
-            HtmlList(UnorderedList, codes, [])
+            let codes = List.map (fun item -> RenderingCode.Hole(Named "List item")) array
+            RenderingCode.HtmlList(UnorderedList, [], codes, [])
     | JObject obj ->
         let keys = obj.Keys |> List.ofSeq
-        let codes = obj |> Map.map (fun key value -> Hole(Named key))
-        HtmlObject(Div, keys, codes, [])
-    | JNull -> Hole UnNamed
-    | _ -> HtmlElement(Tag.Div, [], Data, [])
+        let codes = obj |> Map.map (fun key value -> RenderingCode.Hole(Named key))
+        RenderingCode.HtmlObject(Div, [], keys, codes, [])
+    | JNull -> RenderingCode.Hole UnNamed
+    | _ -> RenderingCode.HtmlElement(Tags.div, [], Data, [])

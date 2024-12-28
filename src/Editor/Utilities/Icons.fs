@@ -26,8 +26,11 @@ let arrowRightLine: obj =
 
 let uploadIcon: obj = importDefault "lucide-react/dist/esm/icons/upload"
 
+let downloadIcon: obj = importDefault "lucide-react/dist/esm/icons/download"
+
+
 let replaceIcon: obj = importDefault "lucide-react/dist/esm/icons/replace"
-let trashIcon: obj = importDefault "lucide-react/dist/esm/icons/trash"
+let trashIcon: obj = importDefault "lucide-react/dist/esm/icons/trash-2"
 
 let arrowDownIcon: obj = importDefault "lucide-react/dist/esm/icons/arrow-down"
 let arrowUpIcon: obj = importDefault "lucide-react/dist/esm/icons/arrow-up"

@@ -5,41 +5,61 @@ open Editor.Types.PageEditorDomain
 open Fable.React
 open Feliz
 open CoreLogic.Types.RenderingTypes
-open Feliz.UseElmish
 open Elmish
 open Fable.Core.JsInterop
 open Fable.SimpleJson
 open Editor.Utilities.FileUpload
 open Editor.Utilities.Icons
 open Editor.Utilities.JsonParsing
-open Editor.Components.CustomRendering
+open Editor.CustomRendering
 open CoreLogic.Operations.DataRecognition
 open CoreLogic.Operations.RenderingCode
-open Editor.Components.OptionComponents
 open CoreLogic.Operations.CodeGeneration
 open Editor.Utilities.JavaScriptEditor
-open Browser.Types
-
+open Editor.Components.ElementComponents
+open Microsoft.FSharp.Reflection
 // PageEditor elmish-style functionality
-// This is the main component for the page editor
-// It contains the left and right panes and the logic for updating the page data
-// It also contains the logic for updating the main page data
-// when the user makes changes to the page data
 
-let pageEditorInit (page: Page) : PageEditorModel * Cmd<PageEditorMsg> =
-    let newModel = {
-        PageData = page
-        FileUploadError = false
-        ActiveRightTab = JavaScriptEditor
+let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
+    let newPage = {
+        Name = "New page"
+        Id = System.Guid.NewGuid()
+        ParsedJson = JNull
+        CurrentTree = RenderingCode.Hole(UnNamed)
+        JsonString = ""
+        CustomFunctions = Map([ "functionExample", JSFunction("functionExample", "console.log()") ])
+        UserMessages = []
+        UpdateFunction = Map([])
     }
 
-    newModel, Cmd.none
-// This function is used to update the page editor model
-// It is called when the user interacts with the page editor
-// It updates the page editor model and sends a message to the main page via Cmd.ofMsg
+
+    let newPageEditorModel = {
+        PageData = newPage
+        FileUploadError = false
+        ViewportPosition = { X = 0.0; Y = 0.0 }
+        Scale = 1.0
+        Elements = []
+        DraggingElementId = None
+        IsPanning = false
+        LastMousePosition = None
+        IsPreviewOpen = false
+        ContextMenuPosition = None
+        ContextMenuVisible = false
+    }
+
+    newPageEditorModel, Cmd.none
+
+
+
+/// <summary>This function is used to update the page editor model.
+///It is called when the user interacts with the page editor.
+///It updates the page editor model and sends a message to the main page via Cmd.ofMsg.</summary>
+/// <param name="msg">A PageEditorMsg produced by the interactions with the user interface.</param>
+/// <param name="model">A PageEditorModel which is to be changed according to the type of message.</param>
+/// <returns></returns>
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
-    | UploadData jsonString ->
+    | UploadData(jsonString, dispatch) ->
         let loadedDataOption = loadJson jsonString
 
         match loadedDataOption with
@@ -53,12 +73,42 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                         JsonString = jsonString
                 }
 
-                {
+                let newModelElement = {
+                    Id = model.Elements.Length + 1
+                    Position = { X = 150.0; Y = 250.0 }
+                    Render = fun model dispatch -> ModelElement model dispatch
+                }
+
+                let viewElement = {
+                    Id = model.Elements.Length + 2
+                    Position = { X = 1200.0; Y = 550.0 }
+                    Render = fun model dispatch -> ViewElement model dispatch
+                }
+
+                let functionsElement = {
+                    Id = model.Elements.Length + 3
+                    Position = { X = 300.0; Y = 700.0 }
+                    Render = fun model dispatch -> FunctionsElement model.PageData.CustomFunctions dispatch
+                }
+
+                let updateElement = {
+                    Id = model.Elements.Length + 4
+                    Position = { X = 1200.0; Y = 1000.0 }
+                    Render =
+                        fun model dispatch ->
+                            MessageAndUpdateElement model.PageData.UserMessages model.PageData.UpdateFunction dispatch
+                }
+
+                let updatedEditorPage = {
                     model with
                         PageData = updatedPage
                         FileUploadError = false
-                },
-                Cmd.ofMsg (SyncWithMain updatedPage)
+                        Elements =
+                            model.Elements
+                            @ [ newModelElement; viewElement; functionsElement; updateElement ]
+                }
+
+                updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
             | _ -> { model with FileUploadError = true }, Cmd.none
         | None -> { model with FileUploadError = true }, Cmd.none
 
@@ -71,35 +121,270 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         }
 
         let newModel = { model with PageData = updatedPage }
-        newModel, Cmd.ofMsg (SyncWithMain updatedPage)
+        newModel, Cmd.ofMsg (SyncWithMain newModel)
 
     | SyncWithMain _ -> model, Cmd.none
-    | SetActiveRightTab tab -> { model with ActiveRightTab = tab }, Cmd.none
-    | AddHandler(name, code) ->
-        let updatedHandlers = model.PageData.CustomHandlers.Add(name, code)
+    | StartPanning pos when model.DraggingElementId.IsNone ->
+        {
+            model with
+                IsPanning = true
+                LastMousePosition = Some pos
+        },
+        Cmd.none
 
-        let updatedPage = {
-            model.PageData with
-                CustomHandlers = updatedHandlers
+    | UpdatePanning pos when model.IsPanning ->
+        match model.LastMousePosition with
+        | Some lastPos ->
+            let dx = (pos.X - lastPos.X) / model.Scale
+            let dy = (pos.Y - lastPos.Y) / model.Scale
+
+            let newViewport = {
+                X = model.ViewportPosition.X + dx
+                Y = model.ViewportPosition.Y + dy
+            }
+
+            let newModel = {
+                model with
+                    ViewportPosition = newViewport
+                    LastMousePosition = Some pos
+            }
+
+            newModel, Cmd.ofMsg (SyncWithMain newModel)
+        | None -> model, Cmd.none
+
+    | EndPanning ->
+        {
+            model with
+                IsPanning = false
+                LastMousePosition = None
+        },
+        Cmd.none
+
+    | StartDraggingItem(itemId, pos) ->
+        {
+            model with
+                DraggingElementId = Some itemId
+                LastMousePosition = Some pos
+        },
+        Cmd.none
+
+    | UpdateDraggingItem pos ->
+        match model.DraggingElementId, model.LastMousePosition with
+        | Some itemId, Some lastPos ->
+            let dx = (pos.X - lastPos.X) / model.Scale
+            let dy = (pos.Y - lastPos.Y) / model.Scale
+
+            let updatedElements =
+                model.Elements
+                |> List.map (fun item ->
+                    if item.Id = itemId then
+                        {
+                            item with
+                                Position = {
+                                    X = item.Position.X + dx
+                                    Y = item.Position.Y + dy
+                                }
+                        }
+                    else
+                        item)
+
+            let newModel = {
+                model with
+                    Elements = updatedElements
+                    LastMousePosition = Some pos
+            }
+
+            newModel, Cmd.ofMsg (SyncWithMain newModel)
+        | _ -> model, Cmd.none
+    | EndDraggingItem ->
+        {
+            model with
+                DraggingElementId = None
+                LastMousePosition = None
+        },
+        Cmd.none
+
+    | Zoom scaleFactor ->
+        let newModel = {
+            model with
+                Scale = model.Scale * scaleFactor
         }
 
-        { model with PageData = updatedPage }, Cmd.ofMsg (SyncWithMain updatedPage)
-    | RemoveHandler name -> failwith "todo"
-    | TogglePreview -> failwith "Not Implemented"
+        newModel, Cmd.ofMsg (SyncWithMain newModel)
+
+    | TogglePreview ->
+        let newModel = {
+            model with
+                IsPreviewOpen = not model.IsPreviewOpen
+        }
+
+        newModel, Cmd.ofMsg (SyncWithMain newModel)
+
+    | CreateFunction ->
+        let newName = $"newFunction{(model.PageData.CustomFunctions.Count)}"
+        let newFunction = JSFunction(newName, "console.log()")
+        let newFunctions = model.PageData.CustomFunctions.Add(newName, newFunction)
+
+        {
+            model with
+                PageData.CustomFunctions = newFunctions
+        },
+        Cmd.none
+    | UpdateFunction(name, code) ->
+        let existingFunction =
+            match Map.tryFind name model.PageData.CustomFunctions with
+            | Some(JSFunction(_, _)) -> true
+            | _ -> false
+
+        let newFunction = code
+
+        let newFunctions =
+            if existingFunction then
+                model.PageData.CustomFunctions |> Map.remove name |> Map.add name newFunction
+            else
+                model.PageData.CustomFunctions.Add(name, newFunction)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        CustomFunctions = newFunctions
+                }
+        },
+        Cmd.none
+    | DeleteFunction(name) ->
+        let newFunctions = model.PageData.CustomFunctions.Remove name
+
+        {
+            model with
+                PageData.CustomFunctions = newFunctions
+        },
+        Cmd.none
+
+    | AddMsg message ->
+        let messageFoundCount =
+            model.PageData.UserMessages
+            |> List.filter (fun element -> element = message)
+            |> List.length
+
+        let defaultUpdateFunction = sprintf "return { ...model };"
+
+        if messageFoundCount = 0 then
+            let newMessages = model.PageData.UserMessages @ [ message ]
+
+            {
+                model with
+                    PageData = {
+                        model.PageData with
+                            UserMessages = newMessages
+                    }
+            },
+            Cmd.none
+        else
+            model, Cmd.ofMsg (AddUpdateMessage(message, defaultUpdateFunction))
+    | UpdateMessage(message, code) ->
+        let newMessages =
+            model.PageData.UserMessages
+            |> List.map (fun element -> if element = message then code else element)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.none
+    | DeleteMsg message ->
+        let newMessages =
+            model.PageData.UserMessages |> List.filter (fun element -> element <> message)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.ofMsg (DeleteUpdateMessage(message))
+
+    | AddUpdateMessage(message, code)
+    | ModifyUpdateMessage(message, code) ->
+        let newUpdate = model.PageData.UpdateFunction.Add(message, code)
+
+        {
+            model with
+                PageData.UpdateFunction = newUpdate
+        },
+        Cmd.none
+    | DeleteUpdateMessage message ->
+        let newUpdate = model.PageData.UpdateFunction.Remove message
+
+        {
+            model with
+                PageData.UpdateFunction = newUpdate
+        },
+        Cmd.none
+    | RenameFunction(currentName, newName) ->
+        let functionJavascrips = model.PageData.CustomFunctions.[currentName]
+
+        match functionJavascrips with
+        | JSFunction(_, functionCode) ->
+            let newFunction = JSFunction(newName, functionCode)
+
+            let newFunctions =
+                model.PageData.CustomFunctions.Remove currentName |> Map.add newName newFunction
+
+            {
+                model with
+                    PageData.CustomFunctions = newFunctions
+            },
+            Cmd.none
+    | RenameMsg(message, newName) ->
+        let newMessages =
+            model.PageData.UserMessages
+            |> List.map (fun element -> if element = message then newName else element)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.ofMsg (RenameUpdateMessage(message, newName))
+    | RenameUpdateMessage(message, newName) ->
+        let functionCode = model.PageData.UpdateFunction.[message]
+
+        let newUpdate =
+            model.PageData.UpdateFunction.Remove message |> Map.add newName functionCode
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UpdateFunction = newUpdate
+                }
+        },
+        Cmd.none
+    | StartPanning(_) -> failwith "Panning already started."
+    | UpdatePanning(_) -> failwith "Not panning the canvas."
 
 
 
-// These are the main components that make up the page editor
-// They are used to render the page editor and handle user interactions
-[<ReactComponent>]
-let DataUpload (dispatch) =
+
+
+//  These are the main components that make up the page editor.
+//  They are used to render the page editor and handle user interactions.
+//||---------------------------------------------------------------------------||
+let DataUpload dispatch =
     let uploadButtonView onLoad =
         Html.div [
             prop.className "inline-flex items-center"
             prop.children [
                 Html.label [
                     prop.className
-                        "w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center"
+                        "bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow flex items-center justify-center h-10"
                     prop.children [
                         ReactBindings.React.createElement (
                             uploadIcon,
@@ -117,231 +402,104 @@ let DataUpload (dispatch) =
             ]
         ]
 
-    let uploadButton = uploadButtonView (UploadData >> dispatch)
+    let uploadButton =
+        uploadButtonView (fun jsonString -> dispatch (UploadData(jsonString, dispatch)))
 
-    Html.div [ prop.className "m-2"; prop.children [ uploadButton ] ]
+    Html.div [ prop.className ""; prop.children [ uploadButton ] ]
 
-
-let rec options
-    (dispatch: PageEditorMsg -> unit)
-    (code: RenderingCode)
-    (path: int list)
-    (name: string)
-    (page: Page)
-    : ReactElement =
-    match code with
-    | HtmlElement _ -> ElementOption(dispatch, name, code, path, page)
-    | HtmlList _ -> ListOption(dispatch, name, code, path, page)
-    | HtmlObject(_) -> SequenceOption(dispatch, name, code, path, page)
-    | Hole _ -> Html.none
-
-
-// Custom handler editor component used to add custom JavaScript event handlers
-[<ReactComponent>]
-let CustomHandlerEditor (handlers: Map<string, Javascript>) (dispatch: PageEditorMsg -> unit) =
-    let (selectedHandler, setSelectedHandler) = React.useState ("")
-    let (handlerName, setHandlerName) = React.useState ("")
-    let (handlerCode, setHandlerCode) = React.useState ("")
-
-    let handleSave () =
-        if handlerName <> "" && handlerCode <> "" then
-            dispatch (AddHandler(handlerName, JSFunction(handlerName, handlerCode)))
-            setHandlerName ("")
-            setHandlerCode ("")
-
-    Html.div [
-        prop.className "flex flex-col h-full"
-        prop.children [
-            Html.div [
-                prop.className "mb-4"
-                prop.children [
-                    Html.select [
-                        prop.className "w-full p-2 border rounded"
-                        prop.onChange (fun (e: Event) ->
-                            let value = e.target?value
-                            setSelectedHandler value
-
-                            match handlers.TryFind value with
-                            | Some(JSFunction(_, code)) ->
-                                setHandlerName value
-                                setHandlerCode code
-                            | None -> ())
-                        prop.children [
-                            Html.option [ prop.value ""; prop.text "Select a handler" ]
-                            for KeyValue(name, _) in handlers do
-                                Html.option [ prop.value name; prop.text name ]
-                        ]
-                    ]
-                ]
-            ]
-            Html.input [
-                prop.className "p-2 mb-4 border rounded"
-                prop.placeholder "Handler name"
-                prop.value handlerName
-                prop.onChange setHandlerName
-            ]
-            Html.div [
-                prop.className "flex-grow mb-4"
-                prop.children [
-                    ReactBindings.React.createElement (
-                        CodeMirror,
-                        createObj [
-                            "value" ==> handlerCode
-                            "onChange" ==> setHandlerCode
-                            "extensions" ==> [| javascript?javascript () |]
-                            "theme" ==> "dark"
-                        ],
-                        []
-                    )
-                ]
-            ]
-            Html.button [
-                prop.className "p-2 bg-blue-500 text-white rounded"
-                prop.onClick (fun _ -> handleSave ())
-                prop.text "Save Handler"
-            ]
-        ]
-    ]
-
-
-[<ReactComponent>]
-let JavaScriptEditorView (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
-    let fullHtml, js =
-        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
-
-    let extensions = [| javascript?javascript (); html?html (); css?css () |]
-
-    //let onChange = fun value -> dispatch (UpdateHtmlCode value)
-
-    Html.div [
-        prop.className "flex flex-col h-full border-solid border-2 border-black overflow-auto"
-        prop.children [
-            Html.h3 [ prop.className "font-bold mb-2 px-2"; prop.text "Code preview" ]
-            Html.div [
-                prop.className "flex-grow overflow-auto"
-                prop.children [
-                    ReactBindings.React.createElement (
-                        CodeMirror,
-                        createObj [
-                            "value" ==> fullHtml
-                            "extensions" ==> extensions
-                            //"onChange" ==> onChange
-                            "theme" ==> "dark"
-                            "readOnly" ==> "true"
-                        ],
-                        []
-                    )
-                ]
-            ]
-        ]
-    ]
-
-
-[<ReactComponent>]
-let SandboxPreviewView (model: PageEditorModel) =
-    let fullHtml, js =
-        generateCode model.PageData.CurrentTree model.PageData.JsonString model.PageData.CustomHandlers
-
-    Html.iframe [
-        prop.src "about:blank"
-        prop.custom ("sandbox", "allow-scripts allow-forms allow-modals")
-        prop.custom ("srcDoc", fullHtml)
-        prop.style [
-            style.width (length.percent 100)
-            style.height (length.px 500)
-            style.border (1, borderStyle.solid, color.gray)
-        ]
-    ]
-
-[<ReactComponent>]
-let RightPaneTabButton (label: string) (isActive: bool) (onClick: unit -> unit) =
+let toolBarElements dispatch = [
+    DataUpload dispatch
     Html.button [
-        prop.className [
-            "px-4 py-2 font-medium rounded-t-lg"
-            if isActive then
-                "bg-white text-blue-600"
-            else
-                "bg-gray-200 text-gray-600 hover:bg-gray-300"
+        prop.children [
+            ReactBindings.React.createElement (downloadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ], [])
+            Html.span [ prop.text "Save" ]
         ]
-        prop.text label
-        prop.onClick (fun _ -> onClick ())
+        prop.className
+            "bg-blue-500 hover:bg-blue-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
+    ]
+    Html.button [
+        prop.className
+            "bg-green-500 hover:bg-green-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
+        prop.text "Show source code"
+    ]
+]
+
+let ToolBar dispatch =
+    Html.div [
+        prop.className
+            "flex items-center justify-between bg-gray-500 min-w-fit text-white h-fit px-4 py-2 fixed space-x-4 top-2 left-1/2 transform -translate-x-1/2 z-10 shadow-md border border-gray-700 rounded"
+        prop.children [
+            Html.nav [
+                prop.className "flex space-x-2 items-center h-full"
+                prop.children (toolBarElements dispatch)
+            ]
+        ]
     ]
 
 
+
+
+
+
+
+/// <summary></summary>
+/// <param name="model"></param>
+/// <param name="dispatch"></param>
+/// <returns></returns>
 [<ReactComponent>]
-let PageEditor (page: Page) (dispatch: Msg -> unit) =
-
-    let model, pageEditorDispatch =
-        React.useElmish (
-            (fun () -> pageEditorInit page),
-            (fun msg model ->
-                let newModel, cmd = pageEditorUpdate msg model
-
-                match msg with
-                | SyncWithMain page -> newModel, Cmd.ofEffect (fun _ -> dispatch (UpdatePage page))
-                | _ -> newModel, cmd),
-            [| box page |]
-        )
-
-    let leftWindow =
-        Html.div [
-            prop.className "w-1/2 p-4 overflow-auto border border-black"
-            prop.children [
-                Html.div [
-                    prop.className "h-1/2 flex flex-col"
-                    prop.children [
-                        Html.h3 [ prop.className "font-bold mb-2 bg-white"; prop.text "Preview" ]
-                        Html.div [
-                            prop.className "flex center-right mb-2 bg-white"
-                            prop.children [ DataUpload pageEditorDispatch ]
-                        ]
-                        renderingCodeToReactElement
-                            model.PageData.CurrentTree
-                            []
-                            model.PageData.ParsedJson
-                            "Data"
-                            options
-                            pageEditorDispatch
-                            true
-                            model.PageData
-                    ]
-                ]
-            ]
-        ]
-
-    let rightWindow =
-        Html.div [
-            prop.className "w-1/2 flex flex-col "
-            prop.children [
-                Html.div [
-                    prop.className "flex border-b"
-                    prop.children [
-                        RightPaneTabButton "JavaScript Editor" (model.ActiveRightTab = JavaScriptEditor) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab JavaScriptEditor))
-                        RightPaneTabButton "Sandbox Preview" (model.ActiveRightTab = SandboxPreview) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab SandboxPreview))
-                        RightPaneTabButton "Custom Handlers" (model.ActiveRightTab = CustomHandlerEditorTab) (fun () ->
-                            pageEditorDispatch (SetActiveRightTab CustomHandlerEditorTab))
-                    ]
-                ]
-                Html.div [
-                    prop.className "flex-1 p-4  overflow-auto"
-                    prop.children [
-                        match model.ActiveRightTab with
-                        | JavaScriptEditor -> JavaScriptEditorView model pageEditorDispatch
-                        | SandboxPreview -> SandboxPreviewView model
-                        | CustomHandlerEditorTab -> CustomHandlerEditor model.PageData.CustomHandlers pageEditorDispatch
-                    ]
-                ]
-            ]
-        ]
-
+let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
+    let bgPositionX = sprintf "%fpx" (model.ViewportPosition.X * model.Scale)
+    let bgPositionY = sprintf "%fpx" (model.ViewportPosition.Y * model.Scale)
 
     Html.div [
-        prop.className "flex-1 flex overflow-hidden bg-white"
-        prop.children [
-            leftWindow
-            rightWindow
-
+        prop.className "relative overflow-hidden w-full h-full bg-gray-600 "
+        //We create the canvas dot pattern using pure CSS
+        prop.style [
+            style.backgroundImage "radial-gradient(circle, #1F2937 1px, transparent 1px)"
+            style.backgroundSize "20px 20px"
+            style.backgroundPosition $"{bgPositionX} {bgPositionY}"
         ]
+
+        prop.onMouseDown (fun event ->
+            if model.DraggingElementId.IsNone && event.button = 0 then
+                dispatch (StartPanning { X = event.clientX; Y = event.clientY }))
+
+        prop.onMouseMove (fun event ->
+            match model.IsPanning, model.DraggingElementId with
+            | true, _ -> dispatch (UpdatePanning { X = event.clientX; Y = event.clientY })
+            | false, Some _ -> dispatch (UpdateDraggingItem { X = event.clientX; Y = event.clientY })
+            | _ -> ())
+
+
+        prop.onMouseUp (fun _ ->
+            dispatch EndPanning
+            dispatch EndDraggingItem)
+
+        prop.onWheel (fun e ->
+            let scaleFactor = if e.deltaY > 0.0 then 0.9 else 1.1
+            dispatch (Zoom scaleFactor))
+
+        prop.children [
+            Html.div [
+                prop.className "relative"
+                prop.children [ renderCanvasElements model dispatch ]
+
+            ]
+        ]
+    (*
+        prop.onContextMenu (fun event ->
+            event.preventDefault ()
+            let position = { X = event.clientX; Y = event.clientY }
+            dispatch (OpenContextMenu position))*)
+    ]
+
+/// <summary></summary>
+/// <param name="pageModel"></param>
+/// <param name="dispatch"></param>
+/// <returns></returns>
+[<ReactComponent>]
+let PageEditorView (pageModel: PageEditorModel) (dispatch: PageEditorMsg -> unit) : ReactElement =
+    Html.div [
+        prop.className "relative h-full w-full flex"
+        prop.children [ ToolBar dispatch; Canvas pageModel dispatch ]
     ]
