@@ -80,9 +80,13 @@ and PageEditorMsg =
     | TogglePreview
     | CreateFunction
     | UpdateFunction of string * Javascript
+    | RenameFunction of string * string
     | DeleteFunction of string
     | AddMsg of string
+    | UpdateMessage of string * string
+    | RenameMsg of string * string
     | DeleteMsg of string
     | AddUpdateMessage of message: UserMessage * code: string
+    | RenameUpdateMessage of message: UserMessage * code: string
     | ModifyUpdateMessage of message: UserMessage * code: string
     | DeleteUpdateMessage of string

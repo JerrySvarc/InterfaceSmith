@@ -12,6 +12,12 @@ open Microsoft.FSharp.Reflection
 
 //                  General helper components
 //||------------------------------------------------------------||
+/// <summary>
+/// Renders a select menu component with the given options and current value
+/// </summary>
+/// <param name="options">List of available options</param>
+/// <param name="value">Currently selected value</param>
+/// <param name="onChange">Callback function when selection changes</param>
 let SelectMenu (options: string list) (value: string) (onChange: string -> unit) =
     Html.select [
         prop.className
@@ -19,10 +25,21 @@ let SelectMenu (options: string list) (value: string) (onChange: string -> unit)
         prop.onMouseDown (fun e -> e.stopPropagation ())
         prop.value value
         prop.onChange (fun (e: Browser.Types.Event) -> e.target?value |> string |> onChange)
-        prop.children (
-            (options
-             |> List.map (fun opt -> Html.option [ prop.className "text-xs"; prop.value opt; prop.text opt ]))
-        )
+        prop.children [
+            Html.option [
+                prop.value value
+                prop.text (
+                    if value.Contains "Select" then
+                        value
+                    else
+                        sprintf "Current: %s" value
+                )
+                prop.disabled (value.Contains "Select")
+            ]
+            yield!
+                options
+                |> List.map (fun opt -> Html.option [ prop.className "text-xs"; prop.value opt; prop.text opt ])
+        ]
     ]
 
 let ErrorDisplay (message: string) =

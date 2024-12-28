@@ -4,7 +4,6 @@
 module Editor.Utilities.FileUpload
 
 open Fable.React
-open Fable.React.Props
 open Fable.Core
 open Fable.Core.JsInterop
 open Browser.Types

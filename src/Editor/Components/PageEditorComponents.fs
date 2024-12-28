@@ -81,19 +81,19 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 
                 let viewElement = {
                     Id = model.Elements.Length + 2
-                    Position = { X = 700.0; Y = 550.0 }
+                    Position = { X = 1200.0; Y = 550.0 }
                     Render = fun model dispatch -> ViewElement model dispatch
                 }
 
                 let functionsElement = {
                     Id = model.Elements.Length + 3
-                    Position = { X = 700.0; Y = 550.0 }
+                    Position = { X = 300.0; Y = 700.0 }
                     Render = fun model dispatch -> FunctionsElement model.PageData.CustomFunctions dispatch
                 }
 
                 let updateElement = {
                     Id = model.Elements.Length + 4
-                    Position = { X = 700.0; Y = 550.0 }
+                    Position = { X = 1200.0; Y = 1000.0 }
                     Render =
                         fun model dispatch ->
                             MessageAndUpdateElement model.PageData.UserMessages model.PageData.UpdateFunction dispatch
@@ -221,7 +221,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         newModel, Cmd.ofMsg (SyncWithMain newModel)
 
     | CreateFunction ->
-        let newName = $"newFunction {(model.PageData.CustomFunctions.Count)}"
+        let newName = $"newFunction{(model.PageData.CustomFunctions.Count)}"
         let newFunction = JSFunction(newName, "console.log()")
         let newFunctions = model.PageData.CustomFunctions.Add(newName, newFunction)
 
@@ -230,8 +230,36 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 PageData.CustomFunctions = newFunctions
         },
         Cmd.none
-    | UpdateFunction(_, _) -> failwith "Not Implemented"
-    | DeleteFunction(_) -> failwith "Not Implemented"
+    | UpdateFunction(name, code) ->
+        let existingFunction =
+            match Map.tryFind name model.PageData.CustomFunctions with
+            | Some(JSFunction(_, _)) -> true
+            | _ -> false
+
+        let newFunction = code
+
+        let newFunctions =
+            if existingFunction then
+                model.PageData.CustomFunctions |> Map.remove name |> Map.add name newFunction
+            else
+                model.PageData.CustomFunctions.Add(name, newFunction)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        CustomFunctions = newFunctions
+                }
+        },
+        Cmd.none
+    | DeleteFunction(name) ->
+        let newFunctions = model.PageData.CustomFunctions.Remove name
+
+        {
+            model with
+                PageData.CustomFunctions = newFunctions
+        },
+        Cmd.none
 
     | AddMsg message ->
         let messageFoundCount =
@@ -254,6 +282,19 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
             Cmd.none
         else
             model, Cmd.ofMsg (AddUpdateMessage(message, defaultUpdateFunction))
+    | UpdateMessage(message, code) ->
+        let newMessages =
+            model.PageData.UserMessages
+            |> List.map (fun element -> if element = message then code else element)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.none
     | DeleteMsg message ->
         let newMessages =
             model.PageData.UserMessages |> List.filter (fun element -> element <> message)
@@ -284,8 +325,52 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                 PageData.UpdateFunction = newUpdate
         },
         Cmd.none
+    | RenameFunction(currentName, newName) ->
+        let functionJavascrips = model.PageData.CustomFunctions.[currentName]
+
+        match functionJavascrips with
+        | JSFunction(_, functionCode) ->
+            let newFunction = JSFunction(newName, functionCode)
+
+            let newFunctions =
+                model.PageData.CustomFunctions.Remove currentName |> Map.add newName newFunction
+
+            {
+                model with
+                    PageData.CustomFunctions = newFunctions
+            },
+            Cmd.none
+    | RenameMsg(message, newName) ->
+        let newMessages =
+            model.PageData.UserMessages
+            |> List.map (fun element -> if element = message then newName else element)
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UserMessages = newMessages
+                }
+        },
+        Cmd.ofMsg (RenameUpdateMessage(message, newName))
+    | RenameUpdateMessage(message, newName) ->
+        let functionCode = model.PageData.UpdateFunction.[message]
+
+        let newUpdate =
+            model.PageData.UpdateFunction.Remove message |> Map.add newName functionCode
+
+        {
+            model with
+                PageData = {
+                    model.PageData with
+                        UpdateFunction = newUpdate
+                }
+        },
+        Cmd.none
     | StartPanning(_) -> failwith "Panning already started."
     | UpdatePanning(_) -> failwith "Not panning the canvas."
+
+
 
 
 
@@ -337,12 +422,6 @@ let toolBarElements dispatch = [
             "bg-green-500 hover:bg-green-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
         prop.text "Show source code"
     ]
-    Html.button [
-        prop.className
-            "bg-yellow-500 hover:bg-yellow-600 text-white font-bold h-10 px-4 rounded shadow flex items-center justify-center"
-        prop.text "Preview Page"
-        prop.onClick (fun _ -> dispatch TogglePreview)
-    ]
 ]
 
 let ToolBar dispatch =
@@ -358,83 +437,7 @@ let ToolBar dispatch =
     ]
 
 
-[<ReactComponent>]
-let SandboxPreviewView (model: PageEditorModel) dispatch =
-    let js =
-        """
-        const Msg = { IncrementCounter: "IncrementCounter", ToggleVisibility: "ToggleVisibility" };
 
-        const model = { counter: 0, isVisible: true };
-
-        const update = (msg, model) => {
-            switch (msg) {
-                case Msg.IncrementCounter:
-                    return { ...model, counter: model.counter + 1 };
-                case Msg.ToggleVisibility:
-                    return { ...model, isVisible: !model.isVisible };
-                default:
-                    return model;
-            }
-        };
-
-        const view = (model, dispatch) => `
-    <div>
-        <div>Counter: ${model.counter}</div>
-        <button class"bg-gray-500 onclick="window.dispatch(Msg.IncrementCounter)">Increment</button>
-        <button onclick="window.dispatch(Msg.ToggleVisibility)">Toggle</button>
-        <div style="display: ${model.isVisible ? 'block' : 'none'}">Hello World</div>
-    </div>
-`;
-        function startApp(initialModel, updateFn, viewFn) {
-            let currentModel = initialModel;
-
-            const render = () => {
-                const root = document.getElementById("app");
-                root.innerHTML = viewFn(currentModel, dispatch);
-            };
-
-           window.dispatch = (msg) => {
-                currentModel = updateFn(msg, currentModel);
-                render();
-            };
-
-            render();
-        }
-
-        startApp(model, update, view);
-        """
-
-    let fullHtml =
-        $"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Sandbox Preview</title>
-        </head>
-        <body>
-            <div id="app"></div>
-            <script>
-            {js}
-            </script>
-        </body>
-        </html>
-        """
-
-    if model.IsPreviewOpen then
-        Html.div [
-            prop.className "bg-white"
-            prop.children [
-                Html.iframe [
-                    prop.src "about:blank"
-                    prop.custom ("sandbox", "allow-scripts allow-same-origin allow-forms allow-modals")
-                    prop.custom ("srcDoc", fullHtml)
-                ]
-            ]
-        ]
-    else
-        Html.none
 
 
 

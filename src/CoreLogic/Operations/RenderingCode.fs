@@ -2,6 +2,8 @@ module CoreLogic.Operations.RenderingCode
 
 open CoreLogic.Types.RenderingTypes
 
+//                          Utilities
+// ||---------------------------------------------------------------||
 let tagToString tag = tag.Name
 
 let stringToTag str =
@@ -80,7 +82,8 @@ let stringToInnerValue stringVal : InnerValue =
     | "Empty"
     | _ -> Empty
 
-
+//              Modification of the RenderingCode AST
+// ||---------------------------------------------------------------||
 
 /// <summary></summary>
 /// <param name="path"></param>
@@ -88,7 +91,7 @@ let stringToInnerValue stringVal : InnerValue =
 /// <returns></returns>
 let rec deleteElement (path: int list) (currentCode: RenderingCode) : RenderingCode =
     match path with
-    | [] -> RenderingCode.Hole UnNamed // Replace with a hole when deleting
+    | [] -> RenderingCode.Hole UnNamed
     | [ lastIndex ] ->
         match currentCode with
         | RenderingCode.HtmlList(lt, attrs, items, handlers) ->
@@ -182,6 +185,11 @@ let rec replace (path: int list) (replacementElement: RenderingCode) (currentCod
             | None -> RenderingCode.HtmlObject(objType, attrs, keys, items, handlers)
         | _ -> currentCode
 
+/// <summary></summary>
+/// <param name="path"></param>
+/// <param name="newOrder"></param>
+/// <param name="currentCode"></param>
+/// <returns></returns>
 let reorderObjectKeys (path: int list) (newOrder: string list) (currentCode: RenderingCode) : RenderingCode =
     let rec reorder code =
         match code with

@@ -3,6 +3,7 @@ framework: net8.0
 storage: none
 
 nuget Elmish
+nuget Fable.React 9.4.0
 nuget Feliz.UseElmish
 nuget FSharp.Core ~> 8
 nuget Fable.Remoting.Giraffe ~> 5
