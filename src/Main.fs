@@ -7,8 +7,8 @@ open Editor.Types.PageEditorDomain
 open CoreLogic.Types.RenderingTypes
 open Fable.SimpleJson
 open System
-open Editor.UIComponents.EditorComponents
-open Editor.UIComponents.PageEditorComponents
+open Editor.Components.EditorComponents
+open Editor.Components.PageEditorComponents
 
 
 let init () : Model * Cmd<Msg> =

@@ -83,7 +83,7 @@ and PageEditorMsg =
     | RenameFunction of string * string
     | DeleteFunction of string
     | AddMsg of string
-    | UpdateMessage of string * string
+    | UpdateMsg of string * string
     | RenameMsg of string * string
     | DeleteMsg of string
     | AddUpdateMessage of message: UserMessage * code: string

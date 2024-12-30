@@ -6,7 +6,7 @@ open CoreLogic.Types.RenderingTypes
 open PageEditorDomain
 
 
-// Application state
+// Main application's state
 type Model = {
     Pages: Map<Guid, PageEditorModel>
     PageOrder: Guid list
@@ -15,7 +15,7 @@ type Model = {
 }
 
 // Application operations
-// General operation such as tab management or opening new pages
+// General operation such as Page management or opening new pages
 type Msg =
     | CreatePage
     | UpdatePage of PageEditorModel

@@ -120,7 +120,6 @@ let SandboxPreviewView (model: PageEditorModel) dispatch =
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Sandbox Preview</title>
-            <script src="https://cdn.tailwindcss.com"></script>
         </head>
         <body>
             <div id="app"></div>
@@ -133,9 +132,10 @@ let SandboxPreviewView (model: PageEditorModel) dispatch =
 
     if model.IsPreviewOpen then
         Html.div [
-            prop.className ""
+            prop.className "w-full h-full border"
             prop.children [
                 Html.iframe [
+                    prop.className "w-full h-full"
                     prop.src "about:blank"
                     prop.custom ("sandbox", "allow-scripts allow-same-origin allow-forms allow-modals")
                     prop.custom ("srcDoc", fullHtml)
@@ -244,7 +244,6 @@ let FunctionsElement (functions: Map<string, Javascript>) dispatch =
     let (isRenaming, setIsRenaming) = React.useState false
     let (newName, setNewName) = React.useState ""
 
-    // Safely convert Map keys to List
     let functionNames =
         if not functions.IsEmpty then
             functions |> Map.keys |> Seq.toList

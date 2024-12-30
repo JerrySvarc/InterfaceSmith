@@ -330,7 +330,34 @@ let EventHandlerMenu
     (userMessages: UserMessage list)
     dispatch
     =
-    let availableEvents = [ "onClick"; "onMouseOver"; "onMouseOut"; "onKeyPress"; "onFocus"; "onBlur" ]
+    let availableEvents = [
+        "onClick"
+        "onMouseOver"
+        "onMouseOut"
+        "onMouseDown"
+        "onMouseUp"
+        "onMouseMove"
+        "onMouseEnter"
+        "onMouseLeave"
+        "onKeyPress"
+        "onKeyDown"
+        "onKeyUp"
+        "onInput"
+        "onChange"
+        "onSubmit"
+        "onFocus"
+        "onBlur"
+        "onDrag"
+        "onDragStart"
+        "onDragEnd"
+        "onDragEnter"
+        "onDragLeave"
+        "onDragOver"
+        "onDrop"
+        "onTouchStart"
+        "onTouchMove"
+        "onTouchEnd"
+    ]
 
     let selectedEvent, setSelectedEvent = React.useState ""
     let selectedHandler, setSelectedHandler = React.useState ""

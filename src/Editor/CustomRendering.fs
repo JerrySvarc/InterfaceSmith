@@ -48,7 +48,13 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
         attributes
         |> List.map (fun attr ->
             match attr.Value with
-            | Data -> attr.Key, box (context.Json |> Json.convertFromJsonAs<string>)
+            | Data ->
+                attr.Key,
+                box (
+                    match context.Json with
+                    | JBool value -> if value then "true" else "false"
+                    | _ -> context.Json |> Json.convertFromJsonAs<string>
+                )
             | Constant s -> (attr.Key, box s)
             | InnerValue.Empty -> (attr.Key, box attr.Value))
         |> List.append [ ("className", box "preview") ]
@@ -70,7 +76,11 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
             match innerValue with
             | Data ->
                 try
-                    let jsonStr = context.Json |> Json.convertFromJsonAs<string>
+                    let jsonStr =
+                        match context.Json with
+                        | JBool value -> if value then "true" else "false"
+                        | _ -> context.Json |> Json.convertFromJsonAs<string>
+
                     [ Html.text jsonStr ]
                 with ex -> [ Html.text $"Data parsing error: {ex.Message}" ]
             | InnerValue.Empty -> []

@@ -1,4 +1,4 @@
-module Editor.UIComponents.PageEditorComponents
+module Editor.Components.PageEditorComponents
 
 open Editor.Types.EditorDomain
 open Editor.Types.PageEditorDomain
@@ -282,7 +282,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
             Cmd.none
         else
             model, Cmd.ofMsg (AddUpdateMessage(message, defaultUpdateFunction))
-    | UpdateMessage(message, code) ->
+    | UpdateMsg(message, code) ->
         let newMessages =
             model.PageData.UserMessages
             |> List.map (fun element -> if element = message then code else element)

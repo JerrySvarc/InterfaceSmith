@@ -1,4 +1,4 @@
-module Editor.UIComponents.EditorComponents
+module Editor.Components.EditorComponents
 
 open Feliz
 open Fable.React
