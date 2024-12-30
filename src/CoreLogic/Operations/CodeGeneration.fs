@@ -138,10 +138,10 @@ let generateJavaScript
             let currentModel = initialModel;
             const render = () => {
                 const root = document.getElementById("app");
-                root.innerHTML = view(currentModel, dispatch);
+                root.innerHTML = viewFunction(currentModel, dispatch);
             };
             window.dispatch = (msg, event) => {
-                currentModel = update(msg, event, currentModel);
+                currentModel = updateFunction(msg, event, currentModel);
                 render();
             };
             render();
