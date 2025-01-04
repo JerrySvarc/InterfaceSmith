@@ -85,121 +85,283 @@ let stringToInnerValue stringVal : InnerValue =
 //              Modification of the RenderingCode AST
 // ||---------------------------------------------------------------||
 
-/// <summary></summary>
-/// <param name="path"></param>
-/// <param name="currentCode"></param>
-/// <returns></returns>
-let rec deleteElement (path: int list) (currentCode: RenderingCode) : RenderingCode =
+/// <summary>
+/// Replaces a RenderingCode element at the specified path with an unnamed Hole in the AST.
+/// </summary>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="currentCode">The root RenderingCode element to start traversal from.</param>
+/// <returns>
+/// Result containing either:
+/// - Ok: Modified RenderingCode AST with target element replaced by Hole
+/// - Error: String message describing why operation failed
+/// </returns>
+/// <remarks>
+/// Common error cases:
+/// - Empty path: Returns Hole
+/// - Invalid index: Returns Error
+/// - Wrong element type: Returns Error
+/// - Path beyond tree depth: Returns Error
+/// </remarks>
+let rec deleteElement (path: int list) (currentCode: RenderingCode) : Result<RenderingCode, string> =
     match path with
-    | [] -> RenderingCode.Hole UnNamed
+    | [] -> Ok(RenderingCode.Hole UnNamed)
     | [ lastIndex ] ->
         match currentCode with
-        | RenderingCode.HtmlList(lt, attrs, items, handlers) ->
-            let newItems = items |> List.removeAt lastIndex
-            RenderingCode.HtmlList(lt, attrs, newItems, handlers)
+        | RenderingCode.HtmlList(lt, attrs, items, handlers) when lastIndex >= 0 && lastIndex < items.Length ->
+            Ok(RenderingCode.HtmlList(lt, attrs, List.removeAt lastIndex items, handlers))
         | RenderingCode.HtmlObject(objType, attrs, keys, items, handlers) ->
-            let keyToRemove = List.tryItem lastIndex keys
-
-            match keyToRemove with
+            match List.tryItem lastIndex keys with
             | Some key ->
-                let newKeys = keys |> List.filter ((<>) key)
-                let newItems = items |> Map.remove key
-                RenderingCode.HtmlObject(objType, attrs, newKeys, newItems, handlers)
-            | None -> currentCode
-        | _ -> currentCode
+                Ok(
+                    RenderingCode.HtmlObject(
+                        objType,
+                        attrs,
+                        List.filter ((<>) key) keys,
+                        Map.remove key items,
+                        handlers
+                    )
+                )
+            | None -> Error $"Invalid key index: {lastIndex}"
+        | RenderingCode.HtmlList _ -> Error $"Index out of bounds: {lastIndex}"
+        | _ -> Error "Cannot delete from this element type"
     | head :: tail ->
         match currentCode with
-        | RenderingCode.HtmlList(lt, attrs, items, handlers) ->
-            let newItems =
-                items
-                |> List.mapi (fun i item -> if i = head then deleteElement tail item else item)
+        | RenderingCode.HtmlList(lt, attrs, items, handlers) when head >= 0 && head < items.Length ->
+            let updateItem i item =
+                if i = head then
+                    match deleteElement tail item with
+                    | Ok modified -> modified
+                    | Error e -> item
+                else
+                    item
 
-            RenderingCode.HtmlList(lt, attrs, newItems, handlers)
+            Ok(RenderingCode.HtmlList(lt, attrs, List.mapi updateItem items, handlers))
         | RenderingCode.HtmlObject(objType, attrs, keys, items, handlers) ->
-            let newItems =
-                items
-                |> Map.map (fun k v ->
-                    if List.tryItem head keys = Some k then
-                        deleteElement tail v
-                    else
-                        v)
+            match List.tryItem head keys with
+            | Some key ->
+                let newItems =
+                    items
+                    |> Map.map (fun k v ->
+                        if k = key then
+                            match deleteElement tail v with
+                            | Ok modified -> modified
+                            | Error _ -> v
+                        else
+                            v)
 
-            RenderingCode.HtmlObject(objType, attrs, keys, newItems, handlers)
-        | _ -> currentCode
+                Ok(RenderingCode.HtmlObject(objType, attrs, keys, newItems, handlers))
+            | None -> Error $"Invalid key index: {head}"
+        | RenderingCode.HtmlList _ -> Error $"Index out of bounds: {head}"
+        | _ -> Error "Cannot navigate through this element type"
 
-/// <summary></summary>
-/// <param name="path"></param>
-/// <param name="currentCode"></param>
-/// <returns></returns>
-let rec getElementAtPath (path: int list) (currentCode: RenderingCode) : RenderingCode =
+/// <summary>
+/// Traverses the RenderingCode AST to find an element at the specified path.
+/// </summary>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="currentCode">The RenderingCode element to start traversal from</param>
+/// <returns>
+/// The RenderingCode element at specified path if found;
+/// Returns original currentCode if path is invalid
+/// </returns>
+/// <remarks>
+/// Common cases:
+/// - Empty path: Returns currentCode
+/// - Invalid index: Returns currentCode
+/// - Valid path: Returns target element
+/// - Mismatched types: Returns currentCode
+/// </remarks>
+let rec getElementAtPath (path: int list) (currentCode: RenderingCode) : Result<RenderingCode, string> =
     match path with
-    | [] -> currentCode
+    | [] -> Ok currentCode
     | head :: tail ->
         match currentCode with
         | RenderingCode.HtmlList(_, _, items, _) ->
             if head < items.Length then
                 getElementAtPath tail (List.item head items)
             else
-                currentCode
+                Error $"Index {head} out of bounds in HtmlList"
         | RenderingCode.HtmlObject(_, _, keys, items, _) ->
             match List.tryItem head keys with
             | Some key ->
                 match Map.tryFind key items with
                 | Some value -> getElementAtPath tail value
-                | None -> currentCode
-            | None -> currentCode
-        | _ -> currentCode
+                | None -> Error $"Value not found for key {key} in HtmlObject"
+            | None -> Error $"Key index {head} out of bounds in HtmlObject"
+        | _ -> Error "Invalid path: element is neither List nor Object"
 
-/// <summary></summary>
-/// <param name="path"></param>
-/// <param name="replacementElement"></param>
-/// <param name="currentCode"></param>
-/// <returns></returns>
-let rec replace (path: int list) (replacementElement: RenderingCode) (currentCode: RenderingCode) : RenderingCode =
+
+
+/// <summary>
+/// Replaces a RenderingCode element at the specified path with a new element.
+/// </summary>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="replacementElement">New RenderingCode element to insert at target location.</param>
+/// <param name="currentCode">The root RenderingCode element to start traversal from.</param>
+/// <returns>
+/// Result containing either:
+/// - Ok: Modified RenderingCode AST with target element replaced
+/// - Error: String message describing why operation failed
+/// </returns>
+/// <remarks>
+/// Common error cases:
+/// - Invalid index: Returns Error
+/// - Wrong element type: Returns Error
+/// - Path beyond tree depth: Returns Error
+///
+/// Preserves original elements on error in nested operations
+/// </remarks>
+let rec replace
+    (path: int list)
+    (replacementElement: RenderingCode)
+    (currentCode: RenderingCode)
+    : Result<RenderingCode, string> =
     match path with
-    | [] -> replacementElement
+    | [] -> Ok replacementElement
     | head :: tail ->
         match currentCode with
         | RenderingCode.HtmlList(lt, attrs, items, handlers) ->
-            let newItems =
-                match items with
-                | [] -> items
-                | _ ->
-                    if head < items.Length then
-                        items |> List.map (replace tail replacementElement)
-                    else
-                        items
+            if head < 0 || head >= items.Length then
+                Error $"Index out of bounds: {head}"
+            else
+                let newItems =
+                    items
+                    |> List.mapi (fun i item ->
+                        if i = head then
+                            match replace tail replacementElement item with
+                            | Ok modified -> modified
+                            | Error _ -> item
+                        else
+                            item)
 
-            RenderingCode.HtmlList(lt, attrs, newItems, handlers)
+                Ok(RenderingCode.HtmlList(lt, attrs, newItems, handlers))
+
         | RenderingCode.HtmlObject(objType, attrs, keys, items, handlers) ->
             match List.tryItem head keys with
             | Some key ->
-                let value = items.TryFind key
+                match Map.tryFind key items with
+                | Some value ->
+                    match replace tail replacementElement value with
+                    | Ok newValue ->
+                        Ok(RenderingCode.HtmlObject(objType, attrs, keys, Map.add key newValue items, handlers))
+                    | Error e -> Error e
+                | None -> Error $"Key not found: {key}"
+            | None -> Error $"Invalid key index: {head}"
 
-                match value with
-                | Some code ->
-                    let newCode = replace tail replacementElement code
-                    let newItems = items.Add(key, newCode)
-                    RenderingCode.HtmlObject(objType, attrs, keys, newItems, handlers)
-                | None -> RenderingCode.HtmlObject(objType, attrs, keys, items, handlers)
-            | None -> RenderingCode.HtmlObject(objType, attrs, keys, items, handlers)
-        | _ -> currentCode
+        | _ -> Error "Invalid element type for replacement"
 
-/// <summary></summary>
-/// <param name="path"></param>
-/// <param name="newOrder"></param>
-/// <param name="currentCode"></param>
-/// <returns></returns>
-let reorderObjectKeys (path: int list) (newOrder: string list) (currentCode: RenderingCode) : RenderingCode =
-    let rec reorder code =
+/// <summary>
+/// Reorders keys in an HtmlObject at the specified path while preserving the object structure.
+/// </summary>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="newOrder">New ordering of keys to apply to target HtmlObject.
+/// Must contain exactly the same keys as existing object.</param>
+/// <param name="currentCode">Root RenderingCode element to start traversal from</param>
+/// <returns>
+/// Result containing either:
+/// - Ok: Modified RenderingCode AST with reordered HtmlObject
+/// - Error: String message describing validation or traversal failure
+/// </returns>
+/// <remarks>
+/// Validation ensures:
+/// - New order has same number of keys as original
+/// - All keys in new order exist in original
+/// - No duplicate keys in new order
+///
+/// Common error cases:
+/// - Invalid path: Returns Error
+/// - Target not HtmlObject: Returns Error
+/// - Invalid key order: Returns Error with specific message
+/// - Traversal failure: Returns Error
+/// </remarks>
+let reorderObjectKeys
+    (path: int list)
+    (newOrder: string list)
+    (currentCode: RenderingCode)
+    : Result<RenderingCode, string> =
+
+    let validateNewOrder (existingKeys: string list) (newKeys: string list) =
+        if List.length existingKeys <> List.length newKeys then
+            Error "New order must contain same number of keys"
+        elif List.exists (fun k -> not (List.contains k existingKeys)) newKeys then
+            Error "New order contains invalid keys"
+        elif List.distinct newKeys <> newKeys then
+            Error "New order contains duplicate keys"
+        else
+            Ok newKeys
+
+    let reorderObject (code: RenderingCode) =
         match code with
-        | RenderingCode.HtmlObject(objType, attrs, _, items, handlers) ->
-            let newItems =
-                newOrder
-                |> List.choose (fun key -> Map.tryFind key items |> Option.map (fun v -> (key, v)))
-                |> Map.ofList
+        | RenderingCode.HtmlObject(objType, attrs, existingKeys, items, handlers) ->
+            validateNewOrder existingKeys newOrder
+            |> Result.map (fun validOrder ->
+                let newItems =
+                    validOrder
+                    |> List.choose (fun key -> Map.tryFind key items |> Option.map (fun v -> (key, v)))
+                    |> Map.ofList
 
-            RenderingCode.HtmlObject(objType, attrs, newOrder, newItems, handlers)
-        | _ -> code
+                RenderingCode.HtmlObject(objType, attrs, validOrder, newItems, handlers))
+        | _ -> Error "Target element is not an HtmlObject"
 
-    replace path (reorder (getElementAtPath path currentCode)) currentCode
+    getElementAtPath path currentCode
+    |> Result.bind reorderObject
+    |> Result.bind (fun reordered -> replace path reordered currentCode)
