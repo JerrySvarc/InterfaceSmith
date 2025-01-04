@@ -27,7 +27,7 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         ParsedJson = JNull
         CurrentTree = RenderingCode.Hole(UnNamed)
         JsonString = ""
-        CustomFunctions = Map([ "functionExample", JSFunction("functionExample", "console.log()") ])
+        CustomFunctions = Map([])
         UserMessages = []
         UpdateFunction = Map([])
     }
@@ -113,16 +113,18 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
         | None -> { model with FileUploadError = true }, Cmd.none
 
     | ReplaceCode(code, path) ->
-        let newCodes = replace path code model.PageData.CurrentTree
+        let newCodesResult = replace path code model.PageData.CurrentTree
 
-        let updatedPage = {
-            model.PageData with
-                CurrentTree = newCodes
-        }
+        match newCodesResult with
+        | Ok newCodes ->
+            let updatedPage = {
+                model.PageData with
+                    CurrentTree = newCodes
+            }
 
-        let newModel = { model with PageData = updatedPage }
-        newModel, Cmd.ofMsg (SyncWithMain newModel)
-
+            let newModel = { model with PageData = updatedPage }
+            newModel, Cmd.ofMsg (SyncWithMain newModel)
+        | Error _ -> model, Cmd.none
     | SyncWithMain _ -> model, Cmd.none
     | StartPanning pos when model.DraggingElementId.IsNone ->
         {
@@ -222,7 +224,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 
     | CreateFunction ->
         let newName = $"newFunction{(model.PageData.CustomFunctions.Count)}"
-        let newFunction = JSFunction(newName, "console.log()")
+        let newFunction = JSFunction(newName, "console.log();")
         let newFunctions = model.PageData.CustomFunctions.Add(newName, newFunction)
 
         {
@@ -436,12 +438,6 @@ let ToolBar dispatch =
         ]
     ]
 
-
-
-
-
-
-
 /// <summary></summary>
 /// <param name="model"></param>
 /// <param name="dispatch"></param>
@@ -486,11 +482,6 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
 
             ]
         ]
-    (*
-        prop.onContextMenu (fun event ->
-            event.preventDefault ()
-            let position = { X = event.clientX; Y = event.clientY }
-            dispatch (OpenContextMenu position))*)
     ]
 
 /// <summary></summary>
