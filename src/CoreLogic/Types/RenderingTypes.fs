@@ -1,13 +1,13 @@
 module CoreLogic.Types.RenderingTypes
 
-/// <summary></summary>
+/// <summary>Represents an HTML tag. Used for the RenderingCode. Can be self-closing. </summary>
 type Tag = {
     Name: string
     Namespace: string option
     IsSelfClosing: bool
 }
 
-/// <summary></summary>
+/// <summary>Represents an HTML attribute consisting of a key-value pair. Used for the RenderingCode. Custom Namespace can be defined.</summary>
 type Attribute = {
     Key: string
     Value: InnerValue
@@ -16,7 +16,7 @@ type Attribute = {
 
 and Attributes = Attribute list
 
-/// <summary></summary>
+/// <summary>Represents a value which can either be a structural reference the corresponding JSON data, some user defined constant, or empty/</summary>
 and InnerValue =
     | Data
     | Constant of string
@@ -37,7 +37,14 @@ type FieldHole =
     | Named of string
     | UnNamed
 
-/// <summary></summary>
+/// <summary>
+/// Abstract Syntax Tree (AST) representing UI elements in a type-safe manner.
+/// Each variant maps to a specific JSON structure for UI rendering.
+/// </summary>
+/// <remarks>
+/// The AST supports hierarchical UI structures through recursive definition.
+/// Holes represent placeholders for dynamic element creation.
+/// </remarks>
 [<RequireQualifiedAccess>]
 type RenderingCode =
     | HtmlElement of tag: Tag * attrs: Attributes * innerValue: InnerValue * eventHandlers: (string * EventHandler) list
@@ -54,6 +61,7 @@ type RenderingCode =
         eventHandlers: (string * EventHandler) list
     | Hole of FieldHole
 
+/// <summary>Representation of the event handlers. The user can attach a JavaScript function or an Elm style message. </summary>
 and EventHandler =
     | JsHandler of functionName: string
     | MsgHandler of message: string
@@ -63,7 +71,7 @@ and EventHandler =
 and Javascript = JSFunction of name: string * code: string
 
 
-/// <summary></summary>
+/// <summary>HTML tags defined using our custom Tag type.</summary>
 [<RequireQualifiedAccess>]
 module Tags =
 
