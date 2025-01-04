@@ -38,13 +38,9 @@ type FieldHole =
     | UnNamed
 
 /// <summary>
-/// Abstract Syntax Tree (AST) representing UI elements in a type-safe manner.
+/// Abstract Syntax Tree (AST) representing of UI elements.
 /// Each variant maps to a specific JSON structure for UI rendering.
 /// </summary>
-/// <remarks>
-/// The AST supports hierarchical UI structures through recursive definition.
-/// Holes represent placeholders for dynamic element creation.
-/// </remarks>
 [<RequireQualifiedAccess>]
 type RenderingCode =
     | HtmlElement of tag: Tag * attrs: Attributes * innerValue: InnerValue * eventHandlers: (string * EventHandler) list
@@ -67,7 +63,7 @@ and EventHandler =
     | MsgHandler of message: string
 
 
-// JSFunction: Represents a JavaScript function used for event handling of custom RenderingCode events, accepts only the parameter "this"
+///<summary> JSFunction: Represents a JavaScript function used for event handling of custom RenderingCode events, accepts only the parameter "this"</summary>
 and Javascript = JSFunction of name: string * code: string
 
 
