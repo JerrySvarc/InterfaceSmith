@@ -4,6 +4,13 @@ open CoreLogic.Types.RenderingTypes
 open CoreLogic.Operations.RenderingCode
 open Editor.Types.PageEditorDomain
 
+/// <summary>Generates a JavaScript application using the Elm architecture based on the provided UI element structure, JSON data, and
+/// custom functions and custom messages. The resulting application consists of a Model, update function, user defined Msgs, and the view functions.</summary>
+/// <param name="code">The RenderingCode representing the UI elements.</param>
+/// <param name="jsonString">Uploaded JSON data in its textual representation.</param>
+/// <param name="customFunctions">Custom defined functions.</param>
+/// <param name="updateFunction">THe update function consisting of messages and updates to the model based on the messages.</param>
+/// <returns>Generated application in JavaScript following the Elm architecture. Attach to html with a HTML element with the id 'app'. </returns>
 let generateJavaScript
     (code: RenderingCode)
     (jsonString: string)
@@ -118,165 +125,39 @@ let generateJavaScript
 
     sprintf
         """
-        const Msg = { %s };
+const Msg = { %s };
 
-        const model = %s;
+const Model = %s;
 
+%s
+
+const update = (msg, event, model) => {
+    switch (msg) {
         %s
+        default:
+            return model;
+    }
+};
 
-        const update = (msg, event, model) => {
-            switch (msg) {
-                %s
-                default:
-                    return model;
-            }
-        };
+const view = (model, dispatch) => `%s`;
 
-        const view = (model, dispatch) => `%s`;
+function startApplication(initialModel, updateFunction, viewFunction) {
+    let currentModel = initialModel;
+    const render = () => {
+        const root = document.getElementById("app");
+        root.innerHTML = viewFunction(currentModel, dispatch);
+    };
+    window.dispatch = (msg, event) => {
+        currentModel = updateFunction(msg, event, currentModel);
+        render();
+    };
+    render();
+}
 
-        function init(initialModel, updateFunction, viewFunction) {
-            let currentModel = initialModel;
-            const render = () => {
-                const root = document.getElementById("app");
-                root.innerHTML = viewFunction(currentModel, dispatch);
-            };
-            window.dispatch = (msg, event) => {
-                currentModel = updateFunction(msg, event, currentModel);
-                render();
-            };
-            render();
-        }
-
-        init(model, update, view);
-
+startApplication(Model, update, view);
         """
         messageTypes
         jsonString
         customFunctionsJs
         updateCases
         (generateView "model" code)
-(*"""
-
-
-    const Msg = { NewMessage1: "NewMessage1",
-    NewMessage2: "NewMessage2",
-    NewMessage3: "NewMessage3",
-    NewMessage4: "NewMessage4" };
-
-    const model = {
-"InputField": "",
-"AddTodo": "Add todo",
-"Todos": [
-    {
-        "text": "Complete project proposal",
-        "completed": false
-    }
-],
-"Others": {
-    "CompletedCount": 0,
-    "AllDoneButton": "All done"
-}
-}
-;
-
-
-        function functionExample(event, model) {
-            console.log()
-        }
-
-    const update = (msg, event, model) => {
-switch (msg) {
-    case Msg.NewMessage1:
-        return {
-            ...model,
-            InputField: event.target.value
-        };
-
-    case Msg.NewMessage2:
-        if (!model.InputField.trim()) return model;
-        return {
-            ...model,
-            InputField: "",
-            Todos: [...model.Todos, {
-                text: model.InputField.trim(),
-                completed: false
-            }]
-        };
-
-    case Msg.NewMessage3:
-        const todoIndex = parseInt(event.target.closest('li').dataset.index);
-        const updatedTodos = model.Todos.map((todo, index) =>
-            index === todoIndex
-                ? {...todo, completed: !todo.completed}
-                : todo
-        );
-        return {
-            ...model,
-            Todos: updatedTodos,
-            Others: {
-                ...model.Others,
-                CompletedCount: updatedTodos.filter(todo => todo.completed).length
-            }
-        };
-
-    case Msg.NewMessage4:
-        const allCompleted = model.Todos.map(todo => ({...todo, completed: true}));
-        return {
-            ...model,
-            Todos: allCompleted,
-            Others: {
-                ...model.Others,
-                CompletedCount: allCompleted.length
-            }
-        };
-
-    default:
-        return model;
-}
-};
-
-const view = (model, dispatch) => `
-<div>
-    <input
-        value="${model.InputField}"
-        type="text"
-        onblur="dispatch('${Msg.NewMessage1}', event)"
-    />
-    <button onclick="dispatch('${Msg.NewMessage2}', event)">${model.AddTodo}</button>
-    <ul>${model.Todos.map((item, index) => `
-        <li data-index="${index}">
-            <div>
-                <input
-                    type="checkbox"
-                    ${item.completed ? 'checked' : ''}
-                    onchange="dispatch('${Msg.NewMessage3}', event)"
-                />
-                <span>${item.text}</span>
-            </div>
-        </li>`
-    ).join('')}</ul>
-    <div>
-        <button onclick="dispatch('${Msg.NewMessage4}', event)">
-            ${model.Others.AllDoneButton}
-        </button>
-        <div>${model.Others.CompletedCount}</div>
-    </div>
-</div>`;
-
-
-    function init(initialModel, updateFunction, viewFunction) {
-        let currentModel = initialModel;
-        const render = () => {
-            const root = document.getElementById("app");
-            root.innerHTML = view(currentModel, dispatch);
-        };
-        window.dispatch = (msg,event) => {
-            currentModel = update(msg, event, currentModel);
-            render();
-        };
-        render();
-    }
-
-    init(model, update, view);
-
-    """*)
