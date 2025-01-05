@@ -35,7 +35,7 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
 
     let newPageEditorModel = {
         PageData = newPage
-        FileUploadError = false
+        FileUploadError = None
         ViewportPosition = { X = 0.0; Y = 0.0 }
         Scale = 1.0
         Elements = []
@@ -51,67 +51,96 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
 
 
 
-/// <summary>This function is used to update the page editor model.
-///It is called when the user interacts with the page editor.
-///It updates the page editor model and sends a message to the main page via Cmd.ofMsg.</summary>
+/// <summary>The main Elmish update function for the PageEditor application.</summary>
 /// <param name="msg">A PageEditorMsg produced by the interactions with the user interface.</param>
 /// <param name="model">A PageEditorModel which is to be changed according to the type of message.</param>
-/// <returns></returns>
+/// <returns>Returns a newly updatted PageEditor state as a PageEditorModel, and a Command of a certain message.</returns>
 let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorModel * Cmd<PageEditorMsg> =
     match msg with
     | UploadData(jsonString, dispatch) ->
-        let loadedDataOption = loadJson jsonString
+        match jsonString with
+        | Ok jsonString ->
+            let loadedDataOption = loadJson jsonString
 
-        match loadedDataOption with
-        | Some(data) ->
-            match data with
-            | JObject obj ->
-                let updatedPage = {
-                    model.PageData with
-                        CurrentTree = recognizeJson data
-                        ParsedJson = data
-                        JsonString = jsonString
-                }
+            match loadedDataOption with
+            | Some(data) ->
+                match data with
+                | JObject obj ->
+                    let updatedPage = {
+                        model.PageData with
+                            CurrentTree = recognizeJson data
+                            ParsedJson = data
+                            JsonString = jsonString
+                    }
 
-                let newModelElement = {
-                    Id = model.Elements.Length + 1
-                    Position = { X = 150.0; Y = 250.0 }
-                    Render = fun model dispatch -> ModelElement model dispatch
-                }
+                    let newModelElement = {
+                        Id = model.Elements.Length + 1
+                        Position = { X = 150.0; Y = 250.0 }
+                        Render = fun model dispatch -> ModelElement model dispatch
+                    }
 
-                let viewElement = {
-                    Id = model.Elements.Length + 2
-                    Position = { X = 1200.0; Y = 550.0 }
-                    Render = fun model dispatch -> ViewElement model dispatch
-                }
+                    let viewElement = {
+                        Id = model.Elements.Length + 2
+                        Position = { X = 1200.0; Y = 550.0 }
+                        Render = fun model dispatch -> ViewElement model dispatch
+                    }
 
-                let functionsElement = {
-                    Id = model.Elements.Length + 3
-                    Position = { X = 300.0; Y = 700.0 }
-                    Render = fun model dispatch -> FunctionsElement model.PageData.CustomFunctions dispatch
-                }
+                    let functionsElement = {
+                        Id = model.Elements.Length + 3
+                        Position = { X = 300.0; Y = 700.0 }
+                        Render = fun model dispatch -> FunctionsElement model.PageData.CustomFunctions dispatch
+                    }
 
-                let updateElement = {
-                    Id = model.Elements.Length + 4
-                    Position = { X = 1200.0; Y = 1000.0 }
-                    Render =
-                        fun model dispatch ->
-                            MessageAndUpdateElement model.PageData.UserMessages model.PageData.UpdateFunction dispatch
-                }
+                    let updateElement = {
+                        Id = model.Elements.Length + 4
+                        Position = { X = 1200.0; Y = 1000.0 }
+                        Render =
+                            fun model dispatch ->
+                                MessageAndUpdateElement
+                                    model.PageData.UserMessages
+                                    model.PageData.UpdateFunction
+                                    dispatch
+                    }
 
-                let updatedEditorPage = {
+                    let updatedEditorPage = {
+                        model with
+                            PageData = updatedPage
+                            FileUploadError = None
+                            Elements =
+                                model.Elements
+                                @ [ newModelElement; viewElement; functionsElement; updateElement ]
+                    }
+
+                    updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
+                | _ ->
+                    {
+                        model with
+                            FileUploadError =
+                                Some(
+                                    FileValidationError.ParseError(
+                                        "Invalid JSON format. Please upload a valid JSON file containing a single top-level JSON object."
+                                    )
+                                )
+                    },
+                    Cmd.none
+            | None ->
+                {
                     model with
-                        PageData = updatedPage
-                        FileUploadError = false
-                        Elements =
-                            model.Elements
-                            @ [ newModelElement; viewElement; functionsElement; updateElement ]
-                }
-
-                updatedEditorPage, Cmd.ofMsg (SyncWithMain updatedEditorPage)
-            | _ -> { model with FileUploadError = true }, Cmd.none
-        | None -> { model with FileUploadError = true }, Cmd.none
-
+                        FileUploadError =
+                            Some(
+                                FileValidationError.ParseError(
+                                    "Invalid JSON format. Please upload a valid JSON file containing a single top-level JSON object."
+                                )
+                            )
+                },
+                Cmd.none
+        | Error error ->
+            {
+                model with
+                    FileUploadError = Some(error)
+            },
+            Cmd.none
+    | SetFileUploadError error -> { model with FileUploadError = error }, Cmd.none
     | ReplaceCode(code, path) ->
         let newCodesResult = replace path code model.PageData.CurrentTree
 
@@ -379,7 +408,9 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 //  These are the main components that make up the page editor.
 //  They are used to render the page editor and handle user interactions.
 //||---------------------------------------------------------------------------||
-let DataUpload dispatch =
+let DataUpload model dispatch =
+
+
     let uploadButtonView onLoad =
         Html.div [
             prop.className "inline-flex items-center"
@@ -399,6 +430,7 @@ let DataUpload dispatch =
                             prop.className "hidden"
                             prop.onChange (handleFileEvent onLoad)
                         ]
+
                     ]
                 ]
             ]
@@ -409,8 +441,8 @@ let DataUpload dispatch =
 
     Html.div [ prop.className ""; prop.children [ uploadButton ] ]
 
-let toolBarElements dispatch = [
-    DataUpload dispatch
+let toolBarElements model dispatch = [
+    DataUpload model dispatch
     Html.button [
         prop.children [
             ReactBindings.React.createElement (downloadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ], [])
@@ -426,15 +458,39 @@ let toolBarElements dispatch = [
     ]
 ]
 
-let ToolBar dispatch =
+let errorToMessage =
+    function
+    | InvalidFileType -> "Please upload a valid JSON file"
+    | EmptyFile -> "Please select a file"
+    | ReadError msg
+    | ParseError msg -> msg
+
+
+let ErrorMessage error dispatch =
+    Html.div [
+        prop.className "mt-2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+        prop.children [
+            Html.span [ prop.className "block sm:inline"; prop.text (errorToMessage error) ]
+            Html.span [
+                prop.className "absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+                prop.onClick (fun _ -> dispatch (SetFileUploadError None))
+                prop.children [ Html.span [ prop.className "text-red-500 font-bold"; prop.text "×" ] ]
+            ]
+        ]
+    ]
+
+let ToolBar model dispatch =
     Html.div [
         prop.className
             "flex items-center justify-between bg-gray-500 min-w-fit text-white h-fit px-4 py-2 fixed space-x-4 top-2 left-1/2 transform -translate-x-1/2 z-10 shadow-md border border-gray-700 rounded"
         prop.children [
             Html.nav [
                 prop.className "flex space-x-2 items-center h-full"
-                prop.children (toolBarElements dispatch)
+                prop.children (toolBarElements model dispatch)
             ]
+            match model.FileUploadError with
+            | Some error -> ErrorMessage error dispatch
+            | None -> Html.none
         ]
     ]
 
@@ -478,19 +534,22 @@ let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
         prop.children [
             Html.div [
                 prop.className "relative"
-                prop.children [ renderCanvasElements model dispatch ]
+                prop.children [
+                    renderCanvasElements model dispatch
+
+                ]
 
             ]
         ]
     ]
 
-/// <summary></summary>
-/// <param name="pageModel"></param>
-/// <param name="dispatch"></param>
+/// <summary>The main Elmish 'view' function of the PageEditor application. </summary>
+/// <param name="pageModel">The current model of the PageEditor.</param>
+/// <param name="dispatch">Elmish 'dispatch' function of type PageEditorMsg -> unit. </param>
 /// <returns></returns>
 [<ReactComponent>]
 let PageEditorView (pageModel: PageEditorModel) (dispatch: PageEditorMsg -> unit) : ReactElement =
     Html.div [
         prop.className "relative h-full w-full flex"
-        prop.children [ ToolBar dispatch; Canvas pageModel dispatch ]
+        prop.children [ ToolBar pageModel dispatch; Canvas pageModel dispatch ]
     ]

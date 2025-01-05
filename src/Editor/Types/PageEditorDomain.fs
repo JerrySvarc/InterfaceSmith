@@ -9,6 +9,13 @@ type UserMessage = string
 type UpdateFunction = Map<UserMessage, string>
 
 
+type FileValidationError =
+    | InvalidFileType
+    | EmptyFile
+    | ReadError of string
+    | ParseError of string
+
+
 /// <summary></summary>
 type Page = {
     Name: string
@@ -53,7 +60,7 @@ type Element = {
 /// <summary></summary>
 and PageEditorModel = {
     PageData: Page
-    FileUploadError: bool
+    FileUploadError: FileValidationError option
     ViewportPosition: Position
     Scale: float
     Elements: Element list
@@ -68,7 +75,8 @@ and PageEditorModel = {
 
 and PageEditorMsg =
     | SyncWithMain of PageEditorModel
-    | UploadData of string * (PageEditorMsg -> unit)
+    | UploadData of Result<string, FileValidationError> * (PageEditorMsg -> unit)
+    | SetFileUploadError of FileValidationError option
     | ReplaceCode of RenderingCode * path: int list
     | StartPanning of Position
     | UpdatePanning of Position
