@@ -2,11 +2,8 @@ module Editor.Utilities.Icons
 
 open Fable.Core.JsInterop
 
-(*
-Load additional icons like this
-
-Can be used
-*)
+///Load additional icons like this:
+///let myIcon: obj = importDefault "lucide-react/dist/esm/icons/my-icon"
 
 
 let chevronLeft: obj = importDefault "lucide-react/dist/esm/icons/chevron-left"

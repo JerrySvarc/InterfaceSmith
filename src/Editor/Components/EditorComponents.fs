@@ -122,9 +122,9 @@ let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : Rea
     ]
 
 /// <summary>Displays the tabs for the different pages and a button to create a new page.</summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <param name="model">The main application's state.</param>
+/// <param name="dispatch">The main appication's dispatch function of (Msg -> unit).</param>
+/// <returns>A ReactElement containing the page tabs and the button to create new pages.</returns>
 [<ReactComponent>]
 let SideBarContent (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [
@@ -165,9 +165,9 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) : ReactElement =
     ]
 
 /// <summary>The collapsible sidebar menu. Contains the SideBarContent.</summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <param name="model">The main application's state.</param>
+/// <param name="dispatch">The main appication's dispatch function of (Msg -> unit).</param>
+/// <returns>A ReactElement rendering the sidebar manu.</returns>
 [<ReactComponent>]
 let Sidebar (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [

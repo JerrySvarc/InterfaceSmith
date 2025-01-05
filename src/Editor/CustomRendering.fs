@@ -28,10 +28,12 @@ let rec options
     | RenderingCode.HtmlObject(_) -> ObjectOption name code path customFunctions userMessages dispatch
     | RenderingCode.Hole _ -> Html.none
 
-/// <summary></summary>
-/// <param name="context"></param>
-/// <param name="code"></param>
-/// <returns></returns>
+/// <summary>Rendering function implementing the increamental creation and live preview functionality.
+/// Recursively renders the created UI elements, combining them with the corresponding data when needed.
+/// Also renders the modificationMenus for the UI elements. </summary>
+/// <param name="context">The rendering context for a particular RenderingCode.</param>
+/// <param name="code">The UI element to render.</param>
+/// <returns>A ReactElement which consists of the preview for the code and the corresponding modification menus.</returns>
 let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (code: RenderingCode) : ReactElement =
 
     let renderWithOptions (preview: ReactElement) =
@@ -217,9 +219,9 @@ let rec renderingCodeToReactElement (context: RenderContext<PageEditorMsg>) (cod
 
 
 
-/// <summary></summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
+/// <summary>Render all canvas elementets at the right coordinates, taking into account the position of the viewport which is affected by panning the canvas, and the scale.</summary>
+/// <param name="model">The PageEditor's state.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
 /// <returns></returns>
 let renderCanvasElements (model: PageEditorModel) dispatch =
     let viewportTransform (position: Position) = {

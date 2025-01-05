@@ -20,6 +20,8 @@ open Editor.CustomRendering
 open Editor.Utilities.JavaScriptEditor
 open CoreLogic.Operations.CodeGeneration
 
+/// <summary> A collapsible element that can be used to display JSON data </summary>
+[<ReactComponent>]
 let Collapsible =
     React.functionComponent
         (fun
@@ -56,6 +58,7 @@ let Collapsible =
                     Html.div [ prop.className "ml-4 mt-1 space-y-1"; prop.children props.children ]
             ])
 
+/// <summary> A canvas element that displays the uploaded JSON data, featuring collapsible fields. </summary>
 [<ReactComponent>]
 let ModelElement model dispatch =
     let rec displayField (json: Json) : ReactElement =
@@ -103,6 +106,7 @@ let ModelElement model dispatch =
         prop.onMouseDown (fun e -> e.stopPropagation ())
     ]
 
+/// <summary> The preview of the created application, displayed in an iframe. </summary>
 [<ReactComponent>]
 let SandboxPreviewView (model: PageEditorModel) dispatch =
     let js =
@@ -145,6 +149,10 @@ let SandboxPreviewView (model: PageEditorModel) dispatch =
     else
         Html.none
 
+/// <summary>The main resizible view element. Used to provide the incremental creation functionality + live preview + serves as the sandbox preview element. </summary>
+/// <param name="model">The PageEditor's state.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns>The main view canvase element for creating, editing and previewing created Page elements.</returns>
 [<ReactComponent>]
 let ViewElement model dispatch =
     let showOptions, setShowOptions = React.useState true
@@ -212,6 +220,10 @@ let ViewElement model dispatch =
         ]
     ]
 
+/// <summary>Provides the CodeMirror editor for writing the custom JavaScript code. Some light extensions added.  </summary>
+/// <param name="code">The editor's default code value.</param>
+/// <param name="onChange">A Callback function to change the code value.</param>
+/// <returns>The CodeMirror editor window.</returns>
 [<ReactComponent>]
 let JavaScriptEditorView code onChange =
     let extensions = [| javascript?javascript () |]
@@ -238,12 +250,22 @@ let JavaScriptEditorView code onChange =
 
 
 
+/// <summary>A general element for creating and editing code of specified elements.
+/// </summary>
+/// <param name="title">The name of what we want to edit.</param>
+/// <param name="items">The options which we choose to edit. </param>
+/// <param name="renderEditor">Render the editing window, for us most likely the JavaScriptEditorView. </param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <param name="onNew">A Callback funtion to create a new list element.</param>
+/// <param name="onRename">A Callback funtion to rename the selected list element.</param>
+/// <param name="onDelete">A Callback funtion to delete the selected list element.</param>
+/// <returns></returns>
 [<ReactComponent>]
-let private EditableListElement<'a>
+let private CodeBasedListElement<'a>
     (title: string)
     (items: Map<string, 'a>)
     (renderEditor: string * 'a -> ReactElement)
-    (dispatch: 'msg -> unit)
+    (dispatch: PageEditorMsg -> unit)
     (onNew: unit -> unit)
     (onRename: string * string -> unit)
     (onDelete: string -> unit)
@@ -341,9 +363,13 @@ let private EditableListElement<'a>
         ]
     ]
 
+/// <summary>The canvas element used to create, modify and delete custom functions. Uses the CodeBasedListElement.</summary>
+/// <param name="functions">The custom functions.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns></returns>
 [<ReactComponent>]
-let FunctionsElement (functions: Map<string, Javascript>) dispatch =
-    EditableListElement
+let FunctionsElement (functions: Map<string, Javascript>) (dispatch: PageEditorMsg -> unit) =
+    CodeBasedListElement
         "Custom Functions"
         functions
         (fun (name, jsFunc) ->
@@ -361,9 +387,14 @@ let FunctionsElement (functions: Map<string, Javascript>) dispatch =
         (fun (oldName, newName) -> dispatch (RenameFunction(oldName, newName)))
         (fun name -> dispatch (DeleteFunction name))
 
+/// <summary>The canvas element used to create, modify and delete custom Elm-style messages. Uses the CodeBasedListElement.</summary>
+/// <param name="messages">The created messages.</param>
+/// <param name="updateFunction">The update function consisting of the messages and corresponding JavaScript code.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns></returns>
 [<ReactComponent>]
 let MessageAndUpdateElement (messages: string list) (updateFunction: Map<string, string>) dispatch =
-    EditableListElement
+    CodeBasedListElement
         "Messages"
         (messages
          |> List.map (fun m -> m, Map.tryFind m updateFunction |> Option.defaultValue "return { ...model };")

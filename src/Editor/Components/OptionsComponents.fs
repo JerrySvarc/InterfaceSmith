@@ -50,6 +50,10 @@ let ErrorDisplay (message: string) =
 
 //    General option components common for all RenderingCodes
 //||-----------------------------------------------------------||
+
+/// <summary>Menu used to select what value is used for the corresponding element. The Data value means that the value corresponds with a JSON field with the same path.</summary>
+/// <param name="currentInnerValue">Current value of the element</param>
+/// <param name="updateInnerValue">Callback function to update the value of the element</param>
 [<ReactComponent>]
 let InnerValueMenu (currentInnerValue: InnerValue) updateInnerValue =
     let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
@@ -98,6 +102,16 @@ let InnerValueMenu (currentInnerValue: InnerValue) updateInnerValue =
 
 
 
+/// <summary>
+/// Component for displaying and editing a single attribute of a HtmlElement.
+/// </summary>
+/// <param name="attr">Attribute to be displayed.</param>
+/// <param name="isEditing">Flag to determine if the attribute is being edited.</param>
+/// <param name="onEditKey">Callback function to toggle editing of the attribute key.</param>
+/// <param name="onKeyChange">Callback function to update the key of the attribute.</param>
+/// <param name="onValueChange">Callback function to update the value of the attribute.</param>
+/// <param name="onDelete">Callback function to delete the attribute.</param>
+/// <returns>A ReactElement representing the attribute row.</returns>
 [<ReactComponent>]
 let AttributeRow
     (attr: Attribute)
@@ -159,12 +173,27 @@ let AttributeRow
         ]
     ]
 
-/// <summary></summary>
-/// <param name="code"></param>
-/// <param name="path"></param>
-/// <param name="attributes"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary>Component for displaying and editing attributes of a HtmlElement.</summary>
+/// <param name="code">The code to which the attributes belong.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="attributes">List of attributes to be displayed.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+[<ReactComponent>]
 let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispatch =
     let editingKey, setEditingKey = React.useState ""
     let menuOpen, setMenuOpen = React.useState false
@@ -326,7 +355,10 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
     ]
 
 
-
+/// <summary>Component for displaying and editing event handlers of a HtmlElement.</summary>
+/// <param name="eventName">Name of the event</param>
+/// <param name="handler">Handler for the event</param>
+/// <param name="onDelete">Callback function to delete the event handler</param>
 [<ReactComponent>]
 let private HandlerTableRow (eventName: string) (handler: EventHandler) (onDelete: string -> unit) =
     Html.tr [
@@ -360,14 +392,29 @@ let private HandlerTableRow (eventName: string) (handler: EventHandler) (onDelet
         ]
     ]
 
-/// <summary></summary>
-/// <param name="code"></param>
-/// <param name="path"></param>
-/// <param name="customFunctions"></param>
-/// <param name="eventHandlers"></param>
-/// <param name="userMessages"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary>Component for displaying and editing event handlers of a RenderingCode.</summary>
+/// <param name="code">The code to which the event handlers belong.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">Map of custom functions available for event handlers.</param>
+/// <param name="eventHandlers">List of event handlers to be displayed.</param>
+/// <param name="userMessages">List of user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns>A ReactElement representing the event handler row.</returns>
 [<ReactComponent>]
 let EventHandlerMenu
     code
@@ -582,14 +629,9 @@ let KeyRow (key: string, index: int, keyOrdering, objType, codes, handlers, disp
         ]
     ]
 
-/// <summary></summary>
-/// <param name="keyOrdering"></param>
-/// <param name="objType"></param>
-/// <param name="codes"></param>
-/// <param name="handlers"></param>
-/// <param name="dispatch"></param>
-/// <param name="path"></param>
-/// <returns></returns>
+/// <summary> Component for displaying keys and editing their ordering.</summary>
+/// <param name="keyOrdering">List of keys in the object.</param>
+/// <param name="objType">Type of the object.</param>
 [<ReactComponent>]
 let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
     let collapsed, setCollapsed = React.useState true
@@ -628,14 +670,28 @@ let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
 
 
 
-/// <summary></summary>
-/// <param name="name"></param>
-/// <param name="code"></param>
-/// <param name="path"></param>
-/// <param name="customFunctions"></param>
-/// <param name="userMessages"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary> Component for displaying and editing the type of a HtmlObject and its event handlers and attributes.</summary>
+/// <param name="name">Name of the object.</param>
+/// <param name="code">The HtmlObject.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">Map of custom functions available for event handlers.</param>
+/// <param name="userMessages">List of user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
 [<ReactComponent>]
 let ObjectOption
     (name: string)
@@ -701,13 +757,28 @@ let ObjectOption
 //      HtmlList modification components
 // ||----------------------------------------||
 
-/// <summary></summary>
+/// <summary> Component for displaying and editing the type of a HtmlList and its event handlers and attributes.</summary>
 /// <param name="name"></param>
 /// <param name="code"></param>
-/// <param name="path"></param>
-/// <param name="customFunctions"></param>
-/// <param name="userMessages"></param>
-/// <param name="dispatch"></param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">The custom functions available for event handlers.</param>
+/// <param name="userMessages">The user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
 /// <returns></returns>
 [<ReactComponent>]
 let ListOption (name: string) code path customFunctions userMessages dispatch =
@@ -790,14 +861,29 @@ let TagMenu (code: RenderingCode) path dispatch =
         SelectMenu tagOptions tag.Name changeTag
     | _ -> ErrorDisplay "Invalid code type for TagMenu"
 
-/// <summary></summary>
-/// <param name="name"></param>
-/// <param name="code"></param>
-/// <param name="path"></param>
-/// <param name="customFunctions"></param>
-/// <param name="userMessages"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary> Component for displaying and editing the type of a HtmlElement, its value, and its event handlers and attributes.</summary>
+/// <param name="name">The name of the JSON based on which this element was created.  </param>
+/// <param name="code">The HtmlElement.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">The custom functions available for event handlers.</param>
+/// <param name="userMessages">The user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns>The modification menu for the HtmlElement.</returns>
 [<ReactComponent>]
 let ElementOption (name: string) code path customFunctions userMessages dispatch =
 

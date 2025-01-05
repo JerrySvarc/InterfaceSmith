@@ -408,9 +408,9 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
 //  These are the main components that make up the page editor.
 //  They are used to render the page editor and handle user interactions.
 //||---------------------------------------------------------------------------||
-let DataUpload model dispatch =
 
-
+/// <summary>Creates a view for the data upload button.</summary>
+let DataUpload dispatch =
     let uploadButtonView onLoad =
         Html.div [
             prop.className "inline-flex items-center"
@@ -441,8 +441,9 @@ let DataUpload model dispatch =
 
     Html.div [ prop.className ""; prop.children [ uploadButton ] ]
 
-let toolBarElements model dispatch = [
-    DataUpload model dispatch
+/// <summary>Toolbar elements - mainly buttons.</summary>
+let toolBarElements dispatch = [
+    DataUpload dispatch
     Html.button [
         prop.children [
             ReactBindings.React.createElement (downloadIcon, createObj [ "size" ==> 16; "className" ==> "mr-2" ], [])
@@ -458,6 +459,7 @@ let toolBarElements model dispatch = [
     ]
 ]
 
+/// <summary>Converts a FileValidationError to a human-readable message.</summary>
 let errorToMessage =
     function
     | InvalidFileType -> "Please upload a valid JSON file"
@@ -465,20 +467,27 @@ let errorToMessage =
     | ReadError msg
     | ParseError msg -> msg
 
-
-let ErrorMessage error dispatch =
+/// <summary>Creates a file error window which can be closed by clicking the x icon.</summary>
+let fileErrorMessage error dispatch =
     Html.div [
         prop.className "mt-2 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
         prop.children [
-            Html.span [ prop.className "block sm:inline"; prop.text (errorToMessage error) ]
             Html.span [
-                prop.className "absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
+                prop.className "block sm:inline mr-8" // Added right margin for X button
+                prop.text (errorToMessage error)
+            ]
+            Html.button [
+                prop.className
+                    "absolute top-1/2 right-2 -translate-y-1/2 p-2 hover:bg-red-200 rounded-full transition-colors"
                 prop.onClick (fun _ -> dispatch (SetFileUploadError None))
-                prop.children [ Html.span [ prop.className "text-red-500 font-bold"; prop.text "×" ] ]
+                prop.children [
+                    ReactBindings.React.createElement (xIcon, createObj [ "size" ==> 16; "color" ==> "#000000" ], [])
+                ]
             ]
         ]
     ]
 
+/// <summary>Creates the top static toolbar of the page editor.</summary>
 let ToolBar model dispatch =
     Html.div [
         prop.className
@@ -486,18 +495,19 @@ let ToolBar model dispatch =
         prop.children [
             Html.nav [
                 prop.className "flex space-x-2 items-center h-full"
-                prop.children (toolBarElements model dispatch)
+                prop.children (toolBarElements dispatch)
             ]
             match model.FileUploadError with
-            | Some error -> ErrorMessage error dispatch
+            | Some error -> fileErrorMessage error dispatch
             | None -> Html.none
         ]
     ]
 
-/// <summary></summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary>Creates the canvas component of the page editor.
+/// This is where the elements are rendered and the user can interact with them.</summary>
+/// <param name="model">The PageEditor's state.</param>
+/// <param name="dispatch">Elmish 'dispatch' function of type PageEditorMsg -> unit. </param>
+/// <returns>The movable canvas containing the rendered draggable elements.</returns>
 [<ReactComponent>]
 let Canvas (model: PageEditorModel) (dispatch: PageEditorMsg -> unit) =
     let bgPositionX = sprintf "%fpx" (model.ViewportPosition.X * model.Scale)

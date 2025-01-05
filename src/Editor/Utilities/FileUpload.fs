@@ -1,4 +1,4 @@
-// Followed the guide described in the SAFE stack docs.
+// Followed the guide described in the SAFE stack docs and added some type safety to the file upload process.
 // https://safe-stack.github.io/docs/recipes/client-server/upload-file-from-client/
 
 module Editor.Utilities.FileUpload

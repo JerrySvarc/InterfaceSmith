@@ -23,6 +23,10 @@ let init () : Model * Cmd<Msg> =
 
     newModel, Cmd.none
 
+/// <summary>Updates the main application's state based on the message.</summary>
+/// <param name="msg">The message to update the state with.</param>
+/// <param name="model">The current state of the main application.</param>
+/// <returns>The new state of the main application and any commands to execute.</returns>
 let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | CreatePage ->
@@ -97,7 +101,10 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         { model with Pages = updatedPages }, newCmd
 
 
-// View function that renders the Main application
+/// <summary>Displays the main application view.</summary>
+/// <param name="model">The main application's state.</param>
+/// <param name="dispatch">The main appication's dispatch function of (Msg -> unit).</param>
+/// <returns>A ReactElement containing the main application view.</returns>
 let view (model: Model) (dispatch: Msg -> unit) =
 
     Html.div [

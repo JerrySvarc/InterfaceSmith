@@ -5,10 +5,14 @@ open System
 open Fable.SimpleJson
 open Fable.React
 
+/// <summary>Represents a message that can be sent to the Elm-style update function of a Page.</summary>
 type UserMessage = string
+
+/// <summary> Represents the Elm-style update function for the created Page, consisting of key-value pairs of messages and the update funcitonality. </summary>
 type UpdateFunction = Map<UserMessage, string>
 
 
+/// <summary>Represents an error relating to uploading a file.</summary>
 type FileValidationError =
     | InvalidFileType
     | EmptyFile
@@ -16,19 +20,21 @@ type FileValidationError =
     | ParseError of string
 
 
-/// <summary></summary>
+/// <summary>The main unit of development for the editor. It represents a single web page following the Elm architecture.
+/// It has the necessary components such as model, messages, update and view funtions.</summary>
 type Page = {
     Name: string
     Id: Guid
     ParsedJson: Json
     CurrentTree: RenderingCode
+    //We save the uploaded json string to then insert it into the resulting application as the model
     JsonString: string
     UserMessages: UserMessage list
     UpdateFunction: UpdateFunction
     CustomFunctions: Map<string, Javascript>
 }
 
-/// <summary></summary>
+/// <summary>The context for rendering the preview of a RenderingCode element alongside its modification menu.</summary>
 type RenderContext<'Msg> = {
     Options:
         ('Msg -> unit)
@@ -47,17 +53,18 @@ type RenderContext<'Msg> = {
     UserMessages: UserMessage list
 }
 
-/// <summary></summary>
+/// <summary>Represents x-axis and y-axis coordinates.</summary>
 type Position = { X: float; Y: float }
 
-/// <summary></summary>
+/// <summary>A draggable element which can be placed onto the canvas.</summary>
 type Element = {
     Id: int
     Position: Position
+    //Needs to be a function instead of the resulting element, because otherwise the element is not updated when model changes
     Render: PageEditorModel -> (PageEditorMsg -> unit) -> ReactElement
 }
 
-/// <summary></summary>
+/// <summary>The state of the PageEditor application.</summary>
 and PageEditorModel = {
     PageData: Page
     FileUploadError: FileValidationError option

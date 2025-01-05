@@ -6,7 +6,7 @@ open CoreLogic.Types.RenderingTypes
 open PageEditorDomain
 
 
-// Main application's state
+/// <summary> The model of the main Elmish application. </summary>
 type Model = {
     Pages: Map<Guid, PageEditorModel>
     PageOrder: Guid list
@@ -14,8 +14,7 @@ type Model = {
     IsSidebarOpen: bool
 }
 
-// Application operations
-// General operation such as Page management or opening new pages
+/// <summary> The messages that can be sent to main application's update function. </summary>
 type Msg =
     | CreatePage
     | UpdatePage of PageEditorModel
