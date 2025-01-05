@@ -232,7 +232,7 @@ let renderCanvasElements (model: PageEditorModel) dispatch =
 
         Html.div [
             prop.key (string element.Id)
-            prop.className "absolute flex items-center justify-center w-fit h-fit bg-blue-900 shadow-lg"
+            prop.className "absolute flex items-center justify-center w-fit h-fit bg-blue-900 shadow-lg cursor-grab"
             prop.style [
                 style.left (length.px pos.X)
                 style.top (length.px pos.Y)
