@@ -24,8 +24,8 @@ The table below shows the different JSON primitives and their corresponding exam
 | Object    | Article | `{"user": {...}}` |
 | Array     | Ordered List | `"items": [...]` |
 
-The collections are types that contain other data as children. The Object is a collection containing different types of data; we assume each type can have a different structure.
-However, we assume that the Array consists of elements of the **same type and structure**.
+The collections are types that contain other data as children. The Object is an *unordered* collection containing different types of data; we assume each type can have a different structure.
+However, we assume that the Array is *ordered* and consists of elements of the **same type and structure**.
 
 ## Example Input Data
 

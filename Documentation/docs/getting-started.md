@@ -64,7 +64,24 @@ When the container is **running** the following applications are available:
 ![InterfaceSmith UI Overview](../img/UIExample.png)
 *Figure: Main editor interface showing the page management panel on the left and workspace on the right*
 
-After you open the Editor, you will be presented with the application's UI. It consists of a collapsable panel on the left, which provides view of the created pages.
+After you open the Editor, you will be presented with the application's UI we can see above. It consists of a collapsable panel on the left, which provides view of the created pages.
 By double clicking on the page tab, the name of the page can be changed. The page can also be deleted by clicking on the thrash bin icon on the tab.
-
 New page can be created by clicking the 'New page' button.
+
+On the right at the top, we can see a panel with several buttons.
+Under the panel, we can see a movable canvas containing draggable elements, each providing different modification functionality.
+
+The top left element is a ModelViewElement, which shows the uploaded JSON data. Each field can also be collapsed.
+
+Under the ModelViewElement, we can se the element to create, modify and delete custom functions, alongside the editor window it provides to modify the JavaScript code.
+
+To the right, we can see the main ViewElement, which provides the main UI creation and modification functionality.
+It is resizible, and also serves as a preview window for the running preview of the created application.
+
+To the right of the ViewElement, we can see the element to create, modify, and delet Elm-style messages.
+After a new message is created, the system automatically creates the case for the message in the Elm-style update function.
+The user can then define the update logic using JavaScript.
+
+## Generated applications
+
+The applications that the system generates follow the

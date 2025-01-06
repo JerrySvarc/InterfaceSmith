@@ -3,10 +3,9 @@ theme:
   name: material
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - User Guide:
-    - Getting Started: user-guide/getting-started.md
     - Input Data Guide: user-guide/data-preparation.md
-    - Creating UI elements : user-guide/element-creation.md
     - Modifying UI elements : user-guide/element-modification.md
     - Implementing custom logic : user-guide/custom-functionality.md
   - Developer Guide:
