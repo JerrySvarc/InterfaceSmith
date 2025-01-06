@@ -61,7 +61,7 @@ When the container is **running** the following applications are available:
 
 ## User interface
 
-![InterfaceSmith UI Overview](../img/UIExample.png)
+![InterfaceSmith UI Overview](img/UIExample.png)
 *Figure: Main editor interface showing the page management panel on the left and workspace on the right*
 
 After you open the Editor, you will be presented with the application's UI we can see above. It consists of a collapsable panel on the left, which provides view of the created pages.

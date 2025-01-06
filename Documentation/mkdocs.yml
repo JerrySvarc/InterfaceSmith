@@ -12,4 +12,3 @@ nav:
     - Getting Started: dev-guide/getting-started.md
     - Architecture: dev-guide/architecture.md
     - Core Logic: dev-guide/core-logic.md
-    - Editor UI: dev-guide/editor.md
