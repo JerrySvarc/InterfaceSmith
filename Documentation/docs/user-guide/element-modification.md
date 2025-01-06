@@ -8,6 +8,7 @@ You can define a new attribute by typing its name in the "Attribute Name" input 
 
 Under it you can see the created attributes. You can change the key of the attribute by double-clicking it, or change its value.
 The value types are:
+
 1. Data - value is set to the value of the corresponding JSON field
 2. Constant - user defined value
 3. Empty - no value
