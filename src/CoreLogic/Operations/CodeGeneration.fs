@@ -164,6 +164,15 @@ startApplication(Model, update, view);
         updateCases
         (generateView "model" code)
 
+/// <summary>
+/// Generates a complete HTML application with embedded JavaScript code.
+/// The generated app follows MVU (Model-View-Update) architecture.
+/// </summary>
+/// <param name="code">The RenderingCode representing the UI elements.</param>
+/// <param name="jsonString">Uploaded JSON data in its textual representation.</param>
+/// <param name="customFunctions">Custom defined functions.</param>
+/// <param name="updateFunction">THe update function consisting of messages and updates to the model based on the messages.</param>
+/// <returns></returns>
 let generateFullApp
     (code: RenderingCode)
     (jsonString: string)
