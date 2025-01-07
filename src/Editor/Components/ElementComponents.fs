@@ -109,30 +109,12 @@ let ModelElement model dispatch =
 /// <summary> The preview of the created application, displayed in an iframe. </summary>
 [<ReactComponent>]
 let SandboxPreviewView (model: PageEditorModel) dispatch =
-    let js =
-        generateJavaScript
+    let fullHtml =
+        generateFullApp
             model.PageData.CurrentTree
             model.PageData.JsonString
             model.PageData.CustomFunctions
             model.PageData.UpdateFunction
-
-    let fullHtml =
-        $"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sandbox Preview</title>
-</head>
-<body>
-    <div id="app"></div>
-    <script>
-    {js}
-    </script>
-</body>
-</html>
-        """
 
     if model.IsPreviewOpen then
         Html.div [

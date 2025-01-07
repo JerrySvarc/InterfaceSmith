@@ -75,6 +75,7 @@ and PageEditorModel = {
     IsPanning: bool
     LastMousePosition: Position option
     IsPreviewOpen: bool
+    IsCodeViewOpen: bool
     ContextMenuVisible: bool
     ContextMenuPosition: Position option
 }
@@ -93,6 +94,7 @@ and PageEditorMsg =
     | EndDraggingItem
     | Zoom of float
     | TogglePreview
+    | ToggleCodeView
     | CreateFunction
     | UpdateFunction of string * Javascript
     | RenameFunction of string * string
