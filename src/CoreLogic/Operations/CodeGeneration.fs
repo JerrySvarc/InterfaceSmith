@@ -139,7 +139,9 @@ const update = (msg, event, model) => {
     }
 };
 
-const view = (model, dispatch) => `%s`;
+const view = (model, dispatch) => `
+%s
+`;
 
 function startApplication(initialModel, updateFunction, viewFunction) {
     let currentModel = initialModel;

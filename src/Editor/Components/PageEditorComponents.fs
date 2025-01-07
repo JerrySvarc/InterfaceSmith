@@ -73,7 +73,7 @@ let pageEditorUpdate (msg: PageEditorMsg) (model: PageEditorModel) : PageEditorM
                             ParsedJson = data
                             JsonString = jsonString
                     }
-
+                    //Create all the elements to be rendered on the canvas
                     let newModelElement = {
                         Id = model.Elements.Length + 1
                         Position = { X = 150.0; Y = 250.0 }

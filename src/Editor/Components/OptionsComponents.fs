@@ -360,7 +360,7 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
 /// <param name="handler">Handler for the event</param>
 /// <param name="onDelete">Callback function to delete the event handler</param>
 [<ReactComponent>]
-let private HandlerTableRow (eventName: string) (handler: EventHandler) (onDelete: string -> unit) =
+let HandlerTableRow (eventName: string) (handler: EventHandler) (onDelete: string -> unit) =
     Html.tr [
         prop.className "border-b hover:bg-gray-50"
         prop.children [
