@@ -39,7 +39,7 @@ The update function receives:
 4. Select your message from the handler dropdown
 5. Click "Add Handler" to attach
 
-![InterfaceSmith UI Overview](img/handler-menu.png)
+![InterfaceSmith UI Overview](../img/handler-menu.png)
 
 
 Example element with message handler:
