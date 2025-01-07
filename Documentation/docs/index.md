@@ -25,7 +25,6 @@ Then you can define new Elm-style messages and define how the data should change
 
 ## Installation
 
-Installation of the
-
+To install the production version, use the provided pre-built docker image and follow the instructions in the [getting-started](getting-started.md) tutorial.
 
 
