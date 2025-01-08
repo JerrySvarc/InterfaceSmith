@@ -24,11 +24,7 @@ docker load < interfacesmith.tar
 
 2. Run the loaded container:
 ```bash
-docker run \
-  -p 8080:8080 \
-  -p 8082:8082 \
-  --name interfacesmith \
-  interfacesmith:latest
+docker run -p 8080:8080 -p 8082:8082 interfacesmith
 ```
 
 ### Building the Dockerfile and running the app
@@ -45,10 +41,7 @@ docker build -t interfacesmith .
 
 3. Run the newly built container:
 ```bash
-docker run \
-  -p 8080:8080 \
-  -p 8082:8082 \
-  --name interfacesmith \
+docker run -p 8080:8080 -p 8082:8082 interfacesmith
 ```
 
 
