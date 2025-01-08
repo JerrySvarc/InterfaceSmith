@@ -16,7 +16,7 @@
     <Compile Include="CoreLogic\Operations\CodeGeneration.fs" />
     <Compile Include="Editor\Types\EditorDomain.fs" />
     <Compile Include="Editor\Utilities\Icons.fs" />
-    <Compile Include="Editor\Utilities\FileUpload.fs" />
+    <Compile Include="Editor\Utilities\FileUtilities.fs" />
     <Compile Include="Editor\Utilities\JsonParsing.fs" />
     <Compile Include="Editor\Utilities\JavaScriptEditor.fs" />
     <Compile Include="Editor\Components\OptionsComponents.fs" />

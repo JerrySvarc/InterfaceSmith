@@ -11,6 +11,7 @@ let sourcePath = Path.getFullName "src/"
 let deployPath = Path.getFullName "deploy"
 
 let testsPath = Path.getFullName "tests/"
+let documentationPath = Path.getFullName "Documentation"
 
 Target.create "Clean" (fun _ ->
     Shell.cleanDir deployPath
@@ -27,8 +28,13 @@ Target.create "Bundle" (fun _ ->
 Target.create "Run" (fun _ ->
     [
         "client", dotnet [ "fable"; "watch"; "-o"; "output"; "-s"; "--run"; "npx"; "vite" ] sourcePath
+        "docs",
+        CreateProcess.fromRawCommand "mkdocs" [ "serve"; "-a"; "localhost:8082" ]
+        |> CreateProcess.withWorkingDirectory documentationPath
+        |> CreateProcess.ensureExitCode
     ]
     |> runParallel)
+
 
 Target.create "RunTests" (fun _ ->
     [
@@ -36,16 +42,21 @@ Target.create "RunTests" (fun _ ->
     ]
     |> runParallel)
 
+Target.create "BuildDocs" (fun _ ->
+    Shell.cleanDir "./Documentation/docs/site"
+    Shell.Exec("mkdocs", "build", "./Documentation") |> ignore)
+
 Target.create "Format" (fun _ -> run dotnet [ "fantomas"; "." ] ".")
 
 open Fake.Core.TargetOperators
 
 let dependencies = [
-    "Clean" ==> "InstallClient" ==> "Bundle"
+    "Clean" ==> "InstallClient" ==> "BuildDocs" ==> "Bundle"
 
-    "Clean" ==> "InstallClient" ==> "Run"
+    "Clean" ==> "InstallClient" ==> "BuildDocs" ==> "Run"
 
     "InstallClient" ==> "RunTests"
+    "Clean" ==> "BuildDocs"
 ]
 
 [<EntryPoint>]

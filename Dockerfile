@@ -1,36 +1,56 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM nixos/nix:latest AS builder
 
-# Install node
-ARG NODE_MAJOR=20
-RUN apt-get update
-RUN apt-get install -y ca-certificates curl gnupg
-RUN mkdir -p /etc/apt/keyrings
-RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
-RUN apt-get update && apt-get install nodejs -y
+RUN echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
 
-
-# Set the working directory
 WORKDIR /app
-
-# Copy the project files
+COPY flake.nix flake.lock ./
 COPY . .
 
-# Restore .NET tools and dependencies
-RUN dotnet tool restore
-RUN dotnet paket restore
+RUN nix develop -c bash -c "\
+    dotnet tool restore && \
+    dotnet paket restore && \
+    dotnet run Bundle && \
+    cd Documentation && mkdocs build"
 
-# Build the application
-RUN dotnet run Bundle
-
-# Use a specific version of the Nginx image for the final stage
 FROM nginx:1.25.1-alpine
 
-# Copy the bundled application from the build stage
-COPY --from=build /app/deploy/public/ /usr/share/nginx/html
+COPY <<'EOF' /etc/nginx/nginx.conf
+events {
+    worker_connections 1024;
+}
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
 
-# Expose port 80
-EXPOSE 80
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log;
 
-# Start Nginx server
+    server {
+        listen 8080;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html/app;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+    }
+
+    server {
+        listen 8082;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html/docs;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+    }
+}
+EOF
+
+COPY --from=builder /app/deploy/public/ /usr/share/nginx/html/app/
+COPY --from=builder /app/Documentation/site/ /usr/share/nginx/html/docs/
+
+EXPOSE 8080 8082
 CMD ["nginx", "-g", "daemon off;"]

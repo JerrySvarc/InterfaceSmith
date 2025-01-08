@@ -1,4 +1,6 @@
 {
-  "Celsius": 0,
-  "Farenheit": 0
- }
+  "Celsius": "",
+  "CelsiusLabel":"Celsius = ",
+  "Fahrenheit": "",
+  "FahrenheitLabel": "Fahrenheit"
+}

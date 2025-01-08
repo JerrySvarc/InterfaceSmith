@@ -6,7 +6,6 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="src/Main.fs" />
     <Compile Include="Helpers.fs" />
     <Compile Include="Build.fs" />
   </ItemGroup>

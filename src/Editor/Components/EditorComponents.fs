@@ -1,4 +1,4 @@
-module Editor.UIComponents.EditorComponents
+module Editor.Components.EditorComponents
 
 open Feliz
 open Fable.React
@@ -8,8 +8,17 @@ open Editor.Utilities.Icons
 open Fable.Core.JsInterop
 
 
-///<summary>
+
+/// <summary>The tab of the pages side menu.</summary>
+/// <param name="model">Current model of the main Elmish app.</param>
+/// <param name="page">Page corresponding to the tab.</param>
+/// <param name="dispatch">Main Elmish application's dispatch function.</param>
+/// <returns></returns>
+[<ReactComponent>]
 let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : ReactElement =
+    let isNameEditing, setIsNameEditing = React.useState false
+    let nameInput, setNameInput = React.useState page.PageData.Name
+
     Html.div [
         prop.className (
             sprintf
@@ -20,32 +29,102 @@ let PageTab (model: Model) (page: PageEditorModel) (dispatch: Msg -> unit) : Rea
                      "")
         )
         prop.onClick (fun _ -> dispatch (OpenPage page.PageData.Id))
+        prop.onDoubleClick (fun _ -> setIsNameEditing true)
         prop.children [
             ReactBindings.React.createElement (fileIcon, createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ], [])
-            Html.span [ prop.className "ml-2"; prop.text page.PageData.Name ]
-            Html.div [
-                prop.className "ml-auto relative invisible group-hover/tab:visible hover:bg-red-900 rounded"
-                prop.children [
-                    Html.button [
-                        prop.className "flex items-center justify-center w-8 h-8 rounded-full"
-                        prop.onClick (fun _ -> dispatch (DeletePage page.PageData.Id))
-                        prop.children [
-                            ReactBindings.React.createElement (
-                                trashIcon,
-                                createObj [ "size" ==> 16; "color" ==> "#FFFFFF" ],
-                                []
-                            )
+            match isNameEditing with
+            | true ->
+                Html.div [
+                    prop.className "flex flex-col space-y-1 w-full"
+                    prop.children [
+                        Html.input [
+                            prop.className
+                                "ml-2 bg-gray-800 text-white px-2 py-1 rounded w-full text-sm outline-none border border-gray-600 focus:border-blue-500"
+                            prop.value nameInput
+                            prop.onChange setNameInput
+                        ]
+                        Html.div [
+                            prop.className "flex space-x-1 ml-2"
+                            prop.children [
+                                Html.button [
+                                    prop.className
+                                        "flex-1 bg-gray-700 hover:bg-gray-600 text-white py-1 px-2 rounded text-sm flex items-center justify-center"
+                                    prop.onClick (fun _ ->
+                                        if nameInput.Length > 0 then
+                                            dispatch (
+                                                UpdatePage(
+                                                    {
+                                                        page with
+                                                            PageData = { page.PageData with Name = nameInput }
+                                                    }
+                                                )
+                                            )
+
+                                            setIsNameEditing false)
+                                    prop.children [
+                                        ReactBindings.React.createElement (
+                                            checkIcon,
+                                            createObj [ "size" ==> 12; "color" ==> "#FFFFFF" ],
+                                            []
+                                        )
+                                        Html.span [ prop.className "ml-1"; prop.text "Save" ]
+                                    ]
+                                ]
+                                Html.button [
+                                    prop.className
+                                        "flex-1 bg-gray-700 hover:bg-gray-600 text-white py-1 px-2 rounded text-sm flex items-center justify-center"
+                                    prop.onClick (fun _ -> setIsNameEditing false)
+                                    prop.children [
+                                        ReactBindings.React.createElement (
+                                            xIcon,
+                                            createObj [ "size" ==> 12; "color" ==> "#FFFFFF" ],
+                                            []
+                                        )
+                                        Html.span [ prop.className "ml-1"; prop.text "Cancel" ]
+                                    ]
+                                ]
+                            ]
                         ]
                     ]
                 ]
-            ]
+
+            | false ->
+                Html.div [
+                    prop.className "flex items-center flex-1 min-w-0"
+                    prop.children [
+                        Html.span [
+                            prop.className "ml-2 truncate text-sm"
+                            prop.title page.PageData.Name
+                            prop.text page.PageData.Name
+                        ]
+                    ]
+                ]
+
+                Html.div [
+                    prop.className "ml-2 flex-shrink-0 invisible group-hover/tab:visible"
+                    prop.children [
+                        Html.button [
+                            prop.className "p-1 hover:bg-red-900 rounded flex items-center justify-center"
+                            prop.onClick (fun e ->
+                                e.stopPropagation ()
+                                dispatch (DeletePage page.PageData.Id))
+                            prop.children [
+                                ReactBindings.React.createElement (
+                                    trashIcon,
+                                    createObj [ "size" ==> 14; "color" ==> "#FFFFFF" ],
+                                    []
+                                )
+                            ]
+                        ]
+                    ]
+                ]
         ]
     ]
 
-/// <summary></summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary>Displays the tabs for the different pages and a button to create a new page.</summary>
+/// <param name="model">The main application's state.</param>
+/// <param name="dispatch">The main appication's dispatch function of (Msg -> unit).</param>
+/// <returns>A ReactElement containing the page tabs and the button to create new pages.</returns>
 [<ReactComponent>]
 let SideBarContent (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [
@@ -85,10 +164,10 @@ let SideBarContent (model: Model) (dispatch: Msg -> unit) : ReactElement =
         ]
     ]
 
-/// <summary></summary>
-/// <param name="model"></param>
-/// <param name="dispatch"></param>
-/// <returns></returns>
+/// <summary>The collapsible sidebar menu. Contains the SideBarContent.</summary>
+/// <param name="model">The main application's state.</param>
+/// <param name="dispatch">The main appication's dispatch function of (Msg -> unit).</param>
+/// <returns>A ReactElement rendering the sidebar manu.</returns>
 [<ReactComponent>]
 let Sidebar (model: Model) (dispatch: Msg -> unit) : ReactElement =
     Html.div [

@@ -1,0 +1,14 @@
+site_name: InterfaceSmith Documentation
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+    - Input Data Guide: user-guide/data-preparation.md
+    - Modifying UI elements : user-guide/element-modification.md
+    - Implementing custom logic : user-guide/custom-functionality.md
+  - Developer Guide:
+    - Getting Started: dev-guide/getting-started.md
+    - Architecture: dev-guide/architecture.md
+    - Core Logic: dev-guide/core-logic.md

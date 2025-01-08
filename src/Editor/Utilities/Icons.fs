@@ -2,11 +2,8 @@ module Editor.Utilities.Icons
 
 open Fable.Core.JsInterop
 
-(*
-Load additional icons like this
-
-Can be used
-*)
+///Load additional icons like this:
+///let myIcon: obj = importDefault "lucide-react/dist/esm/icons/my-icon"
 
 
 let chevronLeft: obj = importDefault "lucide-react/dist/esm/icons/chevron-left"
@@ -26,6 +23,7 @@ let arrowRightLine: obj =
 
 let uploadIcon: obj = importDefault "lucide-react/dist/esm/icons/upload"
 
+
 let downloadIcon: obj = importDefault "lucide-react/dist/esm/icons/download"
 
 
@@ -34,3 +32,5 @@ let trashIcon: obj = importDefault "lucide-react/dist/esm/icons/trash-2"
 
 let arrowDownIcon: obj = importDefault "lucide-react/dist/esm/icons/arrow-down"
 let arrowUpIcon: obj = importDefault "lucide-react/dist/esm/icons/arrow-up"
+
+let checkIcon: obj = importDefault "lucide-react/dist/esm/icons/check"

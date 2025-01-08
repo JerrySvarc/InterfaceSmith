@@ -1,21 +1,14 @@
- {
-    "taskInput":"",
-    "addTask":"Add todo",
-    "tasks": [
+{
+    "InputField": "",
+    "AddTodo": "Add todo",
+    "Todos": [
         {
-        "id": 1,
-        "task": "Complete project proposal",
-        "completed": false
-        },
-        {
-        "id": 2,
-        "task": "Prepare presentation slides",
-        "completed": true
-        },
-        {
-        "id": 3,
-        "task": "Send meeting agenda to team",
-        "completed": false
+            "text": "Complete project proposal",
+            "completed": false
         }
-    ]
+    ],
+    "Others": {
+        "CompletedCount": 0,
+        "AllDoneButton": "All done"
+    }
 }

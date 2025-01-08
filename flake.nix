@@ -16,11 +16,13 @@
           packages = with pkgs; [
             dotnet-sdk_8
             nodejs_20
+            python3
+            python3Packages.pip
+            python3Packages.mkdocs
+            python3Packages.mkdocs-material
           ];
 
                 };
-
-
     in
     {
 

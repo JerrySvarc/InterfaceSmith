@@ -4,6 +4,9 @@ open CoreLogic.Types.RenderingTypes
 open Fable.SimpleJson
 open Microsoft.FSharp.Collections
 
+/// <summary>Recognition of the JSON data - Creates a new RenderingCode UI element and creates holes for its children if the item is a collection.</summary>
+/// <param name="json">The JSON field to be recognized.</param>
+/// <returns>A new RenderingCode element with its children as new Holes.</returns>
 let recognizeJson (json: Json) =
     match json with
     | JArray array ->

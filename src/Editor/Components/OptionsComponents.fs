@@ -13,7 +13,7 @@ open Microsoft.FSharp.Reflection
 //                  General helper components
 //||------------------------------------------------------------||
 /// <summary>
-/// Renders a select menu component with the given options and current value
+/// Renders a dropdown menu component with the given options and current value
 /// </summary>
 /// <param name="options">List of available options</param>
 /// <param name="value">Currently selected value</param>
@@ -50,6 +50,10 @@ let ErrorDisplay (message: string) =
 
 //    General option components common for all RenderingCodes
 //||-----------------------------------------------------------||
+
+/// <summary>Menu used to select what value is used for the corresponding element. The Data value means that the value corresponds with a JSON field with the same path.</summary>
+/// <param name="currentInnerValue">Current value of the element</param>
+/// <param name="updateInnerValue">Callback function to update the value of the element</param>
 [<ReactComponent>]
 let InnerValueMenu (currentInnerValue: InnerValue) updateInnerValue =
     let innerValueOptions = [ "Data"; "Constant"; "Empty" ]
@@ -98,6 +102,16 @@ let InnerValueMenu (currentInnerValue: InnerValue) updateInnerValue =
 
 
 
+/// <summary>
+/// Component for displaying and editing a single attribute of a HtmlElement.
+/// </summary>
+/// <param name="attr">Attribute to be displayed.</param>
+/// <param name="isEditing">Flag to determine if the attribute is being edited.</param>
+/// <param name="onEditKey">Callback function to toggle editing of the attribute key.</param>
+/// <param name="onKeyChange">Callback function to update the key of the attribute.</param>
+/// <param name="onValueChange">Callback function to update the value of the attribute.</param>
+/// <param name="onDelete">Callback function to delete the attribute.</param>
+/// <returns>A ReactElement representing the attribute row.</returns>
 [<ReactComponent>]
 let AttributeRow
     (attr: Attribute)
@@ -159,6 +173,27 @@ let AttributeRow
         ]
     ]
 
+/// <summary>Component for displaying and editing attributes of a HtmlElement.</summary>
+/// <param name="code">The code to which the attributes belong.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="attributes">List of attributes to be displayed.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+[<ReactComponent>]
 let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispatch =
     let editingKey, setEditingKey = React.useState ""
     let menuOpen, setMenuOpen = React.useState false
@@ -239,7 +274,7 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
             Html.button [
                 prop.className "flex flex-row items-center space-x-2"
                 prop.onClick (fun e ->
-                    e.stopPropagation () // Prevent propagation
+                    e.stopPropagation ()
                     toggleMenu ())
                 prop.children [
                     ReactBindings.React.createElement (
@@ -320,7 +355,66 @@ let AttributeMenu (code: RenderingCode) path (attributes: Attribute list) dispat
     ]
 
 
+/// <summary>Component for displaying and editing event handlers of a HtmlElement.</summary>
+/// <param name="eventName">Name of the event</param>
+/// <param name="handler">Handler for the event</param>
+/// <param name="onDelete">Callback function to delete the event handler</param>
+[<ReactComponent>]
+let HandlerTableRow (eventName: string) (handler: EventHandler) (onDelete: string -> unit) =
+    Html.tr [
+        prop.className "border-b hover:bg-gray-50"
+        prop.children [
+            Html.td [ prop.text eventName; prop.className "p-2 text-xs" ]
+            Html.td [
+                prop.text (
+                    match handler with
+                    | JsHandler(name) -> sprintf "JS: %s" name
+                    | MsgHandler msg -> sprintf "Msg: %s" msg
+                )
+                prop.className "p-2 text-xs"
+            ]
+            Html.td [
+                prop.className "flex relative items-center justify-center hover:bg-red-600 rounded"
+                prop.children [
+                    Html.button [
+                        prop.className "flex items-center justify-center w-8 h-8 rounded"
+                        prop.onClick (fun _ -> onDelete eventName)
+                        prop.children [
+                            ReactBindings.React.createElement (
+                                trashIcon,
+                                createObj [ "size" ==> 16; "color" ==> "#000000" ],
+                                []
+                            )
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
 
+/// <summary>Component for displaying and editing event handlers of a RenderingCode.</summary>
+/// <param name="code">The code to which the event handlers belong.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">Map of custom functions available for event handlers.</param>
+/// <param name="eventHandlers">List of event handlers to be displayed.</param>
+/// <param name="userMessages">List of user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns>A ReactElement representing the event handler row.</returns>
 [<ReactComponent>]
 let EventHandlerMenu
     code
@@ -330,13 +424,38 @@ let EventHandlerMenu
     (userMessages: UserMessage list)
     dispatch
     =
-    let availableEvents = [ "onClick"; "onMouseOver"; "onMouseOut"; "onKeyPress"; "onFocus"; "onBlur" ]
+    let availableEvents = [
+        "onClick"
+        "onMouseOver"
+        "onMouseOut"
+        "onMouseDown"
+        "onMouseUp"
+        "onMouseMove"
+        "onMouseEnter"
+        "onMouseLeave"
+        "onKeyPress"
+        "onKeyDown"
+        "onKeyUp"
+        "onInput"
+        "onChange"
+        "onSubmit"
+        "onFocus"
+        "onBlur"
+        "onDrag"
+        "onDragStart"
+        "onDragEnd"
+        "onDragEnter"
+        "onDragLeave"
+        "onDragOver"
+        "onDrop"
+        "onTouchStart"
+        "onTouchMove"
+        "onTouchEnd"
+    ]
 
     let selectedEvent, setSelectedEvent = React.useState ""
     let selectedHandler, setSelectedHandler = React.useState ""
     let menuOpen, setMenuOpen = React.useState false
-
-    let toggleMenu () = setMenuOpen (not menuOpen)
 
     let updateCode updatedHandlers =
         let updatedCode =
@@ -353,15 +472,14 @@ let EventHandlerMenu
         setSelectedEvent ""
         setSelectedHandler ""
 
-
     let addHandler () =
         if selectedEvent <> "" && selectedHandler <> "" then
-            let funtionOption = Map.tryFind selectedHandler customFunctions
+            let functionOption = Map.tryFind selectedHandler customFunctions
             let messageOption = List.tryFind (fun item -> item = selectedHandler) userMessages
 
             let newHandler =
-                match funtionOption, messageOption with
-                | Some _, Some _ -> JsHandler(selectedHandler)
+                match functionOption, messageOption with
+                | Some _, Some _
                 | Some _, None -> JsHandler(selectedHandler)
                 | None, Some _ -> MsgHandler(selectedHandler)
                 | None, None -> failwith "Selected handler does not exist"
@@ -369,13 +487,14 @@ let EventHandlerMenu
             let updatedHandlers = (selectedEvent, newHandler) :: eventHandlers
             updateCode updatedHandlers
 
-
     let removeHandler eventName =
-        let updatedHandlers =
-            eventHandlers |> List.filter (fun (name, _) -> name <> eventName)
+        eventHandlers |> List.filter (fun (name, _) -> name <> eventName) |> updateCode
 
-        updateCode updatedHandlers
+    let availableEventOptions =
+        availableEvents
+        |> List.filter (fun e -> not (List.exists (fun (name, _) -> name = e) eventHandlers))
 
+    let handlerOptions = (customFunctions |> Map.toList |> List.map fst) @ userMessages
 
     Html.div [
         prop.className "space-y-4"
@@ -384,7 +503,7 @@ let EventHandlerMenu
                 prop.className "flex flex-row items-center space-x-2"
                 prop.onClick (fun e ->
                     e.stopPropagation ()
-                    toggleMenu ())
+                    setMenuOpen (not menuOpen))
                 prop.children [
                     ReactBindings.React.createElement (
                         (if menuOpen then chevronDown else chevronRight),
@@ -395,44 +514,22 @@ let EventHandlerMenu
                 ]
             ]
 
-
             if menuOpen then
                 Html.div [
                     prop.className "flex space-x-2"
                     prop.children [
-                        Html.select [
-                            prop.className
-                                "text-xs w-36 h-fit  bg-white border border-black shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                            prop.value selectedEvent
-                            prop.onChange (fun (e: Browser.Types.Event) -> setSelectedEvent (e.target?value |> string))
-                            prop.children (
-                                Html.option [ prop.value "text-xs"; prop.text "Select an event" ]
-                                :: (availableEvents
-                                    |> List.filter (fun e ->
-                                        not (List.exists (fun (name, _) -> name = e) eventHandlers))
-                                    |> List.map (fun e -> Html.option [ prop.value e; prop.text e ]))
-                            )
-                        ]
-                        Html.select [
-                            prop.className
-                                "text-xs w-36 h-fit  bg-white border border-black shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-
-                            prop.value selectedHandler
-                            prop.onChange (fun (e: Browser.Types.Event) ->
-                                setSelectedHandler (e.target?value |> string))
-                            prop.children (
-                                Html.option [ prop.value ""; prop.text "Select a handler" ]
-                                :: (customFunctions
-                                    |> Map.toList
-                                    |> List.map (fun (name, _) -> Html.option [ prop.value name; prop.text name ]))
-                                @ (userMessages
-                                   |> List.map (fun message -> Html.option [ prop.value message; prop.text message ]))
-                            )
-                        ]
-                        Html.button [
-                            prop.className "bg-gray-600 text-white text-xs px-1 rounded shadow-md hover:bg-gray-400"
-                            prop.text "Add Handler"
-                            prop.onClick (fun _ -> addHandler ())
+                        Html.div [
+                            prop.className "flex space-x-2"
+                            prop.children [
+                                SelectMenu availableEventOptions selectedEvent setSelectedEvent
+                                SelectMenu handlerOptions selectedHandler setSelectedHandler
+                                Html.button [
+                                    prop.className
+                                        "bg-gray-600 text-white text-xs px-1 rounded shadow-md hover:bg-gray-400"
+                                    prop.text "Add Handler"
+                                    prop.onClick (fun _ -> addHandler ())
+                                ]
+                            ]
                         ]
                     ]
                 ]
@@ -457,38 +554,7 @@ let EventHandlerMenu
                         ]
                         Html.tbody [
                             eventHandlers
-                            |> List.map (fun (eventName, handler) ->
-                                Html.tr [
-                                    prop.className "border-b hover:bg-gray-50"
-                                    prop.children [
-                                        Html.td [ prop.text eventName; prop.className "p-2 text-xs" ]
-                                        Html.td [
-                                            prop.text (
-                                                match handler with
-                                                | JsHandler(name) -> sprintf "JS: %s" name
-                                                | MsgHandler msg -> sprintf "Msg: %s" msg
-                                            )
-                                            prop.className "p-2 text-xs"
-                                        ]
-                                        Html.td [
-                                            prop.className
-                                                " flex relative items-center justify-center hover:bg-red-600 rounded"
-                                            prop.children [
-                                                Html.button [
-                                                    prop.className "flex items-center justify-center  w-8 h-8 rounded "
-                                                    prop.onClick (fun _ -> removeHandler eventName)
-                                                    prop.children [
-                                                        ReactBindings.React.createElement (
-                                                            trashIcon,
-                                                            createObj [ "size" ==> 16; "color" ==> "#000000" ],
-                                                            []
-                                                        )
-                                                    ]
-                                                ]
-                                            ]
-                                        ]
-                                    ]
-                                ])
+                            |> List.map (fun (eventName, handler) -> HandlerTableRow eventName handler removeHandler)
                             |> prop.children
                         ]
                     ]
@@ -563,6 +629,9 @@ let KeyRow (key: string, index: int, keyOrdering, objType, codes, handlers, disp
         ]
     ]
 
+/// <summary> Component for displaying keys and editing their ordering.</summary>
+/// <param name="keyOrdering">List of keys in the object.</param>
+/// <param name="objType">Type of the object.</param>
 [<ReactComponent>]
 let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
     let collapsed, setCollapsed = React.useState true
@@ -601,6 +670,28 @@ let KeysList (keyOrdering, objType, codes, handlers, dispatch, path) =
 
 
 
+/// <summary> Component for displaying and editing the type of a HtmlObject and its event handlers and attributes.</summary>
+/// <param name="name">Name of the object.</param>
+/// <param name="code">The HtmlObject.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">Map of custom functions available for event handlers.</param>
+/// <param name="userMessages">List of user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
 [<ReactComponent>]
 let ObjectOption
     (name: string)
@@ -666,6 +757,29 @@ let ObjectOption
 //      HtmlList modification components
 // ||----------------------------------------||
 
+/// <summary> Component for displaying and editing the type of a HtmlList and its event handlers and attributes.</summary>
+/// <param name="name"></param>
+/// <param name="code"></param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">The custom functions available for event handlers.</param>
+/// <param name="userMessages">The user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns></returns>
 [<ReactComponent>]
 let ListOption (name: string) code path customFunctions userMessages dispatch =
 
@@ -747,6 +861,29 @@ let TagMenu (code: RenderingCode) path dispatch =
         SelectMenu tagOptions tag.Name changeTag
     | _ -> ErrorDisplay "Invalid code type for TagMenu"
 
+/// <summary> Component for displaying and editing the type of a HtmlElement, its value, and its event handlers and attributes.</summary>
+/// <param name="name">The name of the JSON based on which this element was created.  </param>
+/// <param name="code">The HtmlElement.</param>
+/// <param name="path">List of integer indices for traversing nested structures.
+/// Example using this structure:
+/// <pre>
+/// HtmlObject(Div)                    // Path: []
+/// ├── "key1" -> HtmlElement(div)    // Path: [0]
+/// └── "key2" -> HtmlList            // Path: [1]
+/// |    ├── HtmlElement(Li, "Item 1") // Path: [1,0]
+/// |    └── HtmlElement(Li, "Item 2") // Path: [1,1]
+///
+/// Path traversal:
+/// - [0]: Selects first key's element (key1 -> div)
+/// - [1]: Selects second key's element (key2 -> list)
+/// - [1,0]: First li element inside the list
+/// - [1,1]: Second li element inside the list
+/// </pre>
+/// </param>
+/// <param name="customFunctions">The custom functions available for event handlers.</param>
+/// <param name="userMessages">The user messages available for event handlers.</param>
+/// <param name="dispatch">PageEditor dispatch function of (PageEditorMsg -> unit).</param>
+/// <returns>The modification menu for the HtmlElement.</returns>
 [<ReactComponent>]
 let ElementOption (name: string) code path customFunctions userMessages dispatch =
 
