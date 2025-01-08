@@ -43,8 +43,6 @@ let pageEditorInit () : PageEditorModel * Cmd<PageEditorMsg> =
         IsPanning = false
         LastMousePosition = None
         IsPreviewOpen = false
-        ContextMenuPosition = None
-        ContextMenuVisible = false
         IsCodeViewOpen = false
     }
 

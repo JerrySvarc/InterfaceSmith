@@ -76,8 +76,6 @@ and PageEditorModel = {
     LastMousePosition: Position option
     IsPreviewOpen: bool
     IsCodeViewOpen: bool
-    ContextMenuVisible: bool
-    ContextMenuPosition: Position option
 }
 
 
