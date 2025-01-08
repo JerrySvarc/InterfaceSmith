@@ -1,38 +1,56 @@
 # InterfaceSmith                                     
 **InterfaceSmith** is a programming system combining a **data-driven** approach to creating web application UIs with a **low-code** programming interface. 
 
-## Motivation
+The git [repository](https://github.com/JerrySvarc/InterfaceSmith) is hosted on Github.
 
-**InterfaceSmith** explores a method of creating web applications with a system which guides the programmer during the creation process and provides capabilities that make this process faster and without the need to write large amounts of boilerplate code.
-We will explain the differences between the standard way of creating web applications today compared to our prototype system. 
-
-### Standard workflow today
-Imagine you aquire some JSON data from a public API and you wish to create an application which displays some of this data, and you also want to add custom functionality for the elements.
-The standard method would be to create an empty project in your favourite programming language, analyze the data and then create the UI elements by hand, making sure that each element properly displays the corresponding data.
-Then you would also change the styling of the elements using either pure CSS or a library such as Tailwind.
-Finally, you would add custom behaviour to react to user events, such as clicking a button or clicking on a dropdown menu.  
-
-
-### Workflow using InterfaceSmith
-Imagine you have the same data as in the previous section. You upload this data to the Data DrUId system, which presents you with a view of the uploaded data.
-It also presents you the option to create UI elements based on the data you uploaded. 
-You pick and choose which data to use by incrementally creating the UI elements
-and modify these elements using the context menus which allow you to change the tag, attributes, and handlers of the element.
-You can also style the application using Tailwind and immedeately see the preview of the element after each change. 
-Then you can define events and define how the data should change when the event occurs, which in turn changes the content of the UI elements.
-
-
+The *documentation* is available at: https://jerrysvarc.github.io/InterfaceSmith/
 ## Installation
-The preffered method of running the application is by using the provided Dockerfile. 
 
-## Development
+To use the InterfaceSmith programming system, we provide two main ways of installing and running it:
 
-### Install pre-requisites
-You'll need to install the following pre-requisites in order to build the applications
+1. Using the provided pre-build docker image
+2. Building the docker image using the provided Dockerfile
 
-* [.NET Core SDK](https://www.microsoft.com/net/download) 8.0 or higher
-* [Node 20](https://nodejs.org/en/download/)
+The first option is much faster, as building the image from the Dockerfile involves downloading various technologies and then compiling the entire application and the Docker image, which can take a large amount of time to complete, depending on your internet connection speed and your system's capabilities.
 
-### Build commands
-### 
+### Prerequisites
+- Docker installed and running
 
+
+### Running the pre-built image
+Running the pre-build docker image is the preferred way to run the InterfaceSmith programming system.
+To start the container, do the following sequence of steps:
+
+1. Load the provided image:
+```bash
+docker load < interfacesmith.tar
+```
+
+2. Run the loaded container:
+```bash
+docker run -p 8080:8080 -p 8082:8082 interfacesmith
+```
+
+### Building the Dockerfile and running the app
+
+1. Clone the repository:
+```bash
+git clone https://github.com/JerrySvarc/InterfaceSmith.git
+cd InterfaceSmith
+```
+2. Build the Docker image:
+```bash
+docker build -t interfacesmith .
+```
+
+3. Run the newly built container:
+```bash
+docker run -p 8080:8080 -p 8082:8082 interfacesmith
+```
+
+
+## **Endpoints**
+When the container is **running** the following applications are available:
+
+- Main editor is available on: ```http://localhost:8080```
+- This documentation is available on: ```http://localhost:8082```
